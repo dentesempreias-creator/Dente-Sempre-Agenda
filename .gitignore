@@ -1,0 +1,5 @@
+# Servidor: dados das clínicas, chave das licenças e certificados NUNCA vão para o GitHub
+servidor/dados/
+servidor/certificados/
+*.pem
+node_modules/

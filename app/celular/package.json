@@ -1,0 +1,25 @@
+{
+  "name": "dente-sempre-celular",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dente Sempre para Android e iPhone (Capacitor)",
+  "scripts": {
+    "sincronizar": "cap sync",
+    "android:debug": "node gradle.js assembleDebug",
+    "android:release": "node gradle.js assembleRelease bundleRelease",
+    "android:abrir": "cap open android",
+    "ios:abrir": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app-launcher": "8.0.1",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/device": "8.0.3",
+    "@capacitor/filesystem": "8.1.4",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}

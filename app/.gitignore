@@ -1,0 +1,33 @@
+# Dente Sempre — arquivos que NÃO vão para o GitHub nem para o zip
+
+# Bibliotecas baixadas pelo npm (recriadas com "npm run instalar")
+node_modules/
+
+# Páginas geradas pelo "npm run preparar" (contêm o endereço do servidor)
+desktop/www/
+desktop/app-config.json
+celular/www/
+
+# Aplicativos gerados
+desktop/dist/
+celular/android/app/build/
+celular/android/build/
+celular/android/.gradle/
+celular/android/local.properties
+*.apk
+*.aab
+
+# Chaves de assinatura: NUNCA envie para o GitHub
+*.jks
+*.keystore
+*.p12
+*.pfx
+celular/android/keystore.properties
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Cópias que o "cap sync" coloca dentro dos projetos (recriadas a cada geração)
+celular/android/app/src/main/assets/public/
+celular/ios/App/App/public/

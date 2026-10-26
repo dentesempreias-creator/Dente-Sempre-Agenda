@@ -1,0 +1,133 @@
+{
+  "name": "dente-sempre",
+  "productName": "Dente Sempre",
+  "version": "1.0.0",
+  "description": "Agenda da clínica Dente Sempre",
+  "author": "Dente Sempre",
+  "homepage": "https://api.seudominio.com.br",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node testar-desktop.js",
+    "gerar:windows": "electron-builder --win nsis --x64 --publish never",
+    "gerar:mac": "electron-builder --mac dmg --x64 --arm64 --publish never",
+    "gerar:linux": "electron-builder --linux AppImage deb --x64 --publish never",
+    "gerar:pasta": "electron-builder --dir --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.17.0"
+  },
+  "//assinatura": [
+    "TODO assinatura digital (opcional, recomendado):",
+    "Windows: defina CSC_LINK (arquivo .pfx ou base64) e CSC_KEY_PASSWORD antes de gerar; ou WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD.",
+    "Mac: CSC_LINK + CSC_KEY_PASSWORD (certificado Developer ID Application) e, para notarizar, APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID.",
+    "Sem essas variáveis o aplicativo sai sem assinatura (o Windows mostra aviso do SmartScreen; o Mac pede clique-direito > Abrir)."
+  ],
+  "build": {
+    "appId": "br.com.dentesempre.app",
+    "productName": "Dente Sempre",
+    "copyright": "© Dente Sempre",
+    "asar": true,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app-config.json",
+      "www/**",
+      "build/icon.png",
+      "!**/*.map"
+    ],
+    "electronLanguages": [
+      "pt-BR",
+      "en-US"
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false,
+      "resetAdHocDarwinSignature": true
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Dente-Sempre-Instalador-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Dente Sempre",
+      "installerLanguages": [
+        "pt_BR"
+      ],
+      "language": "1046",
+      "multiLanguageInstaller": false,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.medical",
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "artifactName": "Dente-Sempre-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "Dente Sempre ${version}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Office",
+      "icon": "build/icon.png",
+      "maintainer": "Dente Sempre <suporte@seudominio.com.br>",
+      "synopsis": "Agenda da clínica Dente Sempre",
+      "artifactName": "Dente-Sempre-${version}-${arch}.${ext}",
+      "executableName": "dente-sempre",
+      "syncDesktopName": true
+    },
+    "deb": {
+      "packageName": "dente-sempre"
+    },
+    "publish": null
+  },
+  "desktopName": "dente-sempre.desktop"
+}

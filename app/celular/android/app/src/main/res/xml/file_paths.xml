@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pastas que o app pode entregar para outros apps ao "Compartilhar" (backup).
+     Só a pasta temporária do app e a pasta Documentos. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="temporarios" path="." />
+    <external-path name="documentos" path="Documents/" />
+</paths>

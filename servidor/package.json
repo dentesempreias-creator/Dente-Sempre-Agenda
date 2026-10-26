@@ -1,0 +1,15 @@
+{
+  "name": "dente-sempre-servidor",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Servidor do Dente Sempre: clínicas separadas, licenças, sincronização e cópias.",
+  "main": "servidor.js",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node servidor.js",
+    "nova-clinica": "node servidor.js nova-clinica",
+    "clinicas": "node servidor.js clinicas",
+    "copia": "node servidor.js copia"
+  },
+  "license": "UNLICENSED"
+}

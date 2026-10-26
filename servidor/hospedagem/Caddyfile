@@ -1,0 +1,7 @@
+# Caddy: cuida do HTTPS sozinho (certificado gratuito do Let's Encrypt, renovado automaticamente)
+# e repassa os pedidos para o servidor do Dente Sempre, que fica só dentro da máquina.
+# Troque o endereço abaixo pelo seu domínio (o instalar-vps.sh já faz isso).
+api.seudominio.com.br {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+}

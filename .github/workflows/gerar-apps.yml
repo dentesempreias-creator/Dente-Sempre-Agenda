@@ -1,0 +1,234 @@
+# =====================================================================
+#  Dente Sempre — gera os aplicativos (Windows, Mac, Linux e Android)
+#
+#  Quando roda:
+#    - manualmente: aba "Actions" > "Gerar aplicativos" > "Run workflow";
+#    - ao criar uma etiqueta de versão, ex.: git tag v1.2.0 && git push --tags
+#
+#  O que precisa estar configurado no GitHub (Settings > Secrets and variables > Actions):
+#    DS_SERVIDOR        endereço do servidor, ex.: https://agenda.minhaclinica.com.br  (secret ou variable)
+#    DS_CHAVE_PUBLICA   chave pública da licença que o servidor mostra (secret ou variable)
+#  Opcionais (assinatura):
+#    ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#    WINDOWS_CSC_LINK, WINDOWS_CSC_KEY_PASSWORD                    (certificado .pfx em base64)
+#    MAC_CSC_LINK, MAC_CSC_KEY_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+#
+#  Os arquivos gerados ficam em "Artifacts", no fim da página de cada execução.
+# =====================================================================
+name: Gerar aplicativos
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gerar-apps-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DS_SERVIDOR: ${{ secrets.DS_SERVIDOR || vars.DS_SERVIDOR }}
+  DS_CHAVE_PUBLICA: ${{ secrets.DS_CHAVE_PUBLICA || vars.DS_CHAVE_PUBLICA }}
+  DS_VERSAO_CODIGO: ${{ github.run_number }}
+
+jobs:
+  windows:
+    name: Windows (instalador .exe)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/desktop/package-lock.json
+      - name: Conferir configuração
+        run: |
+          if [ -z "$DS_SERVIDOR" ]; then echo "::error::Configure DS_SERVIDOR (Settings > Secrets and variables > Actions)."; exit 1; fi
+          if [ -z "$DS_CHAVE_PUBLICA" ]; then echo "::error::Configure DS_CHAVE_PUBLICA (Settings > Secrets and variables > Actions)."; exit 1; fi
+      - name: Versão a partir da etiqueta (v1.2.3)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm --prefix desktop version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+      - name: Instalar
+        run: npm ci && npm --prefix desktop ci
+      - name: Preparar página
+        run: node preparar.js
+      - name: Gerar instalador
+        working-directory: app/desktop
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+        run: npx electron-builder --win nsis --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dente-sempre-windows
+          path: app/desktop/dist/*.exe
+          if-no-files-found: error
+
+  mac:
+    name: Mac (.dmg Intel e Apple Silicon)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/desktop/package-lock.json
+      - name: Conferir configuração
+        run: |
+          if [ -z "$DS_SERVIDOR" ]; then echo "::error::Configure DS_SERVIDOR (Settings > Secrets and variables > Actions)."; exit 1; fi
+          if [ -z "$DS_CHAVE_PUBLICA" ]; then echo "::error::Configure DS_CHAVE_PUBLICA (Settings > Secrets and variables > Actions)."; exit 1; fi
+      - name: Versão a partir da etiqueta (v1.2.3)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm --prefix desktop version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+      - name: Instalar
+        run: npm ci && npm --prefix desktop ci
+      - name: Preparar página
+        run: node preparar.js
+      - name: Gerar .dmg
+        working-directory: app/desktop
+        env:
+          # Sem certificado: gera sem assinatura (o Mac pede clique-direito > Abrir na 1ª vez).
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CSC_LINK != '' }}
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npx electron-builder --mac dmg --x64 --arm64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dente-sempre-mac
+          path: app/desktop/dist/*.dmg
+          if-no-files-found: error
+
+  linux:
+    name: Linux (AppImage e .deb) + testes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/desktop/package-lock.json
+      - name: Conferir configuração
+        run: |
+          if [ -z "$DS_SERVIDOR" ]; then echo "::error::Configure DS_SERVIDOR (Settings > Secrets and variables > Actions)."; exit 1; fi
+          if [ -z "$DS_CHAVE_PUBLICA" ]; then echo "::error::Configure DS_CHAVE_PUBLICA (Settings > Secrets and variables > Actions)."; exit 1; fi
+      - name: Versão a partir da etiqueta (v1.2.3)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm --prefix desktop version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+      - name: Instalar
+        run: npm ci && npm --prefix desktop ci
+      - name: Preparar página
+        run: node preparar.js
+      - name: Testar a página embaralhada (Chromium)
+        run: |
+          npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+          PLAYWRIGHT_DIR="$RUNNER_TEMP/pw/node_modules/playwright" node verificar-pagina.js desktop/www/index.html celular/www/index.html
+      - name: Testar o aplicativo de computador (Electron)
+        run: |
+          # O Ubuntu 24.04 bloqueia a proteção (sandbox) do Chromium fora de pacotes instalados.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          npm --prefix desktop test
+      - name: Gerar AppImage e .deb
+        working-directory: app/desktop
+        run: npx electron-builder --linux AppImage deb --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dente-sempre-linux
+          path: |
+            app/desktop/dist/*.AppImage
+            app/desktop/dist/*.deb
+          if-no-files-found: error
+
+  android:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/celular/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            app/celular/android/*.gradle*
+            app/celular/android/**/gradle-wrapper.properties
+      - name: Conferir configuração
+        run: |
+          if [ -z "$DS_SERVIDOR" ]; then echo "::error::Configure DS_SERVIDOR (Settings > Secrets and variables > Actions)."; exit 1; fi
+          if [ -z "$DS_CHAVE_PUBLICA" ]; then echo "::error::Configure DS_CHAVE_PUBLICA (Settings > Secrets and variables > Actions)."; exit 1; fi
+      - name: Versão a partir da etiqueta (v1.2.3)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo "DS_VERSAO=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: Instalar
+        run: npm ci && npm --prefix celular ci
+      - name: Preparar página e copiar para o Android
+        run: |
+          node preparar.js
+          cd celular && npx cap sync android
+      - name: Gerar APK de teste (debug)
+        working-directory: app/celular/android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+      - name: Gerar APK e AAB assinados (release)
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        working-directory: app/celular/android
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/dente-sempre.jks"
+          export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/dente-sempre.jks"
+          ./gradlew --no-daemon assembleRelease bundleRelease
+          rm -f "$RUNNER_TEMP/dente-sempre.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dente-sempre-android-teste
+          path: app/celular/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        with:
+          name: dente-sempre-android-assinado
+          path: |
+            app/celular/android/app/build/outputs/apk/release/*.apk
+            app/celular/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error

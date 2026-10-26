@@ -1,0 +1,29 @@
+# Serviço do Linux (systemd): liga o Dente Sempre sozinho e religa se cair.
+[Unit]
+Description=Dente Sempre - servidor
+After=network.target
+
+[Service]
+Type=simple
+User=dentesempre
+Group=dentesempre
+WorkingDirectory=/opt/dente-sempre-servidor
+# Só aceita conexão de dentro da máquina: quem atende a internet é o Caddy (HTTPS)
+Environment=HOST=127.0.0.1
+Environment=PORTA=3000
+Environment=CONFIAR_PROXY=1
+Environment=HSTS=1
+Environment=COPIA_HORAS=6
+ExecStart=/usr/bin/node servidor.js
+Restart=always
+RestartSec=3
+# Proteções do Linux: o programa só consegue escrever na pasta dados
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/dente-sempre-servidor/dados
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

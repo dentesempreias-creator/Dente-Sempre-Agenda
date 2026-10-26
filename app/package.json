@@ -1,0 +1,28 @@
+{
+  "name": "dente-sempre-apps",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gera os aplicativos Dente Sempre (computador e celular) a partir de fonte/dente-sempre.html",
+  "scripts": {
+    "instalar": "npm ci && npm --prefix desktop ci && npm --prefix celular ci",
+    "preparar": "node preparar.js",
+    "preparar:teste": "node preparar.js --permitir-http --permitir-sem-chave --servidor=http://localhost:3000",
+    "verificar": "node verificar-pagina.js desktop/www/index.html celular/www/index.html",
+    "icones": "node icones/gerar-icones.js",
+    "desktop:abrir": "npm run preparar && npm --prefix desktop start",
+    "desktop:testar": "npm --prefix desktop test",
+    "desktop:windows": "npm run preparar && npm --prefix desktop run gerar:windows",
+    "desktop:mac": "npm run preparar && npm --prefix desktop run gerar:mac",
+    "desktop:linux": "npm run preparar && npm --prefix desktop run gerar:linux",
+    "celular:sincronizar": "npm run preparar && npm --prefix celular run sincronizar",
+    "celular:android": "npm run celular:sincronizar && npm --prefix celular run android:debug",
+    "celular:android-assinado": "npm run celular:sincronizar && npm --prefix celular run android:release",
+    "celular:ios": "npm run celular:sincronizar && npm --prefix celular run ios:abrir"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "5.9.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

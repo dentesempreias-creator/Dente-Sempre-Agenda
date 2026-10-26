@@ -1,0 +1,91 @@
+apply plugin: 'com.android.application'
+
+// ---------------------------------------------------------------------
+// Dente Sempre — assinatura do APK/AAB de distribuição (release).
+// Os dados da chave vêm de variáveis de ambiente (GitHub Actions) ou do
+// arquivo android/keystore.properties (no seu computador; NUNCA envie para o GitHub):
+//   ANDROID_KEYSTORE_FILE      caminho do arquivo .jks (relativo à pasta android/ ou completo)  (ou storeFile=)
+//   ANDROID_KEYSTORE_PASSWORD  senha do arquivo             (ou storePassword=)
+//   ANDROID_KEY_ALIAS          nome da chave                (ou keyAlias=)
+//   ANDROID_KEY_PASSWORD       senha da chave               (ou keyPassword=)
+// Sem esses dados, "assembleRelease" gera um APK NÃO assinado (não instala).
+// Versão: DS_VERSAO_CODIGO (número inteiro que sempre aumenta) e DS_VERSAO (ex.: 1.2.0).
+// ---------------------------------------------------------------------
+def assinatura = new Properties()
+def arquivoAssinatura = rootProject.file('keystore.properties')
+if (arquivoAssinatura.exists()) {
+    arquivoAssinatura.withInputStream { assinatura.load(it) }
+}
+def valorAssinatura = { String variavel, String chave ->
+    def v = System.getenv(variavel)
+    return (v != null && !v.isEmpty()) ? v : assinatura.getProperty(chave)
+}
+def chaveArquivo = valorAssinatura('ANDROID_KEYSTORE_FILE', 'storeFile')
+def temAssinatura = chaveArquivo != null && rootProject.file(chaveArquivo).exists()
+
+android {
+    namespace = "br.com.dentesempre.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "br.com.dentesempre.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode((System.getenv('DS_VERSAO_CODIGO') ?: '1') as Integer)
+        versionName(System.getenv('DS_VERSAO') ?: '1.0.0')
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (temAssinatura) {
+            release {
+                storeFile rootProject.file(chaveArquivo)
+                storePassword valorAssinatura('ANDROID_KEYSTORE_PASSWORD', 'storePassword')
+                keyAlias valorAssinatura('ANDROID_KEY_ALIAS', 'keyAlias')
+                keyPassword valorAssinatura('ANDROID_KEY_PASSWORD', 'keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (temAssinatura) {
+                signingConfig signingConfigs.release
+            }
+            debuggable false
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
