@@ -205,6 +205,30 @@
   .chip{font-size:12px;font-weight:700;padding:1px 7px;border-radius:var(--r);white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
   .chip-late{background:var(--amber-chip);color:var(--late-ink)}
   .chip-fit{background:#fff;color:var(--fit-ink);border:1px solid #a9d6df}
+  .chip-pc{background:#fff;color:#17603a;border:1px solid #9fd3b3}
+  .chip-pr{background:#fff4d6;color:#5c4300;border:1px solid #e8c766}
+  .ev.narrow .rp-txt,.ev.compact .rp-txt{display:none}
+  .st-pc{background:#e6f5ec;color:#17603a} .st-pr{background:#fff4d6;color:#5c4300}
+  .muted-sm{font-size:13px;color:var(--muted)}
+  .btn-link-pac{border-color:#9fd3b3;color:#17603a}
+  /* Busca de consultas */
+  .tb-search{display:none}
+  .pl-tosearch{display:inline-flex;align-items:center;gap:6px;margin-top:8px}
+  .filters.sr-filters{margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .filters.sr-dates{margin-top:0;grid-template-columns:repeat(2,minmax(0,220px))}
+  .sr-count{margin:12px 0 6px;font-size:14px;color:var(--muted);min-height:1em}
+  .sr-list{display:flex;flex-direction:column;gap:6px}
+  .sr-item{display:flex;align-items:stretch;gap:6px;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+  .sr-main{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 12px;border:0;background:none;text-align:left;border-radius:var(--r)}
+  .sr-item:hover{background:var(--accent-hover);border-color:var(--line-strong)}
+  .sr-when{grid-column:1;font-size:14px;color:#33405a;font-variant-numeric:tabular-nums}
+  .sr-name{grid-column:1;font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis}
+  .sr-sub{grid-column:1;font-size:14px;color:var(--muted)}
+  .sr-pills{grid-column:2;grid-row:1 / span 3;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px}
+  .sr-day{align-self:center;margin-right:8px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .sr-hint{padding:10px 2px}
+  .ev-flash{animation:evflash 1.3s ease-in-out 2}
+  @keyframes evflash{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 4px var(--accent)}}
   .chip-day{background:#fff;color:var(--block-ink);border:1px solid #d3d9e1}
   .now-line{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--now);z-index:3;pointer-events:none}
   .now-line::before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;background:var(--now)}
@@ -275,6 +299,7 @@
   .sw.no_show{background:var(--red)} .sw.fit{background:var(--cyan)}
 
   /* Menu do botão direito */
+  .ctx-backdrop{display:none}
   .ctxmenu{position:fixed;z-index:80;background:#fff;border:1px solid #c3cad4;border-radius:var(--r);box-shadow:0 8px 24px rgba(24,33,47,.22);padding:4px 0;min-width:270px;max-width:calc(100vw - 16px)}
   .menu-title{font-size:13px;font-weight:600;color:var(--muted);padding:6px 14px 7px;border-bottom:1px solid var(--line-soft);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .menu-item{display:flex;align-items:center;gap:10px;width:100%;height:36px;text-align:left;border:0;background:none;padding:0 16px 0 10px;font-size:15px;color:var(--ink);white-space:nowrap}
@@ -623,6 +648,7 @@
     .avatar{width:30px;height:30px;font-size:13px}
     .dmeta{display:none}
     .tb-sub{display:none}
+    #searchBtn::after{content:none}
   }
   /* Telas pequenas: uma coluna, a página rola; calendário abre abaixo da data */
   @media (max-width:860px){
@@ -746,6 +772,85 @@
     .toast{bottom:calc(84px + env(safe-area-inset-bottom))}
     body.modal-open .toast{top:calc(10px + env(safe-area-inset-top));bottom:auto}
   }
+  /* ---------- Celular: ajustes para o dedo (só telas de até 600px; o computador não muda) ---------- */
+  @media (max-width:600px){
+    /* Barra de comandos vira uma barra fixa embaixo, com os 5 atalhos mais usados (o resto fica no Menu) */
+    .commandbar{position:fixed;left:0;right:0;bottom:0;z-index:35;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;
+      padding:4px 4px calc(4px + env(safe-area-inset-bottom));overflow:visible;background:#fff;border-top:1px solid var(--line);border-bottom:0;box-shadow:0 -4px 16px rgba(24,33,47,.08)}
+    .commandbar > .cmd-sep,.commandbar > .cmd-spacer,#fitBtn,#blockBtn,#bdayBtn,#dentistsBtn,#privacyBtn,#searchBtn{display:none}
+    /* Lupa no topo, ao lado da sincronização */
+    .tb-search{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid rgba(255,255,255,.38);border-radius:var(--r);background:rgba(255,255,255,.1);color:#fff}
+    #srQ{font-size:18px;min-height:52px}
+    .filters.sr-filters{grid-template-columns:1fr 1fr}
+    .sr-filters .field:nth-child(3){grid-column:1/-1}
+    .filters.sr-dates{grid-template-columns:1fr 1fr}
+    .sr-item{flex-direction:column;gap:0}
+    .sr-main{padding:10px 12px;min-height:72px}
+    .sr-name{font-size:17px}
+    .sr-day{align-self:stretch;margin:0 10px 10px;justify-content:center;height:44px}
+    .cmd{min-width:0;width:100%;height:58px;padding:0 2px;font-size:12.5px;gap:3px;border-radius:10px;flex-direction:column;justify-content:center}
+    .cmd svg{width:23px;height:23px}
+    .cmd:active{background:var(--select)}
+    .cmd .cmd-txt{display:none}
+    .cmd[data-short]::after{content:attr(data-short)}
+    #moreBtn::after{content:'Mais'}
+    .fab{bottom:calc(76px + env(safe-area-inset-bottom));height:54px;border-radius:28px;padding:0 20px}
+    .workspace{gap:6px;padding:6px 6px calc(150px + env(safe-area-inset-bottom))}
+    .toast{bottom:calc(142px + env(safe-area-inset-bottom));left:12px;right:12px;max-width:none;transform:none}
+    /* Digitando na tela (anotações, assistente): a barra de baixo sai da frente do teclado */
+    body:has(.workspace input:focus, .workspace textarea:focus) .commandbar,
+    body:has(.workspace input:focus, .workspace textarea:focus) .fab{display:none}
+
+    /* Menus de opções (Mais, toque num horário) abrem de baixo para cima, largura toda */
+    .ctxmenu{left:0!important;right:0;top:auto!important;bottom:0;width:100%;min-width:0;max-width:none;max-height:78vh;overflow-y:auto;
+      border-radius:14px 14px 0 0;border-bottom:0;padding:8px 0 calc(12px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(24,33,47,.25)}
+    .ctxmenu .menu-item{height:52px;font-size:17px}
+    .ctx-backdrop{display:block;position:fixed;inset:0;z-index:79;background:rgba(24,33,47,.35)}
+    .ctxmenu .menu-title{padding:6px 16px 8px;font-size:14px}
+
+    /* Faixa "Sem internet": fica presa no topo enquanto a agenda rola */
+    .offline-bar{position:sticky;top:0;z-index:34;padding:9px 12px;font-size:15px;line-height:1.35;box-shadow:0 2px 8px rgba(77,58,0,.12)}
+    .offline-bar .link{min-height:36px;font-weight:700}
+
+    /* Topo da agenda mais enxuto */
+    .pane-head.agenda-head{padding:6px 8px;gap:6px}
+    .datetitle{font-size:18px}
+    .dentist{min-height:48px}
+
+    /* Agenda: cartões e horários mais legíveis */
+    .time{font-size:12px}
+    .row.hour .time{font-size:15px}
+    .ev{font-size:16px;padding:4px 10px;border-radius:6px;gap:0 8px}
+    .ev-time{font-size:14px}
+    .ev-name{font-size:17px}
+    .ev-status{font-size:12px;padding:2px 7px}
+    .chip{font-size:12px;padding:1px 6px}
+    .slot{font-size:15px}
+
+    /* Janelas: botões de ação em duas colunas, área de toque grande */
+    .modal-wrap{align-items:end}
+    .modal,.modal.wide{border-radius:14px 14px 0 0}
+    .actions{grid-template-columns:1fr 1fr;gap:8px}
+    .actions .btn{height:52px;font-size:16px;white-space:normal;line-height:1.2}
+    .actions .full{grid-column:1/-1}
+    .drawer{border-radius:0}
+    .modal,.modal.wide{padding-bottom:0}
+    .modal > :last-child:not(.modal-foot){margin-bottom:calc(18px + env(safe-area-inset-bottom))}
+    .modal-foot{position:sticky;bottom:0;background:#fff;padding:10px 0 calc(12px + env(safe-area-inset-bottom));margin-bottom:0;z-index:1;border-top:1px solid var(--line-soft)}
+    /* Lista do dia: cada consulta vira um cartão (sem tabela cortada de lado) */
+    .hours th{font-size:11px;letter-spacing:0;padding:4px 1px}
+    .hours thead th:first-child{width:24%}
+    .hours thead th:nth-child(2){width:60px}
+    .hours td.on{width:60px}
+    .hours input[type=time]{font-size:15px;padding:6px 2px;min-width:0}
+    .daylist thead{display:none}
+    .daylist,.daylist tbody{display:block}
+    .daylist tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:10px 2px;border-bottom:1px solid var(--line-soft)}
+    .daylist td{display:block;padding:0;border:0;grid-column:1;color:var(--muted);font-size:14px}
+    .daylist td:first-child{font-weight:700;color:var(--ink);font-size:15px}
+    .daylist td:nth-child(2){font-size:16px;color:var(--ink)}
+    .daylist td:last-child{grid-column:2;grid-row:1 / span 3;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  }
 </style>
 </head>
 <body>
@@ -760,6 +865,7 @@
   <span class="tb-badge" id="privacyBadge" hidden>Modo recepção ocupada</span>
   <span class="tb-right">
     <span class="tb-clock" id="clock"></span>
+    <button type="button" class="tb-search" id="tbSearch" aria-label="Buscar consultas" title="Buscar consultas"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
     <button type="button" class="tb-sync" id="syncBtn" data-state="ok" hidden><i class="sync-dot" aria-hidden="true"></i><span id="syncTxt">Sincronizado</span></button>
     <button type="button" class="tb-user" id="userBtn" data-menu-trigger aria-haspopup="menu" hidden><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span id="userTxt"></span></button>
   </span>
@@ -779,6 +885,7 @@
   <button data-short="Aniv." class="cmd" id="bdayBtn" data-perm="listas" title="Aniversariantes do mês"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="1"/><path d="M3 15h18M12 10v11M12 10c-1.5-3-5-3.5-5-1s3.5 1 5 1zm0 0c1.5-3 5-3.5 5-1s-3.5 1-5 1z"/></svg><span class="cmd-txt">Aniversários</span></button>
   <span class="cmd-sep" aria-hidden="true" data-perm="pacientes.ver"></span>
   <button class="cmd" id="patientsBtn" data-perm="pacientes.ver"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Pacientes</button>
+  <button data-short="Buscar" class="cmd" id="searchBtn" title="Buscar consultas por paciente, procedimento ou período (atalho: B)" aria-keyshortcuts="B"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><span class="cmd-txt">Buscar</span></button>
   <button class="cmd" id="dentistsBtn" data-perm="dentistas.editar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Dentistas</button>
   <span class="cmd-spacer" aria-hidden="true"></span>
   <button data-short="Ocupada" class="cmd cmd-privacy" id="privacyBtn" data-perm="privacidade" aria-pressed="false" title="Esconde CPF, RG, endereço e o telefone completo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c5 0 9 4.5 10 7a12 12 0 0 1-2.7 3.6M6.3 6.4A12.5 12.5 0 0 0 2 12c1 2.5 5 7 10 7a9.6 9.6 0 0 0 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg><span class="cmd-txt">Modo ocupada</span></button>
@@ -880,7 +987,7 @@
       <label class="field" id="lgClinicRow" hidden><span class="label">Código da clínica</span><input id="lgClinic" autocomplete="organization" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="40"></label>
       <label class="field"><span class="label">Usuário</span><input id="lgUser" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="30"></label>
       <label class="field"><span class="label">Senha</span><input id="lgPass" type="password" autocomplete="current-password" maxlength="100"></label>
-      <label class="lg-remember" for="lgRemember"><input type="checkbox" id="lgRemember"><span>Lembrar neste computador<small>Não pede a senha de novo até alguém clicar em Sair. Não marque em computador de uso público.</small></span></label>
+      <label class="lg-remember" for="lgRemember"><input type="checkbox" id="lgRemember"><span>Lembrar neste aparelho<small>Não pede a senha de novo até alguém usar Sair. Não marque em aparelho de uso público ou emprestado.</small></span></label>
       <div class="error" id="lgError" role="alert" hidden></div>
       <button type="submit" class="btn btn-primary fu-go">Entrar</button>
       <p class="hint lg-first" id="lgFirst" hidden></p>
@@ -915,7 +1022,7 @@
     <div class="fu-head">
       <div class="fu-brand"><span class="tb-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3c-2.5 0-4 2-4 4.5 0 2 .8 3.5 1.5 5 .7 1.6.8 3.3 1.2 5.2.3 1.6.8 3.3 2 3.3 1.5 0 1.6-2.5 2-4.2.3-1.3.9-2.3 2.3-2.3s2 1 2.3 2.3c.4 1.7.5 4.2 2 4.2 1.2 0 1.7-1.7 2-3.3.4-1.9.5-3.6 1.2-5.2.7-1.5 1.5-3 1.5-5C21 5 19.5 3 17 3c-1.8 0-3 1-5 1S8.8 3 7 3z"/></svg></span>Dente Sempre</div>
       <h1 id="actTitle">Ativar o programa</h1>
-      <p id="actLead">Digite a chave de acesso para usar o Dente Sempre neste computador.</p>
+      <p id="actLead">Digite a chave de acesso para usar o Dente Sempre neste aparelho.</p>
     </div>
     <form class="fu-body" id="actForm" novalidate>
       <label class="field" id="actKeyRow"><span class="label">Chave de acesso</span>
@@ -923,7 +1030,7 @@
       <div class="error" id="actError" role="alert" hidden></div>
       <button type="submit" class="btn btn-primary fu-go" id="actGo">Ativar</button>
       <button type="button" class="btn btn-primary fu-go" id="actRenew" hidden>Confirmar a licença agora</button>
-      <p class="hint" id="actHint">A chave tem 16 letras e números e não usa O, I, 0 nem 1. Depois de ativado, não pede de novo neste navegador. Não precisa de internet.</p>
+      <p class="hint" id="actHint">A chave tem 16 letras e números e não usa O, I, 0 nem 1. Depois de ativado, não pede de novo neste aparelho. Não precisa de internet.</p>
       <button type="button" class="link" id="actLogout">Entrar com outro usuário</button>
     </form>
   </div>
@@ -962,7 +1069,7 @@
       <div class="fu-links">
         <button type="button" class="link" id="fuExample">Usar dentistas de exemplo (Dra. Ana e Dr. João)</button>
         <button type="button" class="link" id="fuImport" data-perm="backup.restaurar">Já tenho um backup: restaurar</button>
-        <button type="button" class="link" id="fuReceive">Já uso em outro computador: receber a agenda</button>
+        <button type="button" class="link" id="fuReceive">Já uso em outro aparelho: receber a agenda</button>
       </div>
     </form>
   </div>
@@ -1028,6 +1135,7 @@
   <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
 </div>
 
+<div class="ctx-backdrop" id="ctxBackdrop" hidden></div>
 <div class="ctxmenu" id="slotMenu" role="menu" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -1052,7 +1160,7 @@
   const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];   // segunda primeiro
   const phoneMQ = window.matchMedia('(max-width: 600px)');
   const smallMQ = window.matchMedia('(max-width: 860px)');
-  const rowH = () => phoneMQ.matches ? 40 : 32;
+  const rowH = () => phoneMQ.matches ? 44 : 32;
 
   // Seg a sex 08:30–20:30, sábado 08:30–12:30, domingo não atende
   const defaultHours = () => [null, ...[1, 2, 3, 4, 5].map(() => ({ start: '08:30', end: '20:30' })), { start: '08:30', end: '12:30' }];
@@ -1123,6 +1231,7 @@
     trash: ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
     info: ic('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>'),
     list: ic('<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>'),
+    search: ic('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>'),
     clock: ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
     fork: ic('<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-1.7 0-3 2-3 5.5 0 2.2 1.3 3.5 3 3.5v9"/>'),
     undo: ic('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>'),
@@ -1167,7 +1276,7 @@
 
   // =====================================================================
   //  Estrutura dos dados (versão 5) — pronta para ir para um servidor
-  //  1. Dados da CLÍNICA (iguais em todos os computadores; sobem e descem na sincronização):
+  //  1. Dados da CLÍNICA (iguais em todos os aparelhos; sobem e descem na sincronização):
   //     denteSempre.v1   → { version, clinicId, rev, savedAt, dentists, patients, appointments,
   //                          blocks, lunchDays, types, typeStyles, notes, settings }
   //     denteSempre.logo → a logo (separada só para não regravar a imagem a cada mudança)
@@ -1177,7 +1286,7 @@
   //  3. Dados DESTE COMPUTADOR e de QUEM ESTÁ USANDO (não sobem):
   //     denteSempre.dispositivo → { deviceId, privacy (modo recepção ocupada) }
   //     denteSempre.sessao      → quem entrou (localStorage com "lembrar"; sessionStorage sem)
-  //     denteSempre.activation  → chave deste computador
+  //     denteSempre.activation  → chave deste aparelho
   //     denteSempre.sync        → resumo do que já foi enviado/recebido
   // =====================================================================
   const DATA_VERSION = 5;
@@ -1209,7 +1318,7 @@
     return true;
   }
   const DEVICE_KEY = 'denteSempre.dispositivo';
-  let deviceFresh = false;   // true = não achou os dados deste computador (a cópia automática pode trazer de volta)
+  let deviceFresh = false;   // true = não achou os dados deste aparelho (a cópia automática pode trazer de volta)
   function readDevice() {
     let d = null;
     try { d = JSON.parse(localStorage.getItem(DEVICE_KEY) || 'null'); } catch (e) { d = null; }
@@ -1258,7 +1367,7 @@
       return normalize(null);
     }
     loadedFromStorage = true;
-    // Versão 4: o modo recepção ocupada ficava junto com a clínica. Agora é deste computador.
+    // Versão 4: o modo recepção ocupada ficava junto com a clínica. Agora é deste aparelho.
     if (d.settings && d.settings.privacy === true && !device.privacy) { device.privacy = true; saveDevice(); }
     // A logo fica numa chave própria (para não regravar a imagem a cada mudança)
     try {
@@ -1310,6 +1419,7 @@
     if (d.settings.logoMode !== 'replace') d.settings.logoMode = 'with';
     if (typeof d.settings.lastBackupAt !== 'string') d.settings.lastBackupAt = '';
     if (!d.typeStyles || typeof d.typeStyles !== 'object') d.typeStyles = {};
+    if (!d.replies || typeof d.replies !== 'object' || Array.isArray(d.replies)) d.replies = {};   // respostas dos pacientes pelo link
     if (typeof d.clinicId !== 'string' || !d.clinicId) d.clinicId = uid();   // identifica a clínica no servidor
     d.version = DATA_VERSION;
     return d;
@@ -1341,7 +1451,7 @@
   function save() {
     if (storageProblem) return;   // nunca grava por cima de dados que não foram lidos
     try { persist(); }
-    catch (e) { toast('Não foi possível salvar neste navegador.'); }
+    catch (e) { toast('Não foi possível salvar neste aparelho.'); }
   }
 
   // ---------- Cópia de segurança automática (IndexedDB) ----------
@@ -1374,7 +1484,7 @@
       const tx = conn.transaction(IDB_STORE, 'readwrite');
       tx.objectStore(IDB_STORE).put(rec, 'db');
       tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
-    })).catch(() => { /* sem cópia automática neste navegador: segue só com o localStorage */ })
+    })).catch(() => { /* sem cópia automática neste aparelho: segue só com o localStorage */ })
       .then(() => { mirrorBusy = false; if (mirrorAgain) { mirrorAgain = false; mirrorToIdb(); } });
   }
   function idbRead() {
@@ -1386,7 +1496,7 @@
   }
 
   // A mesma cópia automática guarda também usuários, sessão lembrada, ativação, dados
-  // deste computador e o resumo da sincronização (o navegador às vezes perde o que acabou
+  // deste aparelho e o resumo da sincronização (o navegador às vezes perde o que acabou
   // de gravar no localStorage ao recarregar).
   let sideChecked = false, actTouched = false;
   function keepCopy(key) {
@@ -1578,7 +1688,7 @@
     if (!me) { showLogin('entrar'); return; }
     if (me.mustChange) { showLogin('trocar'); return; }
     hideLogin();
-    // 2. Depois da entrada, a chave: sem ativação neste navegador, só a tela de ativação
+    // 2. Depois da entrada, a chave: sem ativação neste aparelho, só a tela de ativação
     if (!isActivated()) { showLock(); return; }
     hideLock();
     $('#waitScreen').hidden = true;
@@ -1766,10 +1876,14 @@
         const delay = (a.status === 'arrived' && a.delayMinutes > 0)
           ? `<span class="chip chip-late">${a.delayMinutes} min de atraso</span>` : '';
         const fit = a.fit ? `<span class="chip chip-fit" title="Encaixe">${boltSvg}<span class="fit-txt">Encaixe</span></span>` : '';
+        const rp = replyOf(a);
+        const reply = !rp ? '' : rp.tipo === 'confirmado'
+          ? '<span class="chip chip-pc" title="Confirmado pelo paciente">✓<span class="rp-txt"> Confirmado pelo paciente</span></span>'
+          : '<span class="chip chip-pr" title="O paciente pediu para remarcar">↻<span class="rp-txt"> Pediu remarque</span></span>';
         events += `<button class="ev ev-${st.key}${a.fit ? ' fit' : ''}${cls}" style="${style}" data-appt="${a.id}">
           <span class="ev-time">${range}</span>${typeBadge(a.typeName)}
           <span class="ev-name">${esc(p ? p.name : 'Paciente')}</span>
-          <span class="ev-type">${esc(a.typeName)}</span>${fit}${delay}
+          <span class="ev-type">${esc(a.typeName)}</span>${fit}${reply}${delay}
           <span class="ev-status">${esc(st.label)}</span></button>`;
       }
     });
@@ -1801,9 +1915,9 @@
       <span class="sb-item"><i class="sw no_show"></i>Faltas ${c.no_show}</span>
       <span class="sb-item"><i class="sw fit"></i>Encaixes ${fits}</span>
       <span class="sb-spacer"></span>
-      <span class="sb-item sb-right" title="Atalhos de teclado">Atalhos: ${can('agenda.editar') ? '<b>N</b> novo · ' : ''}<b>←</b> <b>→</b> dia · <b>H</b> hoje</span>
+      <span class="sb-item sb-right" title="Atalhos de teclado">Atalhos: ${can('agenda.editar') ? '<b>N</b> novo · ' : ''}<b>←</b> <b>→</b> dia · <b>H</b> hoje · <b>B</b> buscar</span>
       ${can('agenda.editar') ? '<span class="sb-item sb-right">Botão direito: mais opções</span>' : ''}
-      <span class="sb-item sb-right">Dados salvos neste computador</span>`;
+      <span class="sb-item sb-right">Dados salvos neste aparelho</span>`;
   }
 
   function scrollToNow() {
@@ -1876,6 +1990,7 @@
       ? '<div class="menu-sep" role="separator"></div>'
       : `<button type="button" role="menuitem" class="menu-item${it.cls ? ' ' + it.cls : ''}" data-i="${i}" data-act="${it.act || ''}"${it.disabled ? ' disabled' : ''}><span class="mi-icon">${it.icon || ''}</span><span>${esc(it.label)}</span></button>`).join('');
     menu.hidden = false;
+    $('#ctxBackdrop').hidden = false;
     const w = menu.offsetWidth, h = menu.offsetHeight;
     menu.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + 'px';
     menu.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
@@ -1887,7 +2002,7 @@
     const first = $('.menu-item:not([disabled])', menu);
     if (first) first.focus({ preventScroll: true });
   }
-  function closeMenu() { menu.hidden = true; }
+  function closeMenu() { menu.hidden = true; $('#ctxBackdrop').hidden = true; }
 
   menu.addEventListener('keydown', e => {
     const items = $$('.menu-item:not([disabled])', menu);
@@ -2305,7 +2420,7 @@
   }
 
   // Detalhe do horário e ações
-  function openApptModal(id) {
+  function openApptModal(id, opts) {
     const a = getAppt(id);
     if (!a) return;
     const p = getPatient(a.patientId) || { name: 'Paciente', phone: '' };
@@ -2333,10 +2448,16 @@
     }
     // Sem permissão de mudar a agenda: só olha (dentista) ou só WhatsApp
     if (!can('agenda.editar')) actions = can('confirmar') ? '<button class="btn" id="aWa">WhatsApp</button>' : '';
+    // Link para o paciente confirmar ou pedir remarque (precisa do servidor da clínica)
+    if (online() && can('confirmar') && a.status === 'scheduled' && a.date >= todayStr()) {
+      actions = actions.replace('<button class="btn" id="aWa">WhatsApp</button>',
+        '<button class="btn" id="aWa">WhatsApp</button><button class="btn btn-link-pac full" id="aLink">Enviar link para o paciente</button>');
+    }
 
     openModal(`
       <div class="modal-head">
         <div>
+          ${opts && opts.back ? '<button type="button" class="link" id="apBack">‹ Voltar à busca</button>' : ''}
           <div class="eyebrow">${fmtDMY(a.date)} · ${a.start}–${fromMin(end)} · ${a.duration} min</div>
           <h2>${esc(p.name)}</h2>
         </div>${closeX}
@@ -2347,7 +2468,8 @@
         <dt>Dentista</dt><dd>${esc(d.name)}</dd>
         <dt>Telefone</dt><dd>${esc(phoneOut(p.phone))}</dd>
         ${a.status === 'arrived' ? `<dt>Chegou às</dt><dd>${fmtStamp(a.arrivedAt).slice(11)}${a.delayMinutes > 0 ? ` · <span class="pill st-late">${a.delayMinutes} min de atraso</span>` : (a.delayMinutes === 0 ? ' · no horário' : '')}</dd>` : ''}
-        <dt>Agendado em</dt><dd>${fmtStamp(a.scheduledAt)}</dd>
+        ${replyOf(a) ? `<dt>Resposta do paciente</dt><dd><span class="pill ${replyOf(a).tipo === 'confirmado' ? 'st-pc' : 'st-pr'}">${replyText(replyOf(a))}</span> <span class="muted-sm">pelo link · ${fmtStamp(replyOf(a).em)}</span></dd>` : ''}
+        ${a.scheduledAt ? `<dt>Agendado em</dt><dd>${fmtStamp(a.scheduledAt)}</dd>` : ''}
         ${a.editedAt ? `<dt>Editado em</dt><dd>${fmtStamp(a.editedAt)}</dd>` : ''}
       </dl>
       ${can('pacientes.ver') ? quickHistoryHtml(a.patientId, a.id) : ''}
@@ -2358,11 +2480,13 @@
     on('#aMissed', () => markNoShow(a.id));
     on('#aRelease', () => releaseSlot(a.id));
     on('#aWa', () => openWhatsApp(a.id));
+    on('#aLink', () => openPatientLink(a.id));
     on('#aEdit', () => { closeModal(); openApptDrawer({ apptId: a.id }); });
     on('#aDel', () => openDeleteModal(a.id));
     on('#aFitHere', () => { closeModal(); openApptDrawer({ dentistId: a.dentistId, date: a.date, time: a.start, fit: true }); });
     on('#aResched', () => { closeModal(); openApptDrawer({ apptId: a.id, reschedule: true }); });
     on('#qhAll', () => openPatientDetail(a.patientId));
+    if (opts && opts.back) on('#apBack', opts.back);
   }
 
   function markArrived(id) {
@@ -2543,6 +2667,13 @@
   }
 
   // WhatsApp (só monta a mensagem e abre o WhatsApp; quem envia é a recepção)
+  // Resposta do paciente pelo link: só vale se a consulta não mudou de dia/hora depois
+  function replyOf(a) {
+    const r = a && db.replies && db.replies[a.id];
+    return r && r.date === a.date && r.start === a.start && (r.tipo === 'confirmado' || r.tipo === 'remarcar') ? r : null;
+  }
+  const replyText = r => r.tipo === 'confirmado' ? 'Confirmado pelo paciente' : 'Pediu remarque';
+
   function buildMessage(a, p, d) {
     const first = cleanSpaces(p.name).split(' ')[0];
     return `Olá, ${first}. Confirmamos seu horário na clínica dia ${fmtDM(a.date)} às ${a.start}, ${a.typeName}, ${withName(d ? d.name : '')}.`;
@@ -2568,15 +2699,57 @@
         <button type="button" class="btn btn-primary" id="waOpen"${phone ? '' : ' disabled'}>Abrir WhatsApp</button>
       </div>`);
     $('#waBack').onclick = () => openApptModal(id);
-    $('#waOpen').onclick = () => {
-      const text = encodeURIComponent($('#waText').value);
-      // No computador abre o WhatsApp Web; no telefone, o app do WhatsApp
-      const url = (phoneMQ.matches || APP.celular)
-        ? `https://wa.me/${phone}?text=${text}`
-        : `https://web.whatsapp.com/send?phone=${phone}&text=${text}`;
-      abrirExterno(url);
-      closeModal(true);
+    $('#waOpen').onclick = () => { openWa(phone, $('#waText').value); closeModal(true); };
+  }
+
+  // "Enviar link para o paciente": o servidor cria um link só desta consulta; o WhatsApp abre com a mensagem pronta
+  function openPatientLink(id) {
+    if (!allow('confirmar')) return;
+    const a = getAppt(id);
+    if (!a || !online()) return;
+    const p = getPatient(a.patientId) || { name: 'Paciente', phone: '' }, d = getDentist(a.dentistId);
+    const phone = waPhone(p.phone);
+    const head = `<div class="modal-head"><div><div class="eyebrow">Para ${esc(p.name)} · ${esc(phoneOut(p.phone))}</div><h2>Link para o paciente</h2></div>${closeX}</div>`;
+    const fail = msg => {
+      openModal(`${head}<div class="error">${esc(msg)}</div>
+        <div class="modal-foot"><button type="button" class="btn" id="plBack">Voltar</button><button type="button" class="btn btn-primary" id="plRetry">Tentar de novo</button></div>`);
+      $('#plBack').onclick = () => openApptModal(id);
+      $('#plRetry').onclick = () => openPatientLink(id);
     };
+    if (estaOffline()) return fail('Sem internet. O link é criado no servidor: tente de novo quando a conexão voltar.');
+    openModal(`${head}<p class="hint">Criando o link desta consulta…</p>`);
+    // A consulta (e o paciente/dentista) precisam estar no servidor antes do link
+    const precisa = () => pendingChanges().some(c => /^(appointments|patients|dentists|settings):/.test(c.key));
+    (precisa() ? enviarAlteracoes() : Promise.resolve({ ok: true }))
+      .then(r => {
+        if (precisa()) throw new Error((r && r.erro) || 'Esta consulta ainda não foi enviada ao servidor. Sincronize e tente de novo.');
+        return servidorReal.criarLink(a.id);
+      })
+      .then(r => {
+        if (!r || !r.ok || !r.caminho) {
+          if (r && (r.codigo === 'licenca' || r.codigo === 'aparelho')) tratarRecusaLicenca(r);
+          throw new Error((r && r.erro) || 'O servidor não criou o link.');
+        }
+        const url = String(SERVIDOR.url).replace(/\/+$/, '') + r.caminho;
+        const first = cleanSpaces(p.name).split(' ')[0];
+        const clinic = cleanSpaces(db.settings.clinicName) || cleanSpaces(session && session.clinica && session.clinica.nome);
+        const text = `Olá, ${first}! Sua consulta${clinic ? ' na ' + clinic : ''} está marcada para ${parseDate(a.date).toLocaleDateString('pt-BR', { weekday: 'long' })}, ${fmtDM(a.date)}, às ${a.start}${d ? ', ' + withName(d.name) : ''}. Para confirmar ou pedir para remarcar, toque no link: ${url}`;
+        openModal(`${head}
+          <textarea id="plText" rows="5">${esc(text)}</textarea>
+          <p class="hint" style="margin-top:8px">O link mostra só esta consulta (clínica, data, hora, dentista e procedimento). A resposta do paciente aparece aqui na agenda.</p>
+          ${phone ? '' : '<div class="error" style="margin-top:10px">O telefone do paciente parece incompleto. Confira o DDD ou copie o link.</div>'}
+          <div class="modal-foot">
+            <button type="button" class="btn" id="plCopy">Copiar link</button>
+            <button type="button" class="btn btn-primary" id="plOpen"${phone ? '' : ' disabled'}>Abrir WhatsApp</button>
+          </div>`);
+        $('#plOpen').onclick = () => { openWa(phone, $('#plText').value); closeModal(true); toast('Link pronto no WhatsApp. É só tocar em enviar.'); };
+        $('#plCopy').onclick = () => {
+          const done = () => toast('Link copiado.');
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => { $('#plText').select(); toast('Copie o link do texto acima.'); });
+          else { $('#plText').select(); toast('Copie o link do texto acima.'); }
+        };
+      })
+      .catch(e => fail(e && e.message && !/^(Failed to fetch|NetworkError|Load failed)/.test(e.message) ? e.message : 'Sem conexão com o servidor. Tente de novo quando a internet voltar.'));
   }
 
   // Pacientes e histórico
@@ -2585,7 +2758,9 @@
     openModal(`
       <div class="modal-head"><h2>Pacientes</h2>${closeX}</div>
       <input id="plSearch" type="search" autocomplete="off" placeholder="Buscar por nome ou telefone">
+      <button type="button" class="link pl-tosearch" id="plToSearch">${I.search} Buscar consultas por procedimento ou período</button>
       <div class="plist" id="plList"></div>`, true);
+    $('#plToSearch').onclick = () => { const q = $('#plSearch').value.trim(); if (q) searchState.q = q; openSearchModal(); };
     const draw = () => {
       const q = $('#plSearch').value.trim();
       const list = q ? searchPatients(q, 100) : db.patients.slice().sort(byName).slice(0, 100);
@@ -2600,6 +2775,128 @@
     $('#plSearch').oninput = draw;
     draw();
     if (!phoneMQ.matches) $('#plSearch').focus();
+  }
+
+  // ---------- Buscar consultas (por paciente, procedimento ou período) ----------
+  // Usa só os dados deste aparelho: funciona sem internet. O dentista só acha as consultas da agenda dele.
+  const searchState = { q: '', period: 'all', from: '', to: '', status: '', dentist: '' };
+  const SEARCH_PERIODS = [['all', 'Todo o período'], ['today', 'Hoje'], ['next7', 'Próximos 7 dias'], ['next30', 'Próximos 30 dias'],
+    ['last30', 'Últimos 30 dias'], ['month', 'Este mês'], ['lastmonth', 'Mês passado'], ['year', 'Este ano'], ['custom', 'Escolher datas…']];
+  const SEARCH_STATUS = [['', 'Todas as situações'], ['scheduled', 'Agendado'], ['late', 'Atrasado / sem registro'], ['arrived', 'Chegou'],
+    ['no_show', 'Faltou'], ['confirmado', 'Confirmado pelo paciente'], ['remarcar', 'Pediu remarque']];
+  const SEARCH_MAX = 200;
+  function searchPeriodRange(s) {
+    const t = todayStr(), d = parseDate(t), y = d.getFullYear(), m = d.getMonth();
+    const first = (yy, mm) => dateStr(new Date(yy, mm, 1));
+    switch (s.period) {
+      case 'today': return [t, t];
+      case 'next7': return [t, addDays(t, 6)];
+      case 'next30': return [t, addDays(t, 29)];
+      case 'last30': return [addDays(t, -29), t];
+      case 'month': return [first(y, m), addDays(first(y, m + 1), -1)];
+      case 'lastmonth': return [first(y, m - 1), addDays(first(y, m), -1)];
+      case 'year': return [`${y}-01-01`, `${y}-12-31`];
+      case 'custom': return [s.from || '0000-01-01', s.to || '9999-12-31'];
+      default: return ['0000-01-01', '9999-12-31'];
+    }
+  }
+  function searchAppointments(s) {
+    const me = currentUser();
+    if (!me) return [];
+    let onlyD = s.dentist || '';
+    if (me.role === 'dentista') { if (!me.dentistId) return []; onlyD = me.dentistId; }   // dentista: só a própria agenda
+    const [from, to] = searchPeriodRange(s);
+    const q = String(s.q || '');
+    const words = norm(q).split(' ').filter(Boolean);
+    const qd = digits(q);
+    const byPhone = !/[a-zà-ú]/i.test(q) && qd.length >= 3 && can('pacientes.ver') && !isPrivate();
+    return db.appointments.filter(a => {
+      if (a.status === 'deleted') return false;
+      if (onlyD && a.dentistId !== onlyD) return false;
+      if (a.date < from || a.date > to) return false;
+      if (s.status === 'confirmado' || s.status === 'remarcar') { const r = replyOf(a); if (!r || r.tipo !== s.status) return false; }
+      else if (s.status && statusInfo(a).key !== s.status) return false;
+      if (!words.length) return true;
+      const p = getPatient(a.patientId);
+      if (byPhone) return digits(p && p.phone).includes(qd);
+      const hay = norm((p ? p.name : '') + ' ' + (a.typeName || ''));
+      return words.every(w => hay.includes(w));
+    }).sort((x, y) => (y.date + y.start).localeCompare(x.date + x.start));
+  }
+  function openSearchModal() {
+    if (!currentUser()) return;
+    closeMenu();
+    const me = currentUser(), s = searchState;
+    const showDentist = me.role !== 'dentista' && db.dentists.length > 1;
+    if (!showDentist) s.dentist = '';
+    const opt = (list, v) => list.map(([k, t]) => `<option value="${k}"${k === v ? ' selected' : ''}>${esc(t)}</option>`).join('');
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">${me.role === 'dentista' ? 'Só a sua agenda' : 'Todas as agendas'} · funciona sem internet</div><h2>Buscar consultas</h2></div>${closeX}</div>
+      <div class="sr-qwrap"><input id="srQ" type="search" autocomplete="off" enterkeyhint="search" aria-label="Buscar consultas" placeholder="Nome do paciente ou procedimento" value="${esc(s.q)}"></div>
+      <div class="filters sr-filters">
+        <label class="field"><span class="label">Período</span><select id="srPeriod">${opt(SEARCH_PERIODS, s.period)}</select></label>
+        <label class="field"><span class="label">Situação</span><select id="srStatus">${opt(SEARCH_STATUS, s.status)}</select></label>
+        ${showDentist ? `<label class="field"><span class="label">Dentista</span><select id="srDentist"><option value="">Todos os dentistas</option>${db.dentists.slice().sort(byName).map(d => `<option value="${d.id}"${d.id === s.dentist ? ' selected' : ''}>${esc(d.name)}${isActiveDentist(d) ? '' : ' (inativo)'}</option>`).join('')}</select></label>` : ''}
+      </div>
+      <div class="filters sr-dates" id="srDates"${s.period === 'custom' ? '' : ' hidden'}>
+        <label class="field"><span class="label">De</span><input type="date" id="srFrom" value="${s.from}"></label>
+        <label class="field"><span class="label">Até</span><input type="date" id="srTo" value="${s.to}"></label>
+      </div>
+      <div class="sr-count" id="srCount" role="status"></div>
+      <div class="sr-list" id="srList"></div>`, true);
+    const draw = () => {
+      const empty = !s.q.trim() && s.period === 'all' && !s.status && !s.dentist;
+      if (empty) {
+        $('#srCount').textContent = '';
+        $('#srList').innerHTML = '<p class="muted sr-hint">Digite o nome do paciente ou o procedimento (ex.: limpeza, canal), ou escolha um período ou uma situação.</p>';
+        return;
+      }
+      const list = searchAppointments(s);
+      const n = list.length;
+      $('#srCount').textContent = !n ? '' : n > SEARCH_MAX ? `Mostrando ${SEARCH_MAX} de ${n} consultas. Refine a busca para ver menos.` : `${n} ${n === 1 ? 'consulta' : 'consultas'}`;
+      $('#srList').innerHTML = n ? list.slice(0, SEARCH_MAX).map(a => {
+        const p = getPatient(a.patientId), d = getDentist(a.dentistId), st = statusInfo(a), r = replyOf(a);
+        const wd = parseDate(a.date).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+        return `<div class="sr-item">
+          <button type="button" class="sr-main" data-sr="${a.id}">
+            <span class="sr-when"><b>${fmtDMY(a.date)}</b> ${esc(wd)} · ${a.start}–${fromMin(toMin(a.start) + a.duration)}</span>
+            <span class="sr-name">${esc(p ? p.name : 'Paciente')}${a.fit ? ' <span class="chip chip-fit">Encaixe</span>' : ''}</span>
+            <span class="sr-sub">${esc(a.typeName || '')}${d ? ' · ' + esc(d.name) : ''}</span>
+            <span class="sr-pills"><span class="pill st-${st.key}">${esc(st.label)}</span>${r ? `<span class="pill ${r.tipo === 'confirmado' ? 'st-pc' : 'st-pr'}">${replyText(r)}</span>` : ''}</span>
+          </button>
+          <button type="button" class="btn btn-small sr-day" data-srday="${a.id}" title="Abrir este dia na agenda">${I.today}<span>Ver no dia</span></button>
+        </div>`;
+      }).join('') : '<p class="muted sr-hint">Nenhuma consulta encontrada. Confira o texto ou aumente o período.</p>';
+      $$('[data-sr]', $('#srList')).forEach(b => b.onclick = () => openApptModal(b.dataset.sr, { back: openSearchModal }));
+      $$('[data-srday]', $('#srList')).forEach(b => b.onclick = () => showApptInAgenda(b.dataset.srday));
+    };
+    $('#srQ').oninput = e => { s.q = e.target.value; draw(); };
+    $('#srQ').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
+    $('#srPeriod').onchange = e => { s.period = e.target.value; $('#srDates').hidden = s.period !== 'custom'; draw(); };
+    $('#srStatus').onchange = e => { s.status = e.target.value; draw(); };
+    if ($('#srDentist')) $('#srDentist').onchange = e => { s.dentist = e.target.value; draw(); };
+    $('#srFrom').onchange = e => { s.from = e.target.value; draw(); };
+    $('#srTo').onchange = e => { s.to = e.target.value; draw(); };
+    draw();
+    if (!phoneMQ.matches) { $('#srQ').focus(); $('#srQ').select(); }
+  }
+  // "Ver no dia": fecha a busca, abre o dia e o dentista da consulta e destaca o cartão
+  function showApptInAgenda(id) {
+    const a = getAppt(id);
+    if (!a) return;
+    closeModal(true);
+    const me = currentUser();
+    if (!(me && me.role === 'dentista')) state.dentistId = a.dentistId;
+    goToDate(a.date);
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.ev[data-appt="${CSS.escape(a.id)}"]`);
+      if (!el) return;
+      const box = $('#agendaScroll');
+      if (box.scrollHeight > box.clientHeight + 2) box.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - box.clientHeight / 3), behavior: 'smooth' });
+      else window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight / 3), behavior: 'smooth' });
+      el.classList.add('ev-flash');
+      setTimeout(() => el.classList.remove('ev-flash'), 2600);
+    });
   }
 
   function openPatientDetail(id) {
@@ -3018,7 +3315,7 @@
     const draft = { name: db.settings.clinicName, accent: db.settings.accent, logo: db.settings.logo, logoMode: db.settings.logoMode };
     const isPreset = ACCENT_PRESETS.some(([c]) => c === draft.accent);
     openModal(`
-      <div class="modal-head"><div><div class="eyebrow">Fica salvo neste navegador</div><h2>Personalizar a clínica</h2></div>${closeX}</div>
+      <div class="modal-head"><div><div class="eyebrow">${online() ? 'Vale para todos os aparelhos da clínica' : 'Fica salvo neste aparelho'}</div><h2>Personalizar a clínica</h2></div>${closeX}</div>
       <form id="pzForm" novalidate>
         <div class="pz">
           <div>
@@ -3112,7 +3409,7 @@
       try { if (storageProblem) throw new Error('bloqueado'); persist(); }
       catch (x) {
         Object.assign(db.settings, prev);   // não coube no navegador: desfaz
-        $('#pzLogoErr').textContent = 'Não coube no navegador. Tente uma imagem menor.'; $('#pzLogoErr').hidden = false;
+        $('#pzLogoErr').textContent = 'A imagem é grande demais para guardar. Tente uma imagem menor.'; $('#pzLogoErr').hidden = false;
         return;
       }
       applyTheme(); renderClinic(); closeModal(true);
@@ -3277,13 +3574,13 @@
     const renovar = !!(p && ['renovar', 'bloqueada', 'relogio'].includes(p.tipo));
     $('#actTitle').textContent = renovar ? (p.tipo === 'bloqueada' ? 'Uso bloqueado' : 'Confirmar a licença') : 'Ativar o programa';
     $('#actLead').textContent = renovar ? p.texto
-      : (online() ? 'Digite a chave de ativação da clínica para usar o Dente Sempre neste aparelho. Só nesta hora precisa de internet.' : 'Digite a chave de acesso para usar o Dente Sempre neste computador.');
+      : (online() ? 'Digite a chave de ativação da clínica para usar o Dente Sempre neste aparelho. Só nesta hora precisa de internet.' : 'Digite a chave de acesso para usar o Dente Sempre neste aparelho.');
     $('#actKeyRow').hidden = renovar;
     $('#actGo').hidden = renovar;
     $('#actRenew').hidden = !renovar;
     $('#actHint').textContent = online()
       ? 'A chave fica com o administrador da clínica (DSEM-XXXX-XXXX-XXXX). Cada aparelho ativado conta no limite do plano.'
-      : 'A chave tem 16 letras e números e não usa O, I, 0 nem 1. Depois de ativado, não pede de novo neste navegador. Não precisa de internet.';
+      : 'A chave tem 16 letras e números e não usa O, I, 0 nem 1. Depois de ativado, não pede de novo neste aparelho. Não precisa de internet.';
     if (p && !renovar && p.texto) { $('#actError').textContent = p.texto; $('#actError').hidden = false; }
   }
 
@@ -3328,13 +3625,13 @@
       const now = new Date().toISOString();
       if (v.modo !== 'online') {
         try { localStorage.setItem(ACT_STORE, JSON.stringify({ key: r.key, activatedAt: now, mode: v.modo, checkedAt: null })); }
-        catch (x) { $('#actError').textContent = 'Este navegador não deixou salvar a ativação (modo anônimo?).'; $('#actError').hidden = false; return; }
+        catch (x) { $('#actError').textContent = 'Não consegui salvar a ativação neste aparelho (sem espaço ou armazenamento bloqueado).'; $('#actError').hidden = false; return; }
         actTouched = true; keepCopy(ACT_STORE);
       }
       $('#actKey').value = '';
       render();
       setTimeout(scrollToNow, 200);
-      toast(online() ? 'Aparelho ativado.' : 'Programa ativado neste navegador.');
+      toast(online() ? 'Aparelho ativado.' : 'Programa ativado neste aparelho.');
       autoSync();   // com servidor real: já traz a agenda da clínica
     });
   });
@@ -3357,15 +3654,15 @@
     const isOnline = a.mode === 'online';
     openModal(`
       <div class="modal-head"><h2>Ativação</h2>${closeX}</div>
-      <div class="act-ok">Ativado neste navegador.</div>
+      <div class="act-ok">Ativado neste aparelho.</div>
       <dl class="facts">
         <dt>Chave</dt><dd style="font-family:Consolas,monospace">${maskKey(a.key)}</dd>
         <dt>Ativado em</dt><dd>${fmtStamp(a.activatedAt)}</dd>
         <dt>Situação</dt><dd id="actMode"><span class="pill ${isOnline ? 'st-arrived' : 'st-scheduled'}">${isOnline ? 'Online' : 'Local'}</span>
-          ${isOnline ? `conferida pelo servidor${a.checkedAt ? ' em ' + fmtStamp(a.checkedAt) : ''}` : 'conferida neste computador, sem servidor'}</dd>
+          ${isOnline ? `conferida pelo servidor${a.checkedAt ? ' em ' + fmtStamp(a.checkedAt) : ''}` : 'conferida neste aparelho, sem servidor'}</dd>
       </dl>
       ${isOnline ? '' : '<p class="hint">Quando o servidor da clínica existir, a chave passa a ser conferida online e a situação muda para “Online”. As chaves atuais continuam valendo.</p>'}
-      <div class="modal-foot"><button type="button" class="btn" data-close-modal>Fechar</button>${can('ativacao.desativar') ? '<button type="button" class="btn btn-danger" id="actOff">Desativar este computador…</button>' : ''}</div>`);
+      <div class="modal-foot"><button type="button" class="btn" data-close-modal>Fechar</button>${can('ativacao.desativar') ? '<button type="button" class="btn btn-danger" id="actOff">Desativar este aparelho…</button>' : ''}</div>`);
     const off = $('#actOff');
     if (off) off.onclick = openDeactivateDialog;
   }
@@ -3409,7 +3706,7 @@
     const remind = backupReminder();
     openModal(`
       <div class="modal-head"><h2>Sair</h2>${closeX}</div>
-      <p>Encerra a sessão de <b>${esc(u.name)}</b> e volta para a tela de entrada. Os dados continuam salvos neste computador.</p>
+      <p>Encerra a sessão de <b>${esc(u.name)}</b> e volta para a tela de entrada. Os dados continuam salvos neste aparelho.</p>
       ${remind}
       <div class="modal-foot">
         <button type="button" class="btn" data-close-modal>Cancelar</button>
@@ -3431,14 +3728,14 @@
     endSession();
     closeModal(true); closeDrawer(); closeMenu(); closeBaseMenu();
     render();
-    toast(msg || 'Sessão encerrada. Os dados continuam salvos neste computador.');
+    toast(msg || 'Sessão encerrada. Os dados continuam salvos neste aparelho.');
   }
   // Desativar a chave: só o administrador (Configurações → Ativação)
   function openDeactivateDialog() {
     if (!isActivated() || !allow('ativacao.desativar')) return;
     openModal(`
-      <div class="modal-head"><h2>Desativar este computador</h2>${closeX}</div>
-      <p>O programa volta para a tela de chave neste computador. Os dados continuam salvos aqui.</p>
+      <div class="modal-head"><h2>Desativar este aparelho</h2>${closeX}</div>
+      <p>O programa volta para a tela de chave neste aparelho. Os dados continuam salvos aqui.</p>
       ${backupReminder()}
       <div class="modal-foot">
         <button type="button" class="btn" data-close-modal>Cancelar</button>
@@ -3460,15 +3757,15 @@
   // =====================================================================
   //  FASE ONLINE — conversa com o servidor
   //  Tudo o que fala com o servidor passa por servidor(). Enquanto SERVIDOR.url
-  //  estiver vazio, usa um servidor SIMULADO guardado neste navegador, só para
-  //  o fluxo funcionar e ser testado. Nada sai deste computador.
+  //  estiver vazio, usa um servidor SIMULADO guardado neste aparelho, só para
+  //  o fluxo funcionar e ser testado. Nada sai deste aparelho.
   //  Para ligar o servidor real: preencher SERVIDOR.url e criar as rotas
   //  descritas em servidorReal (todas recebem e devolvem JSON).
   // =====================================================================
   // >>> LIGAR O SERVIDOR REAL <<<
   //  Nos aplicativos, esta linha é preenchida sozinha pelo app/preparar.js
   //  (endereço do servidor e chave pública da licença, de app/config.json).
-  //  Vazio ('') = servidor simulado neste navegador (só para testar o programa).
+  //  Vazio ('') = servidor simulado neste aparelho (só para testar o programa).
   const SERVIDOR = { url: '', chavePublica: '' };
   const online = () => !!SERVIDOR.url;
 
@@ -3489,7 +3786,7 @@
   // Cada alteração recebe um número (rev) que só cresce; quem recebe pede "tudo depois do número X".
   const FAKE_SERVER_KEY = 'denteSempre.servidorSimulado';
   const servidorSimulado = {
-    nome: 'Simulado neste navegador',
+    nome: 'Simulado neste aparelho',
     ler() { try { return JSON.parse(localStorage.getItem(FAKE_SERVER_KEY) || 'null'); } catch (e) { return null; } },
     enviar(pacote) {
       return new Promise((resolve, reject) => {
@@ -3557,7 +3854,8 @@
     ativar(chave, info) { return servidorReal.chamar('/api/ativacao', Object.assign({ chave }, info)); },
     enviar(pacote) { return servidorReal.chamar('/api/sync/enviar', pacote); },
     receber(pedido) { return servidorReal.chamar('/api/sync/receber', pedido); },
-    backup(pacote) { return servidorReal.chamar('/api/backup', pacote); }
+    backup(pacote) { return servidorReal.chamar('/api/backup', pacote); },
+    criarLink(apptId) { return servidorReal.chamar('/api/link/criar', { deviceId: device.deviceId, apptId }); }
   };
   const servidor = () => online() ? servidorReal : servidorSimulado;
 
@@ -3581,7 +3879,7 @@
 
   // =====================================================================
   //  Usuários, entrada (login) e permissões
-  //  Hoje a senha é conferida neste computador, mas no mesmo formato que o
+  //  Hoje a senha é conferida neste aparelho, mas no mesmo formato que o
   //  servidor vai usar: pedido { login, senha } → resposta
   //  { ok, usuario: { id, login, name, role, dentistId }, token, trocarSenha }.
   //  A senha nunca é guardada: só um resumo (hash SHA-256 repetido, com "sal").
@@ -3679,7 +3977,7 @@
   function saveUsers() {
     users.rev = (users.rev || 0) + 1;
     try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
-    catch (e) { toast('Não foi possível salvar os usuários neste navegador.'); }
+    catch (e) { toast('Não foi possível salvar os usuários neste aparelho.'); }
     keepCopy(USERS_KEY);
   }
   function readSession() {
@@ -3789,7 +4087,7 @@
       startedAt: new Date().toISOString(), deviceId: device.deviceId, clinica: r.clinica || null, offline: !!r.offline };
     if (r.clinica && r.clinica.codigo && device.clinica !== r.clinica.codigo) { device.clinica = r.clinica.codigo; saveDevice(); }
     const json = JSON.stringify(session);
-    // "Lembrar neste computador": fica no localStorage. Sem marcar: só até fechar o navegador.
+    // "Lembrar neste aparelho": fica no localStorage. Sem marcar: só até fechar o navegador.
     try { (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, json); } catch (e) { /* vale enquanto a página estiver aberta */ }
     try { (remember ? sessionStorage : localStorage).removeItem(SESSION_KEY); } catch (e) { /* nada */ }
     sessionTouched = true;
@@ -4090,8 +4388,8 @@
   function showWaitScreen(kind) {
     const me = currentUser();
     $('#wsText').innerHTML = kind === 'dentist'
-      ? `<p>O usuário <b>${esc(me.login)}</b> ainda não está ligado a uma agenda de dentista neste computador.</p><p class="hint">Se a agenda está em outro computador, receba do servidor. Se não, peça ao administrador para ligar o seu usuário a um dentista em Usuários e senhas.</p>`
-      : '<p>Ainda não há dentistas cadastrados neste computador.</p><p class="hint">Se a clínica já usa o Dente Sempre em outro computador, receba a agenda do servidor. Se é o começo, peça ao administrador para cadastrar os dentistas.</p>';
+      ? `<p>O usuário <b>${esc(me.login)}</b> ainda não está ligado a uma agenda de dentista neste aparelho.</p><p class="hint">Se a agenda está em outro aparelho, receba do servidor. Se não, peça ao administrador para ligar o seu usuário a um dentista em Usuários e senhas.</p>`
+      : '<p>Ainda não há dentistas cadastrados neste aparelho.</p><p class="hint">Se a clínica já usa o Dente Sempre em outro aparelho, receba a agenda do servidor. Se é o começo, peça ao administrador para cadastrar os dentistas.</p>';
     $('#firstUse').hidden = true;
     $('#waitScreen').hidden = false;
   }
@@ -4105,15 +4403,15 @@
   //  O QUE SOBE E DESCE: agenda (consultas, encaixes, bloqueios, almoço do dia),
   //  pacientes, dentistas, configurações da clínica e anotações.
   //  NÃO SOBE: usuários/senhas, modo recepção ocupada, ativação, sessão e a data
-  //  do último backup deste computador.
+  //  do último backup deste aparelho.
   //  Como sabe o que mudou: guarda um resumo (hash) de cada registro do jeito que
   //  foi enviado/recebido pela última vez. Registro com resumo diferente = pendente.
-  //  Mesmo registro mudado aqui e em outro computador: vale o daqui (vai no próximo
+  //  Mesmo registro mudado aqui e em outro aparelho: vale o daqui (vai no próximo
   //  envio) — a última alteração enviada vence, registro por registro.
   // =====================================================================
   const SYNC_KEY = 'denteSempre.sync';
   const SYNC_AREAS = [
-    { id: 'agenda', label: 'Agenda', sub: 'Consultas, encaixes, bloqueios e almoço do dia', parts: ['appointments', 'blocks', 'lunchDays'] },
+    { id: 'agenda', label: 'Agenda', sub: 'Consultas, encaixes, bloqueios e almoço do dia', parts: ['appointments', 'blocks', 'lunchDays', 'replies'] },
     { id: 'pacientes', label: 'Pacientes', sub: 'Cadastro dos pacientes', parts: ['patients'] },
     { id: 'dentistas', label: 'Dentistas', sub: 'Cadastro, expediente e almoço padrão', parts: ['dentists'] },
     { id: 'configuracoes', label: 'Configurações da clínica', sub: 'Nome, cor, logo e tipos de consulta', parts: ['settings', 'types', 'typeStyles'] },
@@ -4121,7 +4419,7 @@
   ];
   const PART_AREA = {};
   SYNC_AREAS.forEach(a => a.parts.forEach(p => { PART_AREA[p] = a.id; }));
-  const CLINIC_SETTINGS = ['clinicName', 'accent', 'logo', 'logoMode'];   // lastBackupAt é deste computador
+  const CLINIC_SETTINGS = ['clinicName', 'accent', 'logo', 'logoMode'];   // lastBackupAt é deste aparelho
   const LIST_PARTS = ['appointments', 'blocks', 'patients', 'dentists'];
 
   // Os dados da clínica cortados em registros: "parte:id" → conteúdo
@@ -4130,6 +4428,7 @@
     LIST_PARTS.forEach(p => d[p].forEach(x => { out[p + ':' + x.id] = x; }));
     Object.keys(d.lunchDays).forEach(k => { out['lunchDays:' + k] = d.lunchDays[k]; });
     Object.keys(d.notes.days).forEach(k => { out['notesDays:' + k] = d.notes.days[k]; });
+    Object.keys(d.replies || {}).forEach(k => { out['replies:' + k] = d.replies[k]; });
     if (d.notes.general) out['notesGeneral:geral'] = d.notes.general;
     const s = {};
     CLINIC_SETTINGS.forEach(k => { s[k] = d.settings[k]; });
@@ -4206,8 +4505,11 @@
     bar.hidden = !(estaOffline() && currentUser());
     if (!bar.hidden) {
       const n = syncInfo.total;
-      $('#offlineTxt').textContent = 'Pode continuar usando: agenda, pacientes, chegou e faltou ficam salvos neste aparelho.' +
-        (n ? ` ${n} ${n === 1 ? 'alteração espera' : 'alterações esperam'} para ir ao servidor.` : ' Nada esperando para enviar.');
+      $('#offlineTxt').textContent = phoneMQ.matches
+        ? 'Pode continuar usando: tudo fica salvo aqui.' + (n ? ` ${n} ${n === 1 ? 'alteração espera' : 'alterações esperam'} envio.` : '')
+        : 'Pode continuar usando: agenda, pacientes, chegou e faltou ficam salvos neste aparelho.' +
+          (n ? ` ${n} ${n === 1 ? 'alteração espera' : 'alterações esperam'} para ir ao servidor.` : ' Nada esperando para enviar.');
+      $('#offlineVer').textContent = phoneMQ.matches ? 'Ver pendentes' : 'Ver o que está pendente';
     }
   }
 
@@ -4229,7 +4531,7 @@
     if (e && (e.message === 'licenca' || e.message === 'aparelho')) tratarRecusaLicenca({ codigo: e.message, erro: e.texto });
     const msg = {
       'outra-clinica': 'O servidor tem a agenda de outra clínica. Nada foi mudado.',
-      'sem-espaco': 'Sem espaço para guardar no servidor simulado deste navegador.'
+      'sem-espaco': 'Sem espaço para guardar no servidor simulado deste aparelho.'
     }[e && e.message] || (e && e.texto) || 'Não foi possível falar com o servidor. Tente de novo.';
     syncState.error = msg;
     saveSyncState();
@@ -4241,9 +4543,9 @@
 
   // ENVIAR ALTERAÇÕES: manda para o servidor o que mudou aqui desde o último envio
   // Depois de restaurar um backup, nada sobe nem desce até o administrador confirmar
-  const RESTORE_WAIT = 'Há um backup restaurado neste computador esperando a confirmação do administrador. Nada foi enviado nem recebido.';
+  const RESTORE_WAIT = 'Há um backup restaurado neste aparelho esperando a confirmação do administrador. Nada foi enviado nem recebido.';
   function enviarAlteracoes(opts) {
-    if (storageProblem) return Promise.resolve({ ok: false, erro: 'Os dados deste computador não foram lidos. Nada foi enviado.' });
+    if (storageProblem) return Promise.resolve({ ok: false, erro: 'Os dados deste aparelho não foram lidos. Nada foi enviado.' });
     if (!can('sync')) return Promise.resolve({ ok: false, erro: 'Seu usuário não tem permissão para isso.' });
     if (!can('sync.enviar')) return Promise.resolve({ ok: true, enviadas: 0, somenteLeitura: true });   // dentista não muda nada
     const replacing = !!syncState.restored;
@@ -4279,7 +4581,7 @@
 
   // RECEBER ALTERAÇÕES: traz do servidor o que outros computadores mudaram
   function receberAlteracoes() {
-    if (storageProblem) return Promise.resolve({ ok: false, erro: 'Os dados deste computador não foram lidos. Nada foi recebido.' });
+    if (storageProblem) return Promise.resolve({ ok: false, erro: 'Os dados deste aparelho não foram lidos. Nada foi recebido.' });
     if (!can('sync')) return Promise.resolve({ ok: false, erro: 'Seu usuário não tem permissão para isso.' });
     if (syncState.restored) return Promise.resolve({ ok: false, restaurado: true, erro: RESTORE_WAIT });
     flushNote();
@@ -4298,14 +4600,14 @@
       }
       let adopted = false;
       if (r.clinicId && r.clinicId !== db.clinicId) {
-        // Computador novo, ainda vazio: passa a ser da clínica do servidor
+        // Aparelho novo, ainda vazio: passa a ser da clínica do servidor
         if (clinicIsEmpty() && !syncState.serverRev) { db.clinicId = r.clinicId; adopted = true; }
         else throw new Error('outra-clinica');
       }
       const cur = syncRecords(db), base = syncState.base;
       // Computador que nunca sincronizou e está vazio: tudo o que vem do servidor vale
       const fresh = !syncState.serverRev && !Object.keys(base).length && clinicIsEmpty();
-      const applied = [];
+      const applied = [], novasRespostas = [];
       let kept = 0;
       r.changes.forEach(c => {
         if (c.by === device.deviceId) return;   // é o que este computador mesmo mandou
@@ -4316,6 +4618,7 @@
         applyRemote(c);
         if (c.op === 'apagar') delete base[c.key];
         applied.push(c.key);
+        if (c.by === 'paciente' && c.op === 'salvar' && c.data) novasRespostas.push(c.data);
       });
       syncState.serverRev = r.rev || syncState.serverRev;
       if ((skipped || !seeNotes) && typeof syncState.skipFrom !== 'number') syncState.skipFrom = desde;
@@ -4331,6 +4634,7 @@
         state.lastDate = null;
         applyTheme(); renderClinic(); render();
       }
+      avisarRespostas(novasRespostas);
       saveSyncState();
       refreshSync();
       return { ok: true, recebidas: applied.length, mantidas: kept };
@@ -4361,7 +4665,18 @@
     if (part === 'lunchDays') return `Almoço do dia · ${fmtDM(id.slice(id.lastIndexOf('|') + 1))}`;
     if (part === 'notesDays') return `Anotação do dia · ${fmtDM(id)}`;
     if (part === 'notesGeneral') return 'Anotações da recepção';
+    if (part === 'replies') return 'Resposta do paciente';
     return 'Configurações da clínica';
+  }
+  // Chegou resposta de paciente pelo link: avisa a recepção
+  function avisarRespostas(lista) {
+    if (!lista.length || !can('confirmar')) return;
+    const txt = lista.map(r => {
+      const a = getAppt(r.apptId), p = a && getPatient(a.patientId);
+      if (!a || !p || !replyOf(a)) return '';
+      return `${cleanSpaces(p.name).split(' ')[0]} ${r.tipo === 'confirmado' ? 'confirmou' : 'pediu para remarcar'} (${fmtDM(a.date)} ${a.start})`;
+    }).filter(Boolean);
+    if (txt.length) toast(txt.length === 1 ? 'Resposta do paciente: ' + txt[0] + '.' : `${txt.length} respostas de pacientes: ` + txt.join('; ') + '.');
   }
   function applyRemote(c) {
     const i = c.key.indexOf(':'), part = c.key.slice(0, i), id = c.key.slice(i + 1);
@@ -4374,6 +4689,7 @@
       else arr.push(v);
     } else if (part === 'lunchDays') { if (del) delete db.lunchDays[id]; else db.lunchDays[id] = v; }
     else if (part === 'notesDays') { if (del) delete db.notes.days[id]; else db.notes.days[id] = v; }
+    else if (part === 'replies') { if (del) delete db.replies[id]; else db.replies[id] = v; }
     else if (part === 'notesGeneral') db.notes.general = del ? '' : String(v);
     else if (part === 'settings' && !del) CLINIC_SETTINGS.forEach(k => { if (k in v) db.settings[k] = v[k]; });
     else if (part === 'types' && !del) db.types = v;
@@ -4404,11 +4720,11 @@
       restaurado: rs ? `Backup restaurado em ${fmtStamp(rs.at)}${rs.fileName ? ` (${esc(rs.fileName)})` : ''}. Nada sobe nem desce até o administrador decidir.` : ''
     }[st];
     openModal(`
-      <div class="modal-head"><div><div class="eyebrow">Vários computadores e celulares</div><h2>Sincronização</h2></div>${closeX}</div>
+      <div class="modal-head"><div><div class="eyebrow">Computadores e celulares</div><h2>Sincronização</h2></div>${closeX}</div>
       <div class="sy-state" data-state="${st}" id="syState"><i class="sync-dot"></i><b>${esc(syncLabel())}</b>
         <span>${stText}</span></div>
       <dl class="facts">
-        <dt>Servidor</dt><dd id="syServer">${online() ? esc(servidor().nome) : 'Simulado neste navegador (o servidor real ainda não existe; nada sai deste computador)'}</dd>
+        <dt>Servidor</dt><dd id="syServer">${online() ? esc(servidor().nome) : 'Simulado neste aparelho (sem servidor configurado; nada sai daqui)'}</dd>
         <dt>Automática</dt><dd id="syAuto">${online() ? `Ligada: recebe a cada ${AUTO_RECEIVE_MS / 1000} segundos e envia logo depois de cada mudança` : 'Liga sozinha quando existir o servidor real. Por enquanto, use os botões.'}</dd>
         <dt>Último envio</dt><dd>${s.lastSentAt ? fmtStamp(s.lastSentAt) : 'nunca'}</dd>
         <dt>Último recebimento</dt><dd>${s.lastReceivedAt ? fmtStamp(s.lastReceivedAt) : 'nunca'}</dd>
@@ -4418,9 +4734,9 @@
       <h3>O que sobe e desce</h3>
       <ul class="sy-areas" id="syAreas">${SYNC_AREAS.map(a => { const n = syncInfo.byArea[a.id] || 0; return `<li data-area="${a.id}"><span><b>${a.label}</b><small>${a.sub}</small></span>
         <span class="pill ${n ? 'st-late' : 'st-arrived'}">${n ? n + (n === 1 ? ' pendente' : ' pendentes') : 'Em dia'}</span></li>`; }).join('')}</ul>
-      <p class="hint">Não sobem: usuários e senhas, modo recepção ocupada, ativação e a data do último backup deste computador.</p>
+      <p class="hint">Não sobem: usuários e senhas, modo recepção ocupada, ativação e a data do último backup deste aparelho.</p>
       ${rs ? (can('backup.restaurar')
-        ? '<div class="error" id="syRestoreWarn">Enviar o backup restaurado deixa o servidor igual ao backup e <b>apaga o que veio depois em todos os computadores</b>.</div>'
+        ? '<div class="error" id="syRestoreWarn">Enviar o backup restaurado deixa o servidor igual ao backup e <b>apaga o que veio depois em todos os aparelhos</b>.</div>'
         : '<p class="hint" id="syRestoreWarn">Só o administrador pode decidir o que fazer com o backup restaurado.</p>') : ''}
       <div class="modal-foot sy-foot">
         <button type="button" class="btn" id="syReceive"${rs ? ' disabled' : ''}>Receber alterações</button>
@@ -4446,14 +4762,14 @@
     const r = syncState.restored;
     openModal(`
       <div class="modal-head"><div><div class="eyebrow">Backup restaurado</div><h2>Enviar o backup para todos</h2></div>${closeX}</div>
-      <div class="error" id="rcWarn"><b>Atenção:</b> o servidor vai ficar igual a este backup. Tudo o que foi feito depois dele (consultas, pacientes, anotações e outras mudanças) vai ser <b>apagado em todos os computadores e celulares da clínica</b>. Não dá para desfazer.</div>
+      <div class="error" id="rcWarn"><b>Atenção:</b> o servidor vai ficar igual a este backup. Tudo o que foi feito depois dele (consultas, pacientes, anotações e outras mudanças) vai ser <b>apagado em todos os aparelhos e celulares da clínica</b>. Não dá para desfazer.</div>
       <dl class="facts">
         ${r.fileName ? `<dt>Arquivo</dt><dd class="bk-file">${esc(r.fileName)}</dd>` : ''}
         <dt>Backup feito em</dt><dd>${r.backupAt ? fmtStamp(r.backupAt) : 'data não informada no arquivo'}</dd>
         <dt>Restaurado em</dt><dd>${fmtStamp(r.at)}</dd>
         <dt>Vai para o servidor</dt><dd>${countText(db)}</dd>
       </dl>
-      <p class="hint">Se outro computador estiver com a agenda mais nova, exporte um backup dele antes.</p>
+      <p class="hint">Se outro aparelho estiver com a agenda mais nova, exporte um backup dele antes.</p>
       <label class="field"><span class="label">Para confirmar, digite SUBSTITUIR</span><input id="rcWord" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20"></label>
       <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="button" class="btn btn-danger solid" id="rcGo" disabled>Substituir os dados de todos</button></div>`);
     $('#rcWord').oninput = e => { $('#rcGo').disabled = norm(e.target.value) !== 'substituir'; };
@@ -4463,7 +4779,7 @@
       $('#rcGo').disabled = true;
       enviarAlteracoes({ substituir: true }).then(res => {
         closeModal(true);
-        toast(res.ok ? 'Backup enviado. O servidor ficou igual ao backup; os outros computadores recebem na próxima sincronização.' : res.erro);
+        toast(res.ok ? 'Backup enviado. O servidor ficou igual ao backup; os outros aparelhos recebem na próxima sincronização.' : res.erro);
       });
     };
   }
@@ -4521,7 +4837,7 @@
         <dt>Tamanho</dt><dd>${fmtSize(size)}</dd>
         <dt>Para onde</dt><dd>${online() ? esc(SERVIDOR.url) : 'Servidor da clínica (endereço ainda não configurado)'}</dd>
       </dl>
-      <p class="hint">Enquanto isso, use “Exportar backup agora” e guarde o arquivo fora deste computador.</p>
+      <p class="hint">Enquanto isso, use “Exportar backup agora” e guarde o arquivo fora deste aparelho.</p>
       <div class="modal-foot"><button type="button" class="btn" data-close-modal>Fechar</button><button type="button" class="btn btn-primary" id="cbSend"${online() ? '' : ' disabled'}>Enviar backup para a nuvem</button></div>`);
     $('#cbSend').onclick = () => enviarBackupNuvem().then(r => toast(r.ok ? 'Backup enviado para a nuvem.' : (r.erro || 'Não foi possível enviar o backup.')));
   }
@@ -4661,10 +4977,10 @@
       <dl class="facts">
         <dt>Arquivo</dt><dd class="bk-file" id="bkFile">${esc(fileName)}</dd>
         <dt>Data e hora</dt><dd id="bkWhen">${fmtStamp(when)}</dd>
-        <dt>Onde</dt><dd>Na pasta de downloads do navegador (ou na pasta que o navegador perguntou).</dd>
+        <dt>Onde</dt><dd>${APP.celular ? 'Você escolhe onde guardar na tela de Compartilhar (Drive, e-mail, WhatsApp ou Arquivos).' : 'Na pasta Downloads (ou na pasta que você escolher na janela de salvar).'}</dd>
         <dt>Conteúdo</dt><dd>${n(db.dentists.length, 'dentista', 'dentistas')} · ${n(db.patients.length, 'paciente', 'pacientes')} · ${n(db.appointments.length, 'consulta', 'consultas')}</dd>
       </dl>
-      <p class="hint">Guarde uma cópia fora deste computador (pendrive, e-mail ou nuvem da clínica). O arquivo tem dados dos pacientes.</p>
+      <p class="hint">Guarde uma cópia fora deste aparelho (pendrive, e-mail ou nuvem da clínica). O arquivo tem dados dos pacientes.</p>
       <div class="modal-foot"><button type="button" class="btn btn-primary" id="bkOk">OK</button></div>`);
     $('#bkOk').onclick = () => closeModal(true);
     if (!phoneMQ.matches) $('#bkOk').focus();
@@ -4699,7 +5015,7 @@
   function confirmImport(data, when, fileName) {
     openModal(`
       <div class="modal-head"><div><div class="eyebrow">Backup</div><h2>Restaurar backup</h2></div>${closeX}</div>
-      <p>Isso <b>substitui todos os dados deste navegador</b> pelos dados do arquivo.</p>
+      <p>Isso <b>substitui todos os dados deste aparelho</b> pelos dados do arquivo.</p>
       <dl class="facts">
         ${fileName ? `<dt>Arquivo</dt><dd class="bk-file">${esc(fileName)}</dd>` : ''}
         <dt>Backup feito em</dt><dd>${when ? fmtStamp(when) : 'data não informada no arquivo'}</dd>
@@ -4707,7 +5023,7 @@
         <dt>Aqui agora</dt><dd>${countText(db)}</dd>
       </dl>
       <p class="hint">Dica: antes de restaurar, exporte um backup do que está aqui agora.</p>
-      <p class="hint" id="impSyncNote">Os outros computadores não mudam agora. Para mandar este backup para todos, o administrador vai precisar confirmar na Sincronização.</p>
+      <p class="hint" id="impSyncNote">Os outros aparelhos não mudam agora. Para mandar este backup para todos, o administrador vai precisar confirmar na Sincronização.</p>
       <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="button" class="btn btn-danger solid" id="impGo">Restaurar e substituir os dados</button></div>`);
     $('#impGo').onclick = () => {
       db = normalize(JSON.parse(JSON.stringify(data)));
@@ -4731,14 +5047,14 @@
     if (!isActivated()) return;
     openModal(`
       <div class="modal-head"><div><div class="eyebrow">Backup</div><h2>Backup restaurado</h2></div>${closeX}</div>
-      <div class="act-ok bk-ok">${I.check}<span>A restauração foi feita. Os dados deste navegador agora são os do arquivo.</span></div>
+      <div class="act-ok bk-ok">${I.check}<span>A restauração foi feita. Os dados deste aparelho agora são os do arquivo.</span></div>
       <dl class="facts">
         ${fileName ? `<dt>Arquivo</dt><dd class="bk-file" id="rsFile">${esc(fileName)}</dd>` : ''}
         <dt>Backup feito em</dt><dd id="rsWhen">${when ? fmtStamp(when) : '—'}</dd>
         <dt>Restaurado em</dt><dd id="rsAt">${fmtStamp(new Date().toISOString())}</dd>
         <dt>Dados agora</dt><dd>${countText(db)}</dd>
       </dl>
-      <p class="hint" id="rsSyncNote">Este backup ainda não foi para os outros computadores. Para mandar, use Sincronização (só o administrador).</p>
+      <p class="hint" id="rsSyncNote">Este backup ainda não foi para os outros aparelhos. Para mandar, use Sincronização (só o administrador).</p>
       <div class="modal-foot"><button type="button" class="btn btn-primary" id="rsOk">OK</button></div>`);
     $('#rsOk').onclick = () => closeModal(true);
     if (!phoneMQ.matches) $('#rsOk').focus();
@@ -4756,12 +5072,12 @@
       { act: 'cloud', label: 'Backup na nuvem…', icon: I.cloud, run: openCloudBackupModal },
       { header: 'Mensagens' },
       { act: 'groupmsg', label: 'Mensagem para grupo…', icon: I.chat, run: openGroupMsgModal },
-      { header: 'Vários computadores' },
+      { header: 'Vários aparelhos' },
       { act: 'sync', label: `Sincronização · ${syncLabel()}…`, icon: I.sync, run: openSyncModal },
       { header: 'Usuários e ativação' },
       { act: 'users', label: 'Usuários e senhas…', icon: I.users, run: () => openUsersModal() },
       { act: 'password', label: 'Trocar minha senha…', icon: I.key, run: openMyPasswordModal },
-      { act: 'activation', label: 'Ativação deste navegador…', icon: I.key, run: openActivationModal },
+      { act: 'activation', label: 'Ativação deste aparelho…', icon: I.key, run: openActivationModal },
       { act: 'exit', label: 'Sair (encerrar sessão)…', icon: I.exit, cls: 'danger', run: openExitDialog },
       { sep: true },
       { act: 'basemenu', label: 'Abrir o menu completo', icon: I.menu, run: openBaseMenu }
@@ -4808,6 +5124,13 @@
     window.open(url, '_blank', 'noopener');
   }
   function openWa(phoneDigits, text) {
+    // No aplicativo do celular: abre direto o app do WhatsApp; se ele não estiver instalado, vai pelo wa.me
+    const L = APP.celular && nativePlugin('AppLauncher');
+    if (L) {
+      const web = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`;
+      return Promise.resolve(L.openUrl({ url: `whatsapp://send?phone=${phoneDigits}&text=${encodeURIComponent(text)}` }))
+        .then(r => { if (!r || !r.completed) return abrirExterno(web); }, () => abrirExterno(web));
+    }
     const url = (phoneMQ.matches || APP.celular)
       ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`
       : `https://web.whatsapp.com/send?phone=${phoneDigits}&text=${encodeURIComponent(text)}`;
@@ -4895,7 +5218,7 @@
           <td class="nowrap">${typeBadge(a.typeName)} ${esc(a.typeName)}</td>
           ${showD ? `<td>${esc(dentistName(a.dentistId))}</td>` : ''}
           <td class="nowrap">${esc(phoneOut(p.phone))}</td>
-          <td><span class="pill st-${st.key}">${esc(st.label)}${a.status === 'arrived' && a.delayMinutes > 0 ? ` · ${a.delayMinutes} min de atraso` : ''}</span></td></tr>`;
+          <td><span class="pill st-${st.key}">${esc(st.label)}${a.status === 'arrived' && a.delayMinutes > 0 ? ` · ${a.delayMinutes} min de atraso` : ''}</span>${replyOf(a) ? ` <span class="pill ${replyOf(a).tipo === 'confirmado' ? 'st-pc' : 'st-pr'}">${replyText(replyOf(a))}</span>` : ''}</td></tr>`;
       }).join('')}
       </tbody></table>`;
   }
@@ -4912,10 +5235,10 @@
       </div>
       <div id="dlBody" class="dl-body"></div>
       <div class="modal-foot"><button type="button" class="btn" data-close-modal>Fechar</button>
-        <button type="button" class="btn btn-primary" id="dlPrint" style="display:inline-flex;align-items:center;gap:8px">${I.print}Imprimir</button></div>`, true);
+        ${APP.celular ? '' : `<button type="button" class="btn btn-primary" id="dlPrint" style="display:inline-flex;align-items:center;gap:8px">${I.print}Imprimir</button>`}</div>`, true);
     $('#dlDate').onchange = e => { date = e.target.value || state.date; draw(); };
     $('#dlDentist').onchange = e => { dId = e.target.value; draw(); };
-    $('#dlPrint').onclick = () => printDayList(date, dId);
+    if ($('#dlPrint')) $('#dlPrint').onclick = () => printDayList(date, dId);
     draw();
   }
   function printDayList(date, dId) {
@@ -5185,7 +5508,7 @@
 
   // =====================================================================
   //  Assistente da agenda
-  //  Funciona neste computador, sem internet. Entende pedidos em português
+  //  Funciona neste aparelho, sem internet. Entende pedidos em português
   //  sobre a agenda e só usa os dados salvos. Não inventa nada: se faltar
   //  dado, diz que não sabe. Não salva sozinha e não envia WhatsApp.
   // =====================================================================
@@ -5508,9 +5831,9 @@
     const m = storageMeta;
     const last = m && m.savedAt ? ` (última gravação em ${fmtStamp(m.savedAt)}: ${m.patients || 0} ${m.patients === 1 ? 'paciente' : 'pacientes'} e ${m.appointments || 0} ${m.appointments === 1 ? 'consulta' : 'consultas'})` : '';
     const text = {
-      missing: `<p>Este navegador já tinha uma agenda do Dente Sempre${last}, mas agora o navegador não entregou esses dados.</p><p class="hint">Isso pode ser uma falha passageira. Feche a aba e abra o arquivo de novo. Se continuar assim, os dados podem ter sido limpos pelo navegador (limpeza de histórico ou de “dados de sites”): importe o último backup.</p>`,
-      unreadable: '<p>O navegador não deixou ler os dados salvos.</p><p class="hint">Isso acontece em janela anônima ou quando o navegador bloqueia o armazenamento de sites. Abra o arquivo numa janela normal e tente de novo.</p>',
-      corrupt: '<p>Os dados salvos neste navegador estão danificados e não consegui ler.</p><p class="hint">Guardei uma cópia do que estava salvo. Para voltar a usar, importe o último backup.</p>'
+      missing: `<p>Este aparelho já tinha uma agenda do Dente Sempre${last}, mas agora os dados salvos não foram entregues.</p><p class="hint">Isso pode ser uma falha passageira. Feche o programa e abra de novo. Se continuar assim, os dados podem ter sido limpos pelo navegador (limpeza de histórico ou de “dados de sites”): importe o último backup.</p>`,
+      unreadable: '<p>Não consegui ler os dados salvos neste aparelho.</p><p class="hint">Isso acontece em janela anônima ou quando o navegador bloqueia o armazenamento de sites. Abra o arquivo numa janela normal e tente de novo.</p>',
+      corrupt: '<p>Os dados salvos neste aparelho estão danificados e não consegui ler.</p><p class="hint">Guardei uma cópia do que estava salvo. Para voltar a usar, importe o último backup.</p>'
     }[storageProblem] || '';
     $('#spText').innerHTML = text;
     const fresh = $('#spFresh');
@@ -5547,7 +5870,8 @@
         { id: 'today', icon: I.today, label: 'Agenda de hoje', sub: longDate(today), run: () => { goToDate(today); scrollToNow(); } },
         { id: 'new', icon: I.plus, label: 'Novo horário', sub: 'Paciente, tipo, data, hora e tempo', run: () => openApptDrawer() },
         { id: 'fit', icon: I.bolt, ico: 'fitc', label: 'Encaixe / emergência', sub: 'Junto com outro paciente ou no almoço', run: () => openApptDrawer({ fit: true }) },
-        { id: 'block', icon: I.lock, label: 'Bloquear horário', sub: 'Reunião, curso, folga', run: () => openBlockModal() }
+        { id: 'block', icon: I.lock, label: 'Bloquear horário', sub: 'Reunião, curso, folga', run: () => openBlockModal() },
+        { id: 'search', icon: I.search, label: 'Buscar consultas', sub: 'Por paciente, procedimento ou período', run: () => openSearchModal() }
       ] },
       { title: 'Pacientes', items: [
         { id: 'patients', icon: I.users, label: 'Pacientes', sub: 'Buscar, ver histórico e editar dados', run: openPatientsModal },
@@ -5570,7 +5894,7 @@
         { id: 'cloud', icon: I.cloud, label: 'Backup na nuvem', sub: 'Ainda não disponível: precisa do servidor', run: openCloudBackupModal },
         { id: 'sync', icon: I.sync, label: 'Sincronização', sub: 'Enviar e receber alterações', state: syncState.restored ? ['Backup restaurado', 'bad'] : syncInfo.error ? ['Erro', 'bad'] : (syncInfo.total ? [`Pendente (${syncInfo.total})`, 'on'] : ['Em dia', '']), run: openSyncModal },
         { id: 'users', icon: I.users, label: 'Usuários e senhas', sub: 'Quem entra e o que cada um pode fazer', run: () => openUsersModal() },
-        { id: 'activation', icon: I.key, label: 'Ativação', sub: 'Situação deste navegador', run: openActivationModal }
+        { id: 'activation', icon: I.key, label: 'Ativação', sub: 'Situação deste aparelho', run: openActivationModal }
       ] }
     ].map(g => Object.assign({}, g, { items: g.items.filter(it => allowedAct(it.id)) })).filter(g => g.items.length);
   }
@@ -5639,6 +5963,8 @@
   $('#fitBtn').onclick = () => openApptDrawer({ fit: true });
   $('#blockBtn').onclick = () => openBlockModal();
   $('#patientsBtn').onclick = openPatientsModal;
+  $('#searchBtn').onclick = () => openSearchModal();
+  $('#tbSearch').onclick = () => openSearchModal();
   $('#dentistsBtn').onclick = () => openDentistsModal();
   $('#manageDentists').onclick = () => openDentistsModal();
   $('#calToggle').onclick = () => setCalOpen($('#layout').classList.contains('layout-cal-closed'));
@@ -5755,6 +6081,7 @@
     const k = e.key;
     if (k === 'n' || k === 'N') { if (can('agenda.editar')) { e.preventDefault(); openApptDrawer(); } }
     else if (k === 'h' || k === 'H') { e.preventDefault(); goToDate(todayStr()); scrollToNow(); }
+    else if (k === 'b' || k === 'B') { if (currentUser()) { e.preventDefault(); openSearchModal(); } }
     else if (k === 'ArrowLeft') { e.preventDefault(); goToDate(addDays(state.date, -1)); }
     else if (k === 'ArrowRight') { e.preventDefault(); goToDate(addDays(state.date, 1)); }
   });
@@ -5869,7 +6196,7 @@
     applyTheme(); renderClinic(); renderPrivacy(); render();
     setTimeout(scrollToNow, 100);
     toast(wasEmpty
-      ? 'Os dados foram recuperados da cópia de segurança automática deste navegador.'
+      ? 'Os dados foram recuperados da cópia de segurança automática deste aparelho.'
       : 'As últimas mudanças foram recuperadas da cópia de segurança automática.');
   });
 })();
