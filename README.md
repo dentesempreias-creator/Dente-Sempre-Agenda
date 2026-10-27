@@ -16,6 +16,7 @@ dente-sempre/
 ├── servidor/
 │   ├── servidor.js               ← servidor (Node 22, sem dependências, banco SQLite)
 │   ├── planos.js                 ← planos e limites (o único arquivo que decide o que cada clínica pode usar)
+│   ├── paciente.js               ← link do paciente: página de confirmação pelo WhatsApp
 │   ├── Dockerfile                ← para Fly.io, Railway, Render...
 │   └── hospedagem/               ← instalação num VPS com HTTPS automático (Caddy)
 └── .github/workflows/gerar-apps.yml   ← gera o APK e os instaladores no GitHub, de graça
@@ -79,11 +80,21 @@ Saem o instalador do Windows, o do Mac, o do Linux e o APK do Android. Detalhes 
 2. Escolha sua conta Apple em *Signing & Capabilities*.
 3. Use *Product → Archive* para enviar ao TestFlight ou à App Store.
 
-**No celular:**
+**Como o programa fica no celular** (telas de até 600px; no computador nada muda):
 
-- O WhatsApp abre pelo aplicativo (wa.me).
-- O backup é salvo pelo botão **Compartilhar** do celular (Drive, e-mail, WhatsApp, Arquivos).
-- A lista do dia é impressa pelo computador.
+- **Barra fixa embaixo** com os 5 atalhos mais usados: Menu, Confirmar, Lista, Pacientes e Mais. O resto (Encaixe, Bloquear, Aniversários, Dentistas e Modo ocupada) fica no Menu.
+- O botão **+ Novo horário** fica flutuando acima da barra. Quando você digita nas anotações ou na assistente, a barra sai da frente do teclado.
+- **Agenda:** cartões com nome e horário maiores, e linhas de 15 minutos mais altas, melhores para o dedo.
+- **Janelas** abrem de baixo para cima. Os botões de ação ficam em duas colunas, e Salvar/Cancelar ficam sempre visíveis no rodapé.
+- **Menus de opções** (Mais, ou tocar num horário livre) abrem de baixo, na largura toda, com fundo escuro. Tocar fora fecha.
+- **Lista do dia:** cada consulta vira um cartão, sem tabela cortada de lado. No app do celular não aparece o botão Imprimir, porque a impressão é pelo computador.
+- **Buscar consultas:** a lupa fica no topo, ao lado da sincronização. O campo é grande, e cada resultado é um cartão com o botão **Ver no dia** (veja a seção 7).
+- **Sem internet:** a faixa amarela fica presa no topo mesmo rolando a agenda, com texto curto e o botão "Ver pendentes".
+- **WhatsApp:** no app do celular abre **direto o aplicativo do WhatsApp** (`whatsapp://`). Se ele não estiver instalado, abre pelo wa.me.
+- **Backup:** é salvo pelo botão **Compartilhar** do celular (Drive, e-mail, WhatsApp, Arquivos).
+- **Textos:** "Lembrar neste computador" virou "Lembrar neste aparelho". O mesmo vale nas outras mensagens: ativação, sair, backup e sincronização.
+
+> **Gerar o APK aqui no Claude não deu certo:** a rede deste ambiente bloqueia `dl.google.com`, de onde o Android baixa as peças dele. Use o GitHub (acima) ou o Android Studio no seu computador.
 
 ---
 
@@ -157,6 +168,8 @@ Depois disso, use o comando **`dente-sempre`** no VPS para tudo (veja a seção 
 | `CONFIAR_PROXY` | atrás de Caddy, Fly ou Railway | desligado |
 | `LICENCA_CHAVE_PRIVADA` | a chave das licenças por variável, em vez do arquivo | — |
 | `ORIGENS_PERMITIDAS` | quem pode chamar a API de dentro de um navegador | os apps |
+| `LINK_DIAS` | validade máxima do link do paciente | 90 |
+| `FUSO` | fuso da clínica (para saber que dia é "hoje" no link) | America/Sao_Paulo |
 
 ---
 
@@ -181,7 +194,78 @@ Depois disso, use o comando **`dente-sempre`** no VPS para tudo (veja a seção 
 
 ---
 
-## 6. Ativação e o que já está preparado para vender
+## 6. Link para o paciente confirmar pelo WhatsApp
+
+**Como a recepção usa:**
+
+1. Toque na consulta, depois em **Enviar link para o paciente**. O botão aparece em consultas agendadas, de hoje em diante, para quem pode confirmar (Recepção e Administrador).
+2. O programa garante que a consulta já está no servidor e pede um **link único** daquela consulta.
+3. Abre a janela com a **mensagem pronta**, que você pode editar. Exemplo: "Olá, Maria! Sua consulta na Clínica Sorriso está marcada para terça-feira, 27/10, às 09:00, com a Dra. Ana. Para confirmar ou pedir para remarcar, toque no link: https://api.seudominio.com.br/p/…"
+4. **Abrir WhatsApp** abre a conversa com a mensagem: no computador pelo WhatsApp Web, no celular direto no app do WhatsApp. Também há o botão **Copiar link**.
+
+**O que o paciente vê** (no navegador do celular dele, sem instalar nada):
+
+- o nome da clínica (e o logo, se houver);
+- "Olá, Maria!", só com o primeiro nome;
+- a data por extenso, o horário, o dentista e o procedimento;
+- os botões **Confirmar presença** e **Preciso remarcar**. Depois de responder, ele ainda pode mudar de ideia pelo mesmo link.
+
+**Como a resposta chega na agenda:**
+
+- O servidor grava a resposta como uma alteração da agenda, e ela chega a todos os aparelhos pela sincronização normal (em até 30 segundos).
+- No cartão da consulta aparece **✓ Confirmado pelo paciente** (verde) ou **↻ Pediu remarque** (amarelo).
+- A resposta também aparece no detalhe da consulta e na Lista do dia.
+- Na hora em que a resposta chega, aparece um aviso na tela, por exemplo: "Resposta do paciente: Maria confirmou (27/10 09:00)".
+- Se a recepção **remarcar** a consulta, a resposta antiga some. O mesmo link passa a mostrar o novo horário e pede confirmação de novo.
+
+**Segurança do link:**
+
+- Cada link tem um código aleatório de 144 bits, impossível de adivinhar. O servidor guarda só o resumo (SHA-256) do código.
+- A página mostra **só aquela consulta**. Não aparecem telefone, sobrenome, CPF, endereço nem outros pacientes.
+- **Abrir** o link não muda nada: só tocar no botão grava a resposta. Assim, a prévia que o WhatsApp gera do link não confirma sozinha.
+- O link deixa de valer:
+  - quando a consulta passa;
+  - quando a consulta é apagada;
+  - quando a clínica é suspensa;
+  - depois de 90 dias.
+- Há limite de pedidos por endereço. A página não é indexada por buscadores e não pode ser colocada dentro de outro site.
+- O link precisa do servidor: no modo sem servidor, o botão não aparece. Sem internet, o programa avisa e você tenta de novo depois.
+
+---
+
+## 7. Buscar consultas
+
+Acha qualquer consulta pelo **nome do paciente** ou pelo **procedimento** (limpeza, canal, extração...), em qualquer data.
+
+**Onde fica:**
+
+- **Computador:** botão **Buscar** (lupa) na barra de comandos, ao lado de Pacientes. Também pela tecla **B**.
+- **Celular:** a **lupa no topo**, ao lado da sincronização. A barra de baixo continua com os mesmos 5 botões.
+- **Menu → Agenda → Buscar consultas**, no computador e no celular.
+- **Pacientes:** o link **Buscar consultas por procedimento ou período** abre a busca já com o nome que estava digitado.
+
+**Como usar:**
+
+1. Digite o nome (ou parte dele) ou o procedimento. Pode misturar: `maria canal`. Acentos e maiúsculas não importam. Só números, como `98765`, busca pelo telefone. Isso vale para quem pode ver pacientes e só fora do modo ocupada.
+2. Se quiser, escolha:
+   - o **Período**: hoje, próximos 7 ou 30 dias, últimos 30 dias, este mês, mês passado, este ano ou **Escolher datas** (De / Até);
+   - a **Situação**: agendado, atrasado/sem registro, chegou, faltou, confirmado pelo paciente ou pediu remarque;
+   - o **Dentista**.
+3. A lista mostra data, dia da semana, horário, paciente, procedimento, dentista e situação, da mais nova para a mais antiga.
+4. **Toque no resultado** para abrir o detalhe da consulta. Ali dá para marcar Veio, remarcar etc. O link **‹ Voltar à busca** volta para a lista sem perder o que foi digitado.
+5. **Ver no dia** abre a agenda naquele dia e naquele dentista, com o cartão da consulta piscando.
+
+**Regras:**
+
+- O **dentista** só encontra as consultas da agenda dele, e não tem o filtro de dentista. Recepção e Administrador encontram todas.
+- Consultas excluídas não aparecem.
+- Funciona **sem internet**, porque usa os dados que já estão no aparelho.
+- A busca não muda nada nos dados, só procura.
+- Para não travar, mostra no máximo 200 resultados e avisa para refinar.
+
+---
+
+## 8. Ativação e o que já está preparado para vender
 
 ### Criar uma clínica (com o servidor ligado)
 
@@ -258,7 +342,7 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 
 ---
 
-## 7. O que ficou pronto e o que falta para vender
+## 9. O que ficou pronto e o que falta para vender
 
 ### Pronto
 
@@ -271,6 +355,9 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
   - criar clínica e chave com o servidor ligado.
 - Licença assinada, ligada à clínica e ao aparelho, com renovação, suspensão e revogação.
 - Planos (Teste, Básico, Profissional) com limites de aparelhos, dentistas e usuários conferidos no servidor.
+- Link para o paciente confirmar ou pedir remarque pelo WhatsApp, com a resposta aparecendo na agenda.
+- Busca de consultas por paciente, procedimento, período, situação e dentista. Respeita as permissões e funciona sem internet.
+- Telas ajustadas para o celular: barra embaixo, cartões maiores, janelas de baixo para cima e WhatsApp direto no app.
 - O pagamento está preparado (`aoConfirmarPagamento` em `planos.js`) e o painel tem as rotas reservadas (`/api/painel/...`).
 - Instalação em VPS com HTTPS automático, cópias automáticas e Dockerfile.
 - Todas as funções de antes continuam iguais, inclusive as permissões:
@@ -291,4 +378,4 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
    - App Store: US$ 99 por ano, e é preciso um Mac com Xcode para gerar o iPhone.
 6. **Parte legal**: termos de uso, política de privacidade e contrato de tratamento de dados (LGPD). Dados de pacientes são dados pessoais, e um advogado deve revisar.
 7. **Suporte**: um e-mail ou WhatsApp de suporte para colocar nas mensagens "Fale com o suporte".
-8. **Testar o APK num celular de verdade.** Aqui ele é gerado pelo GitHub, porque este ambiente não baixa o kit do Android. O app de computador foi testado no Linux; vale abrir o instalador num Windows de verdade antes de vender.
+8. **Testar o APK num celular de verdade.** Ele é gerado pelo GitHub ou pelo Android Studio, porque este ambiente não baixa o kit do Android. O visual do celular e o WhatsApp foram testados num navegador do tamanho de um celular, simulando o app. O app de computador foi testado no Linux; vale abrir o instalador num Windows de verdade antes de vender.

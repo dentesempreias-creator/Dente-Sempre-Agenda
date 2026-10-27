@@ -36,6 +36,7 @@ const crypto = require('node:crypto');
 const os = require('node:os');
 const { DatabaseSync } = require('node:sqlite');
 const planos = require('./planos.js');
+const { criarLinkDoPaciente } = require('./paciente.js');
 
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';                          // atrás do Caddy/Nginx: 127.0.0.1
@@ -563,6 +564,11 @@ const ROTAS = {
       changes, licenca: licencaDoAparelho(clinica, ap) };
   },
 
+  // { deviceId, apptId } → { ok, caminho: '/p/<código>' } — link de confirmação para o paciente (paciente.js)
+  '/api/link/criar'(corpo, req) {
+    return linkPaciente().criar(autenticar(req, corpo, { aparelho: true }), corpo);
+  },
+
   // { clinicId, deviceId, arquivo } — guarda os últimos backups da clínica (no banco da própria clínica)
   '/api/backup'(corpo, req) {
     const { u, d } = autenticar(req, corpo, { aparelho: true });
@@ -623,6 +629,9 @@ const ROTAS = {
   }
 };
 
+let lp = null;
+const linkPaciente = () => lp || (lp = criarLinkDoPaciente({ sistema, bancoDaClinica, clinicaPorId, emTransacao, getMeta, setMeta, planos, agora, recusa }));
+
 // Só para teste no navegador (SERVIR_PROGRAMA=1). Em uso real, a clínica usa o aplicativo.
 function servirHtml(res) {
   let html;
@@ -646,6 +655,9 @@ function criarServidor(opcoesTls) {
       if (SERVIR_PROGRAMA) return servirHtml(res);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(PAGINA_INICIAL);
     }
+    // Página pública do paciente (link enviado pelo WhatsApp): só aquela consulta
+    const mLink = /^\/p\/([^/]+)$/.exec(url.pathname);
+    if (mLink) return linkPaciente().atender(req, res, mLink[1], ipDoPedido(req));
     if (req.method === 'GET' && url.pathname === '/api/situacao') return json(res, 200, { ok: true, servidor: 'Dente Sempre', versao: 2, hora: agora() });
     if (req.method === 'GET' && url.pathname === '/api/chave-publica') return json(res, 200, { ok: true, chavePublica: chavePublicaB64() });
     // [PAINEL] reservado para o painel de administração das clínicas (ainda não existe)
