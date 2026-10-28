@@ -38,7 +38,7 @@ echo "== 4/6 Copiando o servidor para $DESTINO"
 id dentesempre >/dev/null 2>&1 || useradd --system --home "$DESTINO" --shell /usr/sbin/nologin dentesempre
 mkdir -p "$DESTINO/dados"
 if [ "$ORIGEM" != "$DESTINO" ]; then
-  cp -r "$ORIGEM/servidor.js" "$ORIGEM/certificado.js" "$ORIGEM/planos.js" "$ORIGEM/paciente.js" "$ORIGEM/package.json" "$ORIGEM/hospedagem" "$DESTINO/"
+  cp -r "$ORIGEM/servidor.js" "$ORIGEM/certificado.js" "$ORIGEM/planos.js" "$ORIGEM/paciente.js" "$ORIGEM/area.js" "$ORIGEM/package.json" "$ORIGEM/hospedagem" "$DESTINO/"
 fi
 chown -R root:root "$DESTINO"
 chown -R dentesempre:dentesempre "$DESTINO/dados"
