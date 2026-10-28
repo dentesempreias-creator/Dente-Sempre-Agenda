@@ -2,7 +2,7 @@
 # Sem dependências: só o Node 22 (o banco SQLite já vem dentro do Node).
 FROM node:22-alpine
 WORKDIR /app
-COPY servidor.js certificado.js planos.js paciente.js package.json ./
+COPY servidor.js certificado.js planos.js paciente.js area.js package.json ./
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORTA=3000 \

@@ -37,6 +37,7 @@ const os = require('node:os');
 const { DatabaseSync } = require('node:sqlite');
 const planos = require('./planos.js');
 const { criarLinkDoPaciente } = require('./paciente.js');
+const { criarAreaDoPaciente } = require('./area.js');
 
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';                          // atrás do Caddy/Nginx: 127.0.0.1
@@ -569,6 +570,11 @@ const ROTAS = {
     return linkPaciente().criar(autenticar(req, corpo, { aparelho: true }), corpo);
   },
 
+  // { deviceId, patientId } → { ok, codigo, caminho: '/area?codigo=…', horas } — acesso à área do paciente (area.js)
+  '/api/area/convite'(corpo, req) {
+    return areaPaciente().convite(autenticar(req, corpo, { aparelho: true }), corpo);
+  },
+
   // { clinicId, deviceId, arquivo } — guarda os últimos backups da clínica (no banco da própria clínica)
   '/api/backup'(corpo, req) {
     const { u, d } = autenticar(req, corpo, { aparelho: true });
@@ -631,6 +637,8 @@ const ROTAS = {
 
 let lp = null;
 const linkPaciente = () => lp || (lp = criarLinkDoPaciente({ sistema, bancoDaClinica, clinicaPorId, emTransacao, getMeta, setMeta, planos, agora, recusa }));
+let areaP = null;
+const areaPaciente = () => areaP || (areaP = criarAreaDoPaciente({ sistema, bancoDaClinica, clinicaPorId, emTransacao, getMeta, setMeta, planos, agora, recusa }));
 
 // Só para teste no navegador (SERVIR_PROGRAMA=1). Em uso real, a clínica usa o aplicativo.
 function servirHtml(res) {
@@ -658,6 +666,10 @@ function criarServidor(opcoesTls) {
     // Página pública do paciente (link enviado pelo WhatsApp): só aquela consulta
     const mLink = /^\/p\/([^/]+)$/.exec(url.pathname);
     if (mLink) return linkPaciente().atender(req, res, mLink[1], ipDoPedido(req));
+    // Área do paciente: entra com telefone + código e vê só as próprias consultas
+    if (url.pathname === '/area' || url.pathname.startsWith('/area/')) {
+      return areaPaciente().atender(req, res, url, ipDoPedido(req), !!(req.socket.encrypted || (CONFIAR_PROXY && req.headers['x-forwarded-proto'] === 'https')));
+    }
     if (req.method === 'GET' && url.pathname === '/api/situacao') return json(res, 200, { ok: true, servidor: 'Dente Sempre', versao: 2, hora: agora() });
     if (req.method === 'GET' && url.pathname === '/api/chave-publica') return json(res, 200, { ok: true, chavePublica: chavePublicaB64() });
     // [PAINEL] reservado para o painel de administração das clínicas (ainda não existe)

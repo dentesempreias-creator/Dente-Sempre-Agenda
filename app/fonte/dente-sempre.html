@@ -209,6 +209,8 @@
   .chip-pr{background:#fff4d6;color:#5c4300;border:1px solid #e8c766}
   .ev.narrow .rp-txt,.ev.compact .rp-txt{display:none}
   .st-pc{background:#e6f5ec;color:#17603a} .st-pr{background:#fff4d6;color:#5c4300}
+  .chip-px{background:#fdecec;color:#8a2323;border:1px solid #efb4b4} .st-px{background:#fdecec;color:#8a2323}
+  .ar-code{font-size:28px;font-weight:700;letter-spacing:.12em;font-variant-numeric:tabular-nums}
   .muted-sm{font-size:13px;color:var(--muted)}
   .btn-link-pac{border-color:#9fd3b3;color:#17603a}
   /* Busca de consultas */
@@ -630,6 +632,12 @@
   @media (min-width:861px) and (max-width:1340px){
     .cmd .cmd-txt{display:none}
     .cmd[data-short]::after{content:attr(data-short)}
+  }
+  /* Com todos os botões (administrador), Buscar fica só com a lupa para a barra caber */
+  @media (min-width:861px) and (max-width:1600px){
+    .commandbar:has(#dentistsBtn:not([hidden])) #searchBtn .cmd-txt{display:none}
+    .commandbar:has(#dentistsBtn:not([hidden])) #searchBtn::after{content:none}
+    .commandbar:has(#dentistsBtn:not([hidden])) .cmd{padding:0 6px}
   }
   /* ---------- Computador e tablet: cara de programa (a tela não rola, cada painel rola sozinho) ---------- */
   @media (min-width:861px){
@@ -1420,6 +1428,7 @@
     if (typeof d.settings.lastBackupAt !== 'string') d.settings.lastBackupAt = '';
     if (!d.typeStyles || typeof d.typeStyles !== 'object') d.typeStyles = {};
     if (!d.replies || typeof d.replies !== 'object' || Array.isArray(d.replies)) d.replies = {};   // respostas dos pacientes pelo link
+    if (!d.area || typeof d.area !== 'object' || Array.isArray(d.area)) d.area = null;   // regras da área do paciente (só existe depois que o administrador salvar)
     if (typeof d.clinicId !== 'string' || !d.clinicId) d.clinicId = uid();   // identifica a clínica no servidor
     d.version = DATA_VERSION;
     return d;
@@ -1879,6 +1888,8 @@
         const rp = replyOf(a);
         const reply = !rp ? '' : rp.tipo === 'confirmado'
           ? '<span class="chip chip-pc" title="Confirmado pelo paciente">✓<span class="rp-txt"> Confirmado pelo paciente</span></span>'
+          : rp.tipo === 'cancelado'
+          ? '<span class="chip chip-px" title="O paciente cancelou pela área do paciente">✕<span class="rp-txt"> Paciente cancelou</span></span>'
           : '<span class="chip chip-pr" title="O paciente pediu para remarcar">↻<span class="rp-txt"> Pediu remarque</span></span>';
         events += `<button class="ev ev-${st.key}${a.fit ? ' fit' : ''}${cls}" style="${style}" data-appt="${a.id}">
           <span class="ev-time">${range}</span>${typeBadge(a.typeName)}
@@ -2468,7 +2479,7 @@
         <dt>Dentista</dt><dd>${esc(d.name)}</dd>
         <dt>Telefone</dt><dd>${esc(phoneOut(p.phone))}</dd>
         ${a.status === 'arrived' ? `<dt>Chegou às</dt><dd>${fmtStamp(a.arrivedAt).slice(11)}${a.delayMinutes > 0 ? ` · <span class="pill st-late">${a.delayMinutes} min de atraso</span>` : (a.delayMinutes === 0 ? ' · no horário' : '')}</dd>` : ''}
-        ${replyOf(a) ? `<dt>Resposta do paciente</dt><dd><span class="pill ${replyOf(a).tipo === 'confirmado' ? 'st-pc' : 'st-pr'}">${replyText(replyOf(a))}</span> <span class="muted-sm">pelo link · ${fmtStamp(replyOf(a).em)}</span></dd>` : ''}
+        ${replyOf(a) ? `<dt>Resposta do paciente</dt><dd><span class="pill ${replyCls(replyOf(a))}">${replyText(replyOf(a))}</span> <span class="muted-sm">${replyOf(a).origem === 'area' ? 'pela área do paciente' : 'pelo link'} · ${fmtStamp(replyOf(a).em)}</span></dd>` : ''}
         ${a.scheduledAt ? `<dt>Agendado em</dt><dd>${fmtStamp(a.scheduledAt)}</dd>` : ''}
         ${a.editedAt ? `<dt>Editado em</dt><dd>${fmtStamp(a.editedAt)}</dd>` : ''}
       </dl>
@@ -2670,9 +2681,10 @@
   // Resposta do paciente pelo link: só vale se a consulta não mudou de dia/hora depois
   function replyOf(a) {
     const r = a && db.replies && db.replies[a.id];
-    return r && r.date === a.date && r.start === a.start && (r.tipo === 'confirmado' || r.tipo === 'remarcar') ? r : null;
+    return r && r.date === a.date && r.start === a.start && (r.tipo === 'confirmado' || r.tipo === 'remarcar' || r.tipo === 'cancelado') ? r : null;
   }
-  const replyText = r => r.tipo === 'confirmado' ? 'Confirmado pelo paciente' : 'Pediu remarque';
+  const replyText = r => r.tipo === 'confirmado' ? 'Confirmado pelo paciente' : r.tipo === 'cancelado' ? 'Paciente cancelou' : 'Pediu remarque';
+  const replyCls = r => r.tipo === 'confirmado' ? 'st-pc' : r.tipo === 'cancelado' ? 'st-px' : 'st-pr';
 
   function buildMessage(a, p, d) {
     const first = cleanSpaces(p.name).split(' ')[0];
@@ -2783,7 +2795,7 @@
   const SEARCH_PERIODS = [['all', 'Todo o período'], ['today', 'Hoje'], ['next7', 'Próximos 7 dias'], ['next30', 'Próximos 30 dias'],
     ['last30', 'Últimos 30 dias'], ['month', 'Este mês'], ['lastmonth', 'Mês passado'], ['year', 'Este ano'], ['custom', 'Escolher datas…']];
   const SEARCH_STATUS = [['', 'Todas as situações'], ['scheduled', 'Agendado'], ['late', 'Atrasado / sem registro'], ['arrived', 'Chegou'],
-    ['no_show', 'Faltou'], ['confirmado', 'Confirmado pelo paciente'], ['remarcar', 'Pediu remarque']];
+    ['no_show', 'Faltou'], ['confirmado', 'Confirmado pelo paciente'], ['remarcar', 'Pediu remarque'], ['cancelado', 'Paciente cancelou']];
   const SEARCH_MAX = 200;
   function searchPeriodRange(s) {
     const t = todayStr(), d = parseDate(t), y = d.getFullYear(), m = d.getMonth();
@@ -2814,7 +2826,7 @@
       if (a.status === 'deleted') return false;
       if (onlyD && a.dentistId !== onlyD) return false;
       if (a.date < from || a.date > to) return false;
-      if (s.status === 'confirmado' || s.status === 'remarcar') { const r = replyOf(a); if (!r || r.tipo !== s.status) return false; }
+      if (s.status === 'confirmado' || s.status === 'remarcar' || s.status === 'cancelado') { const r = replyOf(a); if (!r || r.tipo !== s.status) return false; }
       else if (s.status && statusInfo(a).key !== s.status) return false;
       if (!words.length) return true;
       const p = getPatient(a.patientId);
@@ -2862,7 +2874,7 @@
             <span class="sr-when"><b>${fmtDMY(a.date)}</b> ${esc(wd)} · ${a.start}–${fromMin(toMin(a.start) + a.duration)}</span>
             <span class="sr-name">${esc(p ? p.name : 'Paciente')}${a.fit ? ' <span class="chip chip-fit">Encaixe</span>' : ''}</span>
             <span class="sr-sub">${esc(a.typeName || '')}${d ? ' · ' + esc(d.name) : ''}</span>
-            <span class="sr-pills"><span class="pill st-${st.key}">${esc(st.label)}</span>${r ? `<span class="pill ${r.tipo === 'confirmado' ? 'st-pc' : 'st-pr'}">${replyText(r)}</span>` : ''}</span>
+            <span class="sr-pills"><span class="pill st-${st.key}">${esc(st.label)}</span>${r ? `<span class="pill ${replyCls(r)}">${replyText(r)}</span>` : ''}</span>
           </button>
           <button type="button" class="btn btn-small sr-day" data-srday="${a.id}" title="Abrir este dia na agenda">${I.today}<span>Ver no dia</span></button>
         </div>`;
@@ -2899,6 +2911,91 @@
     });
   }
 
+  // ---------- Área do paciente ----------
+  // A recepção manda pelo WhatsApp o endereço e um código de 6 números. O paciente entra com o telefone e o código,
+  // vê só as consultas dele e pode confirmar, pedir remarque ou cancelar. A resposta volta como as do link.
+  function openPatientAreaInvite(id) {
+    if (!allow('confirmar')) return;
+    const p = getPatient(id);
+    if (!p || !online()) return;
+    const phone = waPhone(p.phone);
+    const head = `<div class="modal-head"><div><button type="button" class="link" id="arBack">‹ ${esc(p.name)}</button><div class="eyebrow">Para ${esc(p.name)} · ${esc(phoneOut(p.phone))}</div><h2>Acesso à área do paciente</h2></div>${closeX}</div>`;
+    const wire = () => { $('#arBack').onclick = () => openPatientDetail(id); };
+    const fail = msg => {
+      openModal(`${head}<div class="error">${esc(msg)}</div>
+        <div class="modal-foot"><button type="button" class="btn" id="arBack2">Voltar</button><button type="button" class="btn btn-primary" id="arRetry">Tentar de novo</button></div>`);
+      wire();
+      $('#arBack2').onclick = () => openPatientDetail(id);
+      $('#arRetry').onclick = () => openPatientAreaInvite(id);
+    };
+    if (estaOffline()) return fail('Sem internet. O código é criado no servidor: tente de novo quando a conexão voltar.');
+    openModal(`${head}<p class="hint">Criando o código de acesso…</p>`);
+    wire();
+    // O paciente (e as consultas dele) precisam estar no servidor antes
+    const precisa = () => pendingChanges().some(c => /^(appointments|patients|dentists|settings|area):/.test(c.key));
+    (precisa() ? enviarAlteracoes() : Promise.resolve({ ok: true }))
+      .then(r => {
+        if (precisa()) throw new Error((r && r.erro) || 'Os dados deste paciente ainda não foram enviados ao servidor. Sincronize e tente de novo.');
+        return servidorReal.conviteArea(p.id);
+      })
+      .then(r => {
+        if (!r || !r.ok || !r.codigo) {
+          if (r && (r.codigo === 'licenca' || r.codigo === 'aparelho')) tratarRecusaLicenca(r);
+          throw new Error((r && r.erro) || 'O servidor não criou o código.');
+        }
+        const base = String(SERVIDOR.url).replace(/\/+$/, '');
+        const url = base + r.caminho;
+        const first = cleanSpaces(p.name).split(' ')[0];
+        const clinic = cleanSpaces(db.settings.clinicName) || cleanSpaces(session && session.clinica && session.clinica.nome);
+        const text = `Olá, ${first}! Esta é a sua área do paciente${clinic ? ' da ' + clinic : ''}. Nela você vê as suas consultas e pode confirmar, pedir para remarcar ou cancelar: ${url}\nPara entrar, use o seu telefone com DDD e o código ${r.codigo}. O código vale por ${r.horas} horas e só pode ser usado uma vez.`;
+        openModal(`${head}
+          <p class="hint">Código de acesso:</p>
+          <div class="ar-code" id="arCode">${esc(r.codigo)}</div>
+          <div style="margin-top:10px"><textarea id="arText" rows="6">${esc(text)}</textarea></div>
+          <p class="hint" style="margin-top:8px">O paciente entra com o telefone do cadastro e este código, e vê só as consultas dele. Um código novo substitui o anterior. O que ele fizer lá aparece aqui na agenda.</p>
+          ${phone ? '' : '<div class="error" style="margin-top:10px">O telefone do paciente parece incompleto. Confira o DDD ou copie a mensagem.</div>'}
+          <div class="modal-foot">
+            <button type="button" class="btn" id="arCopy">Copiar mensagem</button>
+            <button type="button" class="btn btn-primary" id="arOpen"${phone ? '' : ' disabled'}>Abrir WhatsApp</button>
+          </div>`);
+        wire();
+        $('#arOpen').onclick = () => { openWa(phone, $('#arText').value); closeModal(true); toast('Acesso pronto no WhatsApp. É só tocar em enviar.'); };
+        $('#arCopy').onclick = () => {
+          const done = () => toast('Mensagem copiada.');
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText($('#arText').value).then(done, () => { $('#arText').select(); toast('Copie a mensagem do texto acima.'); });
+          else { $('#arText').select(); toast('Copie a mensagem do texto acima.'); }
+        };
+      })
+      .catch(e => fail(e && e.message && !/^(Failed to fetch|NetworkError|Load failed)/.test(e.message) ? e.message : 'Sem conexão com o servidor. Tente de novo quando a internet voltar.'));
+  }
+  // Regras da clínica para a área do paciente (Menu → Configurações → Área do paciente)
+  const AREA_PADRAO = { cancelar: true, horas: 24, whatsapp: '' };
+  function openAreaSettings() {
+    if (!allow('config')) return;
+    const r = Object.assign({}, AREA_PADRAO, db.area || {});
+    const horas = [[0, 'Até a hora da consulta'], [2, '2 horas antes'], [6, '6 horas antes'], [12, '12 horas antes'], [24, '24 horas antes'], [48, '48 horas antes'], [72, '3 dias antes']];
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Área do paciente</h2></div>${closeX}</div>
+      <form id="arForm" class="stack" novalidate>
+        <p class="hint" style="margin:0">O paciente entra pelo endereço <b>${esc(String(SERVIDOR.url).replace(/\/+$/, ''))}/area</b> com o telefone e um código. Para mandar o código, abra o paciente em <b>Pacientes</b> e toque em <b>Enviar acesso à área do paciente</b>.</p>
+        <label class="field"><span class="label">WhatsApp da recepção</span><input id="arWa" type="tel" inputmode="tel" placeholder="(11) 91234-5678" value="${esc(r.whatsapp ? phoneOut(r.whatsapp) : '')}">
+          <span class="hint">Aparece para o paciente como "Falar com a recepção pelo WhatsApp". Em branco, o botão não aparece.</span></label>
+        <label class="fitrow"><input type="checkbox" id="arCancel"${r.cancelar ? ' checked' : ''}><span>O paciente pode cancelar a consulta pela área</span></label>
+        <label class="field"><span class="label">Remarcar e cancelar pela área só até</span><select id="arHoras">${horas.map(([v, t]) => `<option value="${v}"${Number(r.horas) === v ? ' selected' : ''}>${t}</option>`).join('')}</select>
+          <span class="hint">Depois disso, a área pede para o paciente falar com a recepção. Confirmar presença vale até a hora da consulta.</span></label>
+        <div class="error" id="arErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button></div>
+      </form>`);
+    $('#arForm').onsubmit = e => {
+      e.preventDefault();
+      const wa = $('#arWa').value.trim();
+      if (wa && !waPhone(wa)) { $('#arErr').textContent = 'O WhatsApp parece incompleto. Escreva com DDD, por exemplo (11) 91234-5678.'; $('#arErr').hidden = false; return; }
+      db.area = { whatsapp: digits(wa), cancelar: $('#arCancel').checked, horas: Number($('#arHoras').value) };
+      save(); closeModal(true);
+      toast('Regras da área do paciente salvas.');
+    };
+  }
+
   function openPatientDetail(id) {
     if (!allow('pacientes.ver')) return;
     const p = getPatient(id);
@@ -2932,10 +3029,12 @@
         ${p.editedAt ? `<dt>Dados editados em</dt><dd>${fmtStamp(p.editedAt)}</dd>` : ''}
       </dl>
       <button type="button" class="btn" id="pdEdit" style="display:inline-flex;align-items:center;gap:8px">${I.edit}Editar dados</button>
+      ${online() && can('confirmar') ? '<button type="button" class="btn btn-link-pac" id="pdArea" style="display:inline-flex;align-items:center;gap:8px;margin-left:6px">' + I.key + 'Enviar acesso à área do paciente</button>' : ''}
       <div class="row-between"><h3>Consultas (${hist.length})</h3><button type="button" class="btn btn-small" id="pdNew">+ Novo horário</button></div>
       ${hist.length ? `<ul class="hist">${items}</ul>` : '<p class="muted">Nenhuma consulta ainda.</p>'}`, true);
     $('#pdBack').onclick = openPatientsModal;
     $('#pdEdit').onclick = () => openPatientEdit(id);
+    if ($('#pdArea')) $('#pdArea').onclick = () => openPatientAreaInvite(id);
     $('#pdNew').onclick = () => { closeModal(true); openApptDrawer({ patientId: id }); };
   }
 
@@ -3855,7 +3954,8 @@
     enviar(pacote) { return servidorReal.chamar('/api/sync/enviar', pacote); },
     receber(pedido) { return servidorReal.chamar('/api/sync/receber', pedido); },
     backup(pacote) { return servidorReal.chamar('/api/backup', pacote); },
-    criarLink(apptId) { return servidorReal.chamar('/api/link/criar', { deviceId: device.deviceId, apptId }); }
+    criarLink(apptId) { return servidorReal.chamar('/api/link/criar', { deviceId: device.deviceId, apptId }); },
+    conviteArea(patientId) { return servidorReal.chamar('/api/area/convite', { deviceId: device.deviceId, patientId }); }
   };
   const servidor = () => online() ? servidorReal : servidorSimulado;
 
@@ -3908,7 +4008,7 @@
     block: 'bloqueio', unblock: 'bloqueio', lunch: 'bloqueio', lunchoff: 'bloqueio', lunchreset: 'bloqueio',
     hours: 'dentistas.editar', dentists: 'dentistas.editar',
     history: 'pacientes.ver', patients: 'pacientes.ver', privacy: 'privacidade',
-    customize: 'config', types: 'config', users: 'usuarios',
+    customize: 'config', types: 'config', users: 'usuarios', area: 'config',
     export: 'backup.exportar', import: 'backup.restaurar', cloud: 'backup.nuvem'
   };
 
@@ -4414,7 +4514,7 @@
     { id: 'agenda', label: 'Agenda', sub: 'Consultas, encaixes, bloqueios e almoço do dia', parts: ['appointments', 'blocks', 'lunchDays', 'replies'] },
     { id: 'pacientes', label: 'Pacientes', sub: 'Cadastro dos pacientes', parts: ['patients'] },
     { id: 'dentistas', label: 'Dentistas', sub: 'Cadastro, expediente e almoço padrão', parts: ['dentists'] },
-    { id: 'configuracoes', label: 'Configurações da clínica', sub: 'Nome, cor, logo e tipos de consulta', parts: ['settings', 'types', 'typeStyles'] },
+    { id: 'configuracoes', label: 'Configurações da clínica', sub: 'Nome, cor, logo e tipos de consulta', parts: ['settings', 'types', 'typeStyles', 'area'] },
     { id: 'anotacoes', label: 'Anotações', sub: 'Do dia e da recepção', parts: ['notesGeneral', 'notesDays'] }
   ];
   const PART_AREA = {};
@@ -4429,6 +4529,7 @@
     Object.keys(d.lunchDays).forEach(k => { out['lunchDays:' + k] = d.lunchDays[k]; });
     Object.keys(d.notes.days).forEach(k => { out['notesDays:' + k] = d.notes.days[k]; });
     Object.keys(d.replies || {}).forEach(k => { out['replies:' + k] = d.replies[k]; });
+    if (d.area) out['area:config'] = d.area;
     if (d.notes.general) out['notesGeneral:geral'] = d.notes.general;
     const s = {};
     CLINIC_SETTINGS.forEach(k => { s[k] = d.settings[k]; });
@@ -4666,6 +4767,7 @@
     if (part === 'notesDays') return `Anotação do dia · ${fmtDM(id)}`;
     if (part === 'notesGeneral') return 'Anotações da recepção';
     if (part === 'replies') return 'Resposta do paciente';
+    if (part === 'area') return 'Área do paciente (regras)';
     return 'Configurações da clínica';
   }
   // Chegou resposta de paciente pelo link: avisa a recepção
@@ -4674,7 +4776,7 @@
     const txt = lista.map(r => {
       const a = getAppt(r.apptId), p = a && getPatient(a.patientId);
       if (!a || !p || !replyOf(a)) return '';
-      return `${cleanSpaces(p.name).split(' ')[0]} ${r.tipo === 'confirmado' ? 'confirmou' : 'pediu para remarcar'} (${fmtDM(a.date)} ${a.start})`;
+      return `${cleanSpaces(p.name).split(' ')[0]} ${r.tipo === 'confirmado' ? 'confirmou' : r.tipo === 'cancelado' ? 'cancelou' : 'pediu para remarcar'} (${fmtDM(a.date)} ${a.start})`;
     }).filter(Boolean);
     if (txt.length) toast(txt.length === 1 ? 'Resposta do paciente: ' + txt[0] + '.' : `${txt.length} respostas de pacientes: ` + txt.join('; ') + '.');
   }
@@ -4690,6 +4792,7 @@
     } else if (part === 'lunchDays') { if (del) delete db.lunchDays[id]; else db.lunchDays[id] = v; }
     else if (part === 'notesDays') { if (del) delete db.notes.days[id]; else db.notes.days[id] = v; }
     else if (part === 'replies') { if (del) delete db.replies[id]; else db.replies[id] = v; }
+    else if (part === 'area') db.area = del ? null : v;
     else if (part === 'notesGeneral') db.notes.general = del ? '' : String(v);
     else if (part === 'settings' && !del) CLINIC_SETTINGS.forEach(k => { if (k in v) db.settings[k] = v[k]; });
     else if (part === 'types' && !del) db.types = v;
@@ -5218,7 +5321,7 @@
           <td class="nowrap">${typeBadge(a.typeName)} ${esc(a.typeName)}</td>
           ${showD ? `<td>${esc(dentistName(a.dentistId))}</td>` : ''}
           <td class="nowrap">${esc(phoneOut(p.phone))}</td>
-          <td><span class="pill st-${st.key}">${esc(st.label)}${a.status === 'arrived' && a.delayMinutes > 0 ? ` · ${a.delayMinutes} min de atraso` : ''}</span>${replyOf(a) ? ` <span class="pill ${replyOf(a).tipo === 'confirmado' ? 'st-pc' : 'st-pr'}">${replyText(replyOf(a))}</span>` : ''}</td></tr>`;
+          <td><span class="pill st-${st.key}">${esc(st.label)}${a.status === 'arrived' && a.delayMinutes > 0 ? ` · ${a.delayMinutes} min de atraso` : ''}</span>${replyOf(a) ? ` <span class="pill ${replyCls(replyOf(a))}">${replyText(replyOf(a))}</span>` : ''}</td></tr>`;
       }).join('')}
       </tbody></table>`;
   }
@@ -5888,6 +5991,7 @@
       ] },
       { title: 'Configurações', items: [
         { id: 'customize', icon: I.home, label: 'Personalizar', sub: 'Cores, logo e nome da clínica', run: openCustomizeModal },
+        ...(online() ? [{ id: 'area', icon: I.key, label: 'Área do paciente', sub: 'WhatsApp da recepção e regras para cancelar', run: openAreaSettings }] : []),
         { id: 'types', icon: I.palette, label: 'Cores e ícones dos tipos', sub: 'Aparecem na grade', run: openTypesModal },
         { id: 'export', icon: I.download, label: 'Exportar backup', sub: `Último: ${last}`, state: last === 'nunca' ? ['Nunca feito', 'bad'] : null, run: () => exportBackup() },
         { id: 'import', icon: I.upload, label: 'Restaurar backup', sub: 'Volta os dados de um arquivo de backup', run: startImport },

@@ -17,6 +17,7 @@ dente-sempre/
 │   ├── servidor.js               ← servidor (Node 22, sem dependências, banco SQLite)
 │   ├── planos.js                 ← planos e limites (o único arquivo que decide o que cada clínica pode usar)
 │   ├── paciente.js               ← link do paciente: página de confirmação pelo WhatsApp
+│   ├── area.js                   ← área do paciente: entra com telefone + código e vê as próprias consultas
 │   ├── Dockerfile                ← para Fly.io, Railway, Render...
 │   └── hospedagem/               ← instalação num VPS com HTTPS automático (Caddy)
 └── .github/workflows/gerar-apps.yml   ← gera o APK e os instaladores no GitHub, de graça
@@ -169,7 +170,9 @@ Depois disso, use o comando **`dente-sempre`** no VPS para tudo (veja a seção 
 | `LICENCA_CHAVE_PRIVADA` | a chave das licenças por variável, em vez do arquivo | — |
 | `ORIGENS_PERMITIDAS` | quem pode chamar a API de dentro de um navegador | os apps |
 | `LINK_DIAS` | validade máxima do link do paciente | 90 |
-| `FUSO` | fuso da clínica (para saber que dia é "hoje" no link) | America/Sao_Paulo |
+| `FUSO` | fuso da clínica (para saber que dia e hora é no link e na área do paciente) | America/Sao_Paulo |
+| `AREA_CODIGO_HORAS` | validade do código da área do paciente | 48 |
+| `AREA_SESSAO_DIAS` | o paciente fica conectado por até tantos dias sem uso | 30 |
 
 ---
 
@@ -265,7 +268,67 @@ Acha qualquer consulta pelo **nome do paciente** ou pelo **procedimento** (limpe
 
 ---
 
-## 8. Ativação e o que já está preparado para vender
+## 8. Área do paciente
+
+O paciente entra pelo endereço **`https://api.seudominio.com.br/area`** com o **telefone** e um **código**, e vê só as consultas dele.
+
+**1. A clínica escolhe as regras (uma vez, pelo administrador):** Menu → Configurações → **Área do paciente**.
+
+- **WhatsApp da recepção:** vira o botão "Falar com a recepção pelo WhatsApp". Em branco, o botão não aparece.
+- **O paciente pode cancelar pela área:** ligado ou desligado.
+- **Remarcar e cancelar só até:** de "até a hora da consulta" a "3 dias antes". O padrão é 24 horas. Depois desse prazo, a área pede para o paciente falar com a recepção. Confirmar presença vale até a hora da consulta.
+
+Essas regras sincronizam como as outras configurações. A opção só aparece com o servidor ligado.
+
+**2. A recepção manda o acesso:** Pacientes → abra o paciente → **Enviar acesso à área do paciente**.
+
+1. O programa envia os dados do paciente para o servidor, se faltar, e pede um **código de 6 números**.
+2. Abre a mensagem pronta, que você pode editar. Exemplo: "Olá, Maria! Esta é a sua área do paciente da Clínica Sorriso… https://api.seudominio.com.br/area?codigo=482913. Para entrar, use o seu telefone com DDD e o código 482913."
+3. **Abrir WhatsApp** ou **Copiar mensagem**.
+
+O código vale **uma vez** e por **48 horas**. Um código novo substitui o anterior. O botão aparece para Recepção e Administrador.
+
+**3. O paciente entra e usa** (no navegador do celular, sem instalar nada):
+
+1. Toca no link: o código já vem preenchido. Ele digita o telefone com DDD, do jeito que quiser: `(11) 98765-4321`, `11987654321` ou `+55 11 98765-4321`.
+2. Vê **Próximas consultas** (data, hora, procedimento e dentista) e **Consultas anteriores** (realizada, não compareceu ou cancelada).
+3. Em cada próxima consulta, conforme as regras:
+   - **Confirmar presença**;
+   - **Pedir para remarcar**;
+   - **Cancelar consulta**, que pede confirmação antes.
+4. **Falar com a recepção pelo WhatsApp** abre a conversa com a recepção, já com o nome dele.
+5. Ele continua conectado naquele celular por até 30 dias sem uso. **Sair deste aparelho** desconecta.
+
+**Como a clínica vê as ações:** igual ao link simples.
+
+- A ação vira uma resposta na agenda e chega a todos os aparelhos pela sincronização (em até 30 segundos).
+- **No cartão da consulta:** ✓ Confirmado pelo paciente (verde), ↻ Pediu remarque (amarelo) ou **✕ Paciente cancelou** (vermelho).
+- **No detalhe da consulta:** "Paciente cancelou · pela área do paciente".
+- **Também aparece** na **Lista do dia**, no aviso na tela ("Resposta do paciente: Maria cancelou (04/11 15:00)") e na **Busca**, pela situação "Paciente cancelou".
+- O cancelamento **não apaga** a consulta sozinho. A recepção vê o aviso e libera o horário (Excluir) quando quiser.
+- Se a recepção remarcar a consulta, a resposta antiga some, como no link.
+
+**Segurança:**
+
+- **O paciente só vê o que é dele.** O servidor busca as consultas pelo paciente da sessão. Ele não vê outros pacientes, anotações, CPF, endereço, telefone nem dados internos da clínica. Pedir ação numa consulta de outra pessoa é recusado.
+- **Entrar exige o telefone do cadastro e o código juntos.** O código vale uma vez e vence em 48 horas.
+- **Tentativas erradas:** 5 seguidas no mesmo telefone, ou 20 do mesmo endereço, fazem esperar 15 minutos.
+- **O servidor guarda só resumos** (SHA-256) do código, da sessão e do telefone.
+- **A sessão** fica num cookie que o JavaScript não lê (HttpOnly), enviado só por HTTPS e só para `/area`. Cada botão leva uma senha da sessão, contra ataque de outro site.
+- **A sessão acaba sozinha** se a recepção mudar o telefone do paciente, se o paciente for apagado, se a clínica for suspensa ou depois de 30 dias sem uso.
+- **A página** não tem JavaScript, não é indexada por buscadores e não abre dentro de outro site.
+
+**Arquivo:** `servidor/area.js`. As rotas são:
+
+- `GET /area`: entrada ou lista de consultas;
+- `POST /area/entrar`, `POST /area/acao` e `POST /area/sair`;
+- `POST /api/area/convite`, para o app.
+
+O resto do servidor não mudou. O link simples (`/p/...`) continua igual.
+
+---
+
+## 9. Ativação e o que já está preparado para vender
 
 ### Criar uma clínica (com o servidor ligado)
 
@@ -342,7 +405,7 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 
 ---
 
-## 9. O que ficou pronto e o que falta para vender
+## 10. O que ficou pronto e o que falta para vender
 
 ### Pronto
 
@@ -356,6 +419,7 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 - Licença assinada, ligada à clínica e ao aparelho, com renovação, suspensão e revogação.
 - Planos (Teste, Básico, Profissional) com limites de aparelhos, dentistas e usuários conferidos no servidor.
 - Link para o paciente confirmar ou pedir remarque pelo WhatsApp, com a resposta aparecendo na agenda.
+- Área do paciente (`/area`): entra com telefone e código, vê só as próprias consultas, confirma, pede remarque ou cancela pelas regras da clínica e fala com a recepção pelo WhatsApp.
 - Busca de consultas por paciente, procedimento, período, situação e dentista. Respeita as permissões e funciona sem internet.
 - Telas ajustadas para o celular: barra embaixo, cartões maiores, janelas de baixo para cima e WhatsApp direto no app.
 - O pagamento está preparado (`aoConfirmarPagamento` em `planos.js`) e o painel tem as rotas reservadas (`/api/painel/...`).
