@@ -210,6 +210,16 @@
   .ev.narrow .rp-txt,.ev.compact .rp-txt{display:none}
   .st-pc{background:#e6f5ec;color:#17603a} .st-pr{background:#fff4d6;color:#5c4300}
   .chip-px{background:#fdecec;color:#8a2323;border:1px solid #efb4b4} .st-px{background:#fdecec;color:#8a2323}
+  /* Módulo de próteses */
+  .pr-preparo{background:#eceff3;color:#4a5568} .pr-enviada{background:var(--appt);color:var(--appt-ink)} .pr-atrasada{background:var(--red-soft);color:var(--red-ink);border:1px solid #efb4b4}
+  .pr-na_clinica{background:var(--amber-soft);color:var(--amber-ink)} .pr-pronta{background:var(--fit-soft);color:var(--fit-ink)} .pr-entregue{background:var(--ok);color:var(--ok-ink)} .pr-cancelada{background:#eceff3;color:#6b7584;text-decoration:line-through}
+  .pr-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .pr-top .btn{display:inline-flex;align-items:center;gap:6px}
+  .pr-alert{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;border:1px solid #efb4b4;border-left:4px solid var(--red);border-radius:var(--r);background:var(--red-soft);color:var(--red-ink)}
+  .pr-ask{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pr-ask .btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pr-cobrar{border-color:#efb4b4;color:var(--red-ink)}
+  .pf-pac{padding:8px 0}
   .ar-code{font-size:28px;font-weight:700;letter-spacing:.12em;font-variant-numeric:tabular-nums}
   .muted-sm{font-size:13px;color:var(--muted)}
   .btn-link-pac{border-color:#9fd3b3;color:#17603a}
@@ -796,6 +806,8 @@
     .sr-main{padding:10px 12px;min-height:72px}
     .sr-name{font-size:17px}
     .sr-day{align-self:stretch;margin:0 10px 10px;justify-content:center;height:44px}
+    .pr-ask .btn{min-height:44px;min-width:72px}
+    .pr-top .btn{min-height:44px;flex:1;justify-content:center}
     .cmd{min-width:0;width:100%;height:58px;padding:0 2px;font-size:12.5px;gap:3px;border-radius:10px;flex-direction:column;justify-content:center}
     .cmd svg{width:23px;height:23px}
     .cmd:active{background:var(--select)}
@@ -858,6 +870,31 @@
     .daylist td:first-child{font-weight:700;color:var(--ink);font-size:15px}
     .daylist td:nth-child(2){font-size:16px;color:var(--ink)}
     .daylist td:last-child{grid-column:2;grid-row:1 / span 3;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  }
+  /* Regras do dia: tela de pendências e aviso de dia passado */
+  .pend-card{width:min(640px,100%)}
+  .pd-scroll{max-height:min(56vh,520px);overflow:auto;margin:-4px 0 0}
+  .pd-box{max-height:min(52vh,480px);overflow:auto;margin:10px 0 0;border-top:1px solid var(--line-soft)}
+  .pd-dia{font-size:14px;margin:12px 0 4px;color:var(--muted);font-weight:700}
+  .pd-list{list-style:none;margin:0;padding:0;border:1px solid var(--line)}
+  .pd-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:1px solid var(--line-soft)}
+  .pd-row:first-child{border-top:0}
+  .pd-info{display:flex;gap:10px;align-items:baseline;flex:1;min-width:0}
+  .pd-hora{font-variant-numeric:tabular-nums;min-width:44px}
+  .pd-nome{font-weight:600;display:block;overflow-wrap:anywhere}
+  .pd-info small{display:block;color:var(--muted);font-size:13px}
+  .pd-bts{display:flex;gap:6px;align-items:center;flex:none}
+  .pd-bts .btn{min-width:84px}
+  .pd-exit{margin-top:12px}
+  .dp-aviso{display:flex;gap:10px;margin-top:14px;background:var(--amber-soft);border:1px solid #f0d28a;border-left:4px solid var(--amber);padding:10px 12px;color:var(--amber-ink)}
+  .dp-aviso p{margin:6px 0 8px}
+  .dp-ico svg{width:18px;height:18px;margin-top:2px}
+  .dp-bts{display:flex;gap:8px;flex-wrap:wrap}
+  .dp-bts .btn{min-width:110px}
+  @media (max-width:600px){
+    .pd-row{flex-direction:column;align-items:stretch;gap:8px}
+    .pd-bts .btn{flex:1;height:44px}
+    .pd-scroll{max-height:none}
   }
 </style>
 </head>
@@ -1083,6 +1120,21 @@
   </div>
 </div>
 
+<div class="firstuse pend-screen" id="pendScreen" hidden>
+  <div class="fu-card pend-card" role="dialog" aria-modal="true" aria-labelledby="pdTitle">
+    <div class="fu-head">
+      <div class="fu-brand">Dente Sempre</div>
+      <h1 id="pdTitle">Consultas sem status</h1>
+      <p id="pdCount"></p>
+    </div>
+    <div class="fu-body">
+      <div class="pd-scroll" id="pdBody"></div>
+      <p class="hint" id="pdAdmin" hidden>Administrador: em “Abrir” dá para alterar, remarcar ou excluir a consulta.</p>
+      <div class="fu-links"><button type="button" class="link" id="pdExit">Sair (entrar com outro usuário)</button></div>
+    </div>
+  </div>
+</div>
+
 <button class="fab" id="fabNew" data-perm="agenda.editar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Novo horário</button>
 
 <div class="backdrop" id="backdrop" hidden></div>
@@ -1262,7 +1314,9 @@
     sync: ic('<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>'),
     cloud: ic('<path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 10.4 3.8 3.8 0 0 1 17.5 18z"/>'),
     key: ic('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>'),
-    gift: ic('<rect x="3" y="10" width="18" height="11" rx="1"/><path d="M3 15h18M12 10v11"/>')
+    gift: ic('<rect x="3" y="10" width="18" height="11" rx="1"/><path d="M3 15h18M12 10v11"/>'),
+    tooth: ic('<path d="M7.5 3C5 3 3.5 5 3.5 7.5c0 2.8 1.4 4.3 1.9 6.8.6 3 1 6.7 2.5 6.7s1.6-3.3 2.3-5c.4-1 1-1.5 1.8-1.5s1.4.5 1.8 1.5c.7 1.7.8 5 2.3 5s1.9-3.7 2.5-6.7c.5-2.5 1.9-4 1.9-6.8C20.5 5 19 3 16.5 3c-2 0-2.9 1-4.5 1S9.5 3 7.5 3z"/>'),
+    lab: ic('<path d="M9 3h6M10 3v6.5L4.6 18.4A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.4-2.6L14 9.5V3M7.5 15h9"/>')
   };
   const lockSvg = I.lock, forkSvg = I.fork, boltSvg = I.bolt;
   const closeX = '<button type="button" class="winclose" data-close-modal aria-label="Fechar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
@@ -1428,7 +1482,12 @@
     if (typeof d.settings.lastBackupAt !== 'string') d.settings.lastBackupAt = '';
     if (!d.typeStyles || typeof d.typeStyles !== 'object') d.typeStyles = {};
     if (!d.replies || typeof d.replies !== 'object' || Array.isArray(d.replies)) d.replies = {};   // respostas dos pacientes pelo link
-    if (!d.area || typeof d.area !== 'object' || Array.isArray(d.area)) d.area = null;   // regras da área do paciente (só existe depois que o administrador salvar)
+    if (!d.area || typeof d.area !== 'object' || Array.isArray(d.area)) d.area = null;
+    // Módulo de próteses (opcional): só vira registro de sincronização quando é usado
+    if (!Array.isArray(d.labs)) d.labs = [];
+    if (!Array.isArray(d.prostheses)) d.prostheses = [];
+    d.prostheses.forEach(x => { if (!Array.isArray(x.history)) x.history = []; });
+    if (!d.modules || typeof d.modules !== 'object' || Array.isArray(d.modules)) d.modules = null;   // regras da área do paciente (só existe depois que o administrador salvar)
     if (typeof d.clinicId !== 'string' || !d.clinicId) d.clinicId = uid();   // identifica a clínica no servidor
     d.version = DATA_VERSION;
     return d;
@@ -2978,7 +3037,7 @@
       <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Área do paciente</h2></div>${closeX}</div>
       <form id="arForm" class="stack" novalidate>
         <p class="hint" style="margin:0">O paciente entra pelo endereço <b>${esc(String(SERVIDOR.url).replace(/\/+$/, ''))}/area</b> com o telefone e um código. Para mandar o código, abra o paciente em <b>Pacientes</b> e toque em <b>Enviar acesso à área do paciente</b>.</p>
-        <label class="field"><span class="label">WhatsApp da recepção</span><input id="arWa" type="tel" inputmode="tel" placeholder="(11) 91234-5678" value="${esc(r.whatsapp ? phoneOut(r.whatsapp) : '')}">
+        <label class="field"><span class="label">WhatsApp da recepção</span><input id="arWa" type="tel" inputmode="tel" placeholder="(11) 91234-5678" value="${esc(r.whatsapp ? fmtPhone(r.whatsapp) : '')}">
           <span class="hint">Aparece para o paciente como "Falar com a recepção pelo WhatsApp". Em branco, o botão não aparece.</span></label>
         <label class="fitrow"><input type="checkbox" id="arCancel"${r.cancelar ? ' checked' : ''}><span>O paciente pode cancelar a consulta pela área</span></label>
         <label class="field"><span class="label">Remarcar e cancelar pela área só até</span><select id="arHoras">${horas.map(([v, t]) => `<option value="${v}"${Number(r.horas) === v ? ' selected' : ''}>${t}</option>`).join('')}</select>
@@ -2994,6 +3053,488 @@
       save(); closeModal(true);
       toast('Regras da área do paciente salvas.');
     };
+  }
+
+  // =====================================================================
+  //  MÓDULO DE PRÓTESES (opcional: Menu → Configurações → Módulo de próteses)
+  //  Próteses enviadas ao laboratório, protéticos, atraso e cobrança pelo WhatsApp.
+  //  Ver: quem vê pacientes. Mudar: quem edita pacientes. Desligado, nada aparece.
+  // =====================================================================
+  const PR_TIPOS = ['Coroa', 'Coroa sobre implante', 'Protocolo', 'PPR', 'Prótese total', 'Ponte fixa', 'Faceta', 'Onlay / inlay', 'Provisório', 'Placa miorrelaxante'];
+  const PR_STATUS = { preparo: 'Aguardando envio', enviada: 'No laboratório', na_clinica: 'Na clínica (prova)', pronta: 'Pronta para entregar', entregue: 'Entregue', cancelada: 'Cancelada' };
+  const PR_FILTROS = [['abertas', 'Em andamento'], ['atrasada', 'Em atraso'], ['preparo', 'Aguardando envio'], ['enviada', 'No laboratório'],
+    ['na_clinica', 'Na clínica (prova)'], ['pronta', 'Pronta para entregar'], ['entregue', 'Entregues'], ['cancelada', 'Canceladas'], ['todas', 'Todas']];
+  const proteseAtiva = () => !!(db.modules && db.modules.protese);
+  const prDias = () => { const n = Number(db.modules && db.modules.proteseDias); return n >= 1 && n <= 120 ? Math.round(n) : 10; };
+  const prVer = () => proteseAtiva() && can('pacientes.ver');
+  const prEditar = () => proteseAtiva() && can('pacientes.editar');
+  const getLab = id => db.labs.find(l => l.id === id);
+  const getProtese = id => db.prostheses.find(x => x.id === id);
+  const prAberta = x => x.status !== 'entregue' && x.status !== 'cancelada';
+  // Dias de atraso: só conta enquanto está no laboratório e passou do retorno previsto
+  function prAtraso(x) {
+    if (x.status !== 'enviada' || !x.dueDate) return 0;
+    const t = todayStr();
+    return x.dueDate < t ? Math.round((parseDate(t) - parseDate(x.dueDate)) / 86400000) : 0;
+  }
+  function prInfo(x) {
+    const d = prAtraso(x);
+    return d ? { key: 'atrasada', label: `Em atraso · ${d} ${d === 1 ? 'dia' : 'dias'}` } : { key: x.status, label: PR_STATUS[x.status] || x.status };
+  }
+  const prAtrasadas = () => db.prostheses.filter(x => prAtraso(x) > 0);
+  const prLabNome = x => { const l = getLab(x.labId); return l ? l.name : ''; };
+  const prPaciente = x => { const p = getPatient(x.patientId); return p ? p.name : 'Paciente'; };
+  function prLog(x, kind, text) {
+    const now = new Date().toISOString();
+    (x.history = Array.isArray(x.history) ? x.history : []).push({ at: now, kind, text, by: currentUser() ? currentUser().name : '' });
+    x.editedAt = now;
+  }
+  // A ordem da lista: atrasadas primeiro, depois pelo retorno previsto; as encerradas por último
+  function prOrdem(a, b) {
+    const ka = prAberta(a) ? 0 : 1, kb = prAberta(b) ? 0 : 1;
+    if (ka !== kb) return ka - kb;
+    if (ka === 1) return String(b.editedAt || '').localeCompare(String(a.editedAt || ''));
+    const da = prAtraso(a), dbb = prAtraso(b);
+    if (da !== dbb) return dbb - da;
+    return String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999'));
+  }
+  function prPill(x) { const i = prInfo(x); return `<span class="pill pr-${i.key}">${esc(i.label)}</span>`; }
+  function prQuando(x) {
+    if (x.status === 'entregue' && x.deliveredAt) return `Entregue em <b>${fmtDMY(x.deliveredAt)}</b>`;
+    if (!x.sentAt) return 'Ainda não foi enviada';
+    return `Enviada em <b>${fmtDMY(x.sentAt)}</b>${x.dueDate ? ` · retorno ${fmtDM(x.dueDate)}` : ''}`;
+  }
+  function prItem(x) {
+    const lab = prLabNome(x);
+    return `<div class="sr-item">
+        <button type="button" class="sr-main" data-pr="${x.id}">
+          <span class="sr-when">${prQuando(x)}</span>
+          <span class="sr-name">${esc(prPaciente(x))}</span>
+          <span class="sr-sub">${esc(x.type)}${lab ? ' · ' + esc(lab) : ''}</span>
+          <span class="sr-pills">${prPill(x)}</span>
+        </button>
+        ${prAtraso(x) && prEditar() ? `<button type="button" class="btn btn-small sr-day pr-cobrar" data-prcob="${x.id}" title="Mensagem pelo WhatsApp para o protético">${I.chat}<span>Cobrar</span></button>` : ''}
+      </div>`;
+  }
+
+  // ---------- Lista geral ----------
+  const prState = { status: 'abertas', lab: '', q: '' };
+  function openProsthesesModal() {
+    if (!allow('pacientes.ver') || !proteseAtiva()) return;
+    closeMenu();
+    const s = prState;
+    const opt = (list, v) => list.map(([k, t]) => `<option value="${k}"${k === v ? ' selected' : ''}>${esc(t)}</option>`).join('');
+    const labs = db.labs.slice().sort(byName);
+    if (s.lab && !getLab(s.lab)) s.lab = '';
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Controle de próteses</div><h2>Próteses</h2></div>${closeX}</div>
+      <div id="prAlert"></div>
+      <div class="pr-top">
+        ${prEditar() ? '<button type="button" class="btn btn-primary" id="prNew">+ Nova prótese</button>' : ''}
+        <button type="button" class="btn" id="prLabs">${I.lab}Protéticos</button>
+      </div>
+      <div class="sr-qwrap"><input id="prQ" type="search" autocomplete="off" placeholder="Paciente ou tipo de prótese" value="${esc(s.q)}"></div>
+      <div class="filters sr-filters">
+        <label class="field"><span class="label">Situação</span><select id="prStatus">${opt(PR_FILTROS, s.status)}</select></label>
+        <label class="field"><span class="label">Protético</span><select id="prLab"><option value="">Todos os protéticos</option>${labs.map(l => `<option value="${l.id}"${l.id === s.lab ? ' selected' : ''}>${esc(l.name)}${l.active === false ? ' (inativo)' : ''}</option>`).join('')}</select></label>
+      </div>
+      <div class="sr-count" id="prCount" role="status"></div>
+      <div class="sr-list" id="prList"></div>`, true);
+    const draw = () => {
+      const late = prAtrasadas();
+      $('#prAlert').innerHTML = late.length
+        ? `<div class="pr-alert" role="alert">${I.clock}<span><b>${late.length === 1 ? '1 prótese em atraso' : late.length + ' próteses em atraso'}</b> no laboratório.</span>${s.status !== 'atrasada' ? '<button type="button" class="link" id="prOnlyLate">Ver só as atrasadas</button>' : ''}</div>` : '';
+      if ($('#prOnlyLate')) $('#prOnlyLate').onclick = () => { s.status = 'atrasada'; $('#prStatus').value = 'atrasada'; draw(); };
+      const words = norm(s.q).split(' ').filter(Boolean);
+      const list = db.prostheses.filter(x => {
+        if (s.lab && x.labId !== s.lab) return false;
+        if (s.status === 'abertas' && !prAberta(x)) return false;
+        if (s.status === 'atrasada' && !prAtraso(x)) return false;
+        if (!['abertas', 'atrasada', 'todas'].includes(s.status) && x.status !== s.status) return false;
+        if (!words.length) return true;
+        const hay = norm(prPaciente(x) + ' ' + x.type + ' ' + prLabNome(x));
+        return words.every(w => hay.includes(w));
+      }).sort(prOrdem);
+      $('#prCount').textContent = list.length ? `${list.length} ${list.length === 1 ? 'prótese' : 'próteses'}` : '';
+      $('#prList').innerHTML = list.length ? list.map(prItem).join('')
+        : `<p class="muted sr-hint">${db.prostheses.length ? 'Nenhuma prótese com esses filtros.' : 'Nenhuma prótese cadastrada ainda. Cadastre em "+ Nova prótese" ou na ficha do paciente.'}</p>`;
+      $$('[data-pr]', $('#prList')).forEach(b => b.onclick = () => openProsthesisDetail(b.dataset.pr, openProsthesesModal));
+      $$('[data-prcob]', $('#prList')).forEach(b => b.onclick = () => openProsthesisCharge(b.dataset.prcob, openProsthesesModal));
+    };
+    $('#prQ').oninput = e => { s.q = e.target.value; draw(); };
+    $('#prStatus').onchange = e => { s.status = e.target.value; draw(); };
+    $('#prLab').onchange = e => { s.lab = e.target.value; draw(); };
+    if ($('#prNew')) $('#prNew').onclick = () => openProsthesisForm({ back: openProsthesesModal });
+    $('#prLabs').onclick = () => openLabsModal(openProsthesesModal);
+    draw();
+  }
+
+  // ---------- Detalhe de uma prótese ----------
+  function openProsthesisDetail(id, back) {
+    if (!allow('pacientes.ver')) return;
+    const x = getProtese(id);
+    if (!x) return;
+    const p = getPatient(x.patientId), lab = getLab(x.labId), late = prAtraso(x), ed = prEditar();
+    const backTo = back || (() => openProsthesesModal());
+    const backTxt = back && back.prPaciente ? (p ? p.name : 'Paciente') : 'Próteses';
+    const acts = [];
+    if (ed) {
+      if (x.status === 'preparo') acts.push('<button type="button" class="btn btn-primary full" id="prxSend">Enviar ao laboratório</button>');
+      if (x.status === 'enviada') {
+        acts.push('<button type="button" class="btn" id="prxReady">Voltou pronta</button>', '<button type="button" class="btn" id="prxTry">Voltou para prova</button>');
+        acts.push(`<button type="button" class="btn ${late ? 'btn-danger solid' : ''} full" id="prxCharge">${late ? 'Cobrar o protético (em atraso)' : 'Mensagem para o protético'}</button>`);
+        acts.push('<button type="button" class="btn full" id="prxDue">Mudar o retorno previsto</button>');
+      }
+      if (x.status === 'na_clinica') acts.push('<button type="button" class="btn" id="prxResend">Reenviar ao laboratório</button>', '<button type="button" class="btn" id="prxReady">Ficou pronta</button>');
+      if (x.status === 'pronta') acts.push('<button type="button" class="btn btn-primary full" id="prxDeliver">Entregue ao paciente</button>', '<button type="button" class="btn full" id="prxResend">Voltar ao laboratório</button>');
+      acts.push('<button type="button" class="btn" id="prxEdit">Editar</button>');
+      if (prAberta(x)) acts.push('<button type="button" class="btn btn-danger" id="prxCancel">Cancelar prótese</button>');
+    }
+    const hist = (x.history || []).slice().reverse().map(h => `<li><div><div class="when">${fmtStamp(h.at)}</div><div>${esc(h.text)}</div>${h.by ? `<div class="sub">por ${esc(h.by)}</div>` : ''}</div></li>`).join('');
+    openModal(`
+      <div class="modal-head"><div>
+          <button type="button" class="link" id="prxBack">‹ ${esc(backTxt)}</button>
+          <div class="eyebrow">Prótese · ${esc(x.type)}</div>
+          <h2>${esc(p ? p.name : 'Paciente')}</h2>
+        </div>${closeX}</div>
+      <div class="pills">${prPill(x)}</div>
+      <dl class="facts">
+        <dt>Tipo</dt><dd>${esc(x.type)}</dd>
+        <dt>Protético</dt><dd>${lab ? esc(lab.name) + (lab.phone ? ` · ${esc(fmtPhone(lab.phone))}` : '') : '—'}</dd>
+        <dt>Enviada em</dt><dd>${x.sentAt ? fmtDMY(x.sentAt) : '—'}</dd>
+        <dt>Retorno previsto</dt><dd>${x.dueDate ? fmtDMY(x.dueDate) : '—'}${late ? ` · <b style="color:var(--red-ink)">${late} ${late === 1 ? 'dia' : 'dias'} de atraso</b>` : ''}</dd>
+        ${x.returnedAt ? `<dt>Voltou em</dt><dd>${fmtDMY(x.returnedAt)}</dd>` : ''}
+        ${x.deliveredAt ? `<dt>Entregue em</dt><dd>${fmtDMY(x.deliveredAt)}</dd>` : ''}
+        ${x.lastChargeAt ? `<dt>Última cobrança</dt><dd>${fmtStamp(x.lastChargeAt)}</dd>` : ''}
+        <dt>Anotações</dt><dd>${x.notes ? esc(x.notes).replace(/\n/g, '<br>') : '—'}</dd>
+      </dl>
+      ${acts.length ? `<div class="actions">${acts.join('')}</div>` : ''}
+      <div class="row-between"><h3>Histórico de envios e retornos</h3>${p ? '<button type="button" class="btn btn-small" id="prxPatient">Ficha do paciente</button>' : ''}</div>
+      ${hist ? `<ul class="hist">${hist}</ul>` : '<p class="muted">Sem registros ainda.</p>'}`, true);
+    const again = () => openProsthesisDetail(id, back);
+    const on = (sel, fn) => { if ($(sel)) $(sel).onclick = fn; };
+    on('#prxBack', backTo);
+    on('#prxPatient', () => openPatientDetail(x.patientId));
+    on('#prxSend', () => openProsthesisSend(id, 'enviar', again));
+    on('#prxResend', () => openProsthesisSend(id, 'reenviar', again));
+    on('#prxDue', () => openProsthesisSend(id, 'prazo', again));
+    on('#prxCharge', () => openProsthesisCharge(id, again));
+    on('#prxEdit', () => openProsthesisForm({ id, back: again }));
+    const passo = (status, campo, texto, aviso) => () => {
+      if (!allow('pacientes.editar')) return;
+      x.status = status;
+      if (campo) x[campo] = todayStr();
+      prLog(x, status, texto);
+      save(); again(); toast(aviso);
+    };
+    on('#prxReady', passo('pronta', x.status === 'enviada' ? 'returnedAt' : '', x.status === 'enviada' ? 'Voltou do laboratório pronta.' : 'Ficou pronta depois da prova.', 'Prótese pronta para entregar.'));
+    on('#prxTry', passo('na_clinica', 'returnedAt', 'Voltou do laboratório para prova.', 'Prótese na clínica para prova.'));
+    on('#prxDeliver', passo('entregue', 'deliveredAt', 'Entregue ao paciente.', 'Prótese entregue ao paciente.'));
+    on('#prxCancel', () => openProsthesisCancel(id, again));
+  }
+
+  // Enviar / reenviar ao laboratório e mudar o retorno previsto
+  function openProsthesisSend(id, modo, back) {
+    if (!allow('pacientes.editar')) return;
+    const x = getProtese(id);
+    if (!x) return;
+    const titulo = { enviar: 'Enviar ao laboratório', reenviar: 'Reenviar ao laboratório', prazo: 'Mudar o retorno previsto' }[modo];
+    const hoje = todayStr();
+    const labs = db.labs.filter(l => l.active !== false || l.id === x.labId).sort(byName);
+    openModal(`
+      <div class="modal-head"><div><button type="button" class="link" id="psBack">‹ Voltar</button><div class="eyebrow">${esc(prPaciente(x))} · ${esc(x.type)}</div><h2>${titulo}</h2></div>${closeX}</div>
+      <form id="psForm" class="stack" novalidate>
+        ${modo !== 'prazo' ? `<label class="field"><span class="label">Protético</span><select id="psLab"><option value="">Escolha o protético</option>${labs.map(l => `<option value="${l.id}"${l.id === x.labId ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>
+        <div class="two">
+          <label class="field"><span class="label">Data de envio</span><input type="date" id="psSent" value="${hoje}"></label>
+          <label class="field"><span class="label">Retorno previsto</span><input type="date" id="psDue" value="${addDays(hoje, prDias())}"></label>
+        </div>` : `<label class="field"><span class="label">Novo retorno previsto</span><input type="date" id="psDue" value="${x.dueDate && x.dueDate >= hoje ? x.dueDate : addDays(hoje, 3)}"></label>`}
+        <label class="field"><span class="label">Observação (opcional)</span><input id="psObs" autocomplete="off" placeholder="${modo === 'prazo' ? 'Ex.: protético pediu mais 3 dias' : 'Ex.: ajustar a cor'}"></label>
+        <div class="error" id="psErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" id="psCancel">Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button></div>
+      </form>`);
+    $('#psBack').onclick = back; $('#psCancel').onclick = back;
+    if ($('#psSent')) $('#psSent').onchange = e => { if (e.target.value) $('#psDue').value = addDays(e.target.value, prDias()); };
+    $('#psForm').onsubmit = e => {
+      e.preventDefault();
+      const err = m => { $('#psErr').textContent = m; $('#psErr').hidden = false; };
+      const due = $('#psDue').value, obs = cleanSpaces($('#psObs').value);
+      if (modo === 'prazo') {
+        if (!due) return err('Escolha a data do retorno previsto.');
+        if (x.sentAt && due < x.sentAt) return err('O retorno não pode ser antes do envio.');
+        x.dueDate = due;
+        prLog(x, 'prazo', `Retorno previsto mudou para ${fmtDMY(due)}.${obs ? ' ' + obs : ''}`);
+      } else {
+        const lab = $('#psLab').value, sent = $('#psSent').value;
+        if (!lab) return err('Escolha o protético. Se ele não estiver na lista, cadastre em Protéticos.');
+        if (!sent) return err('Escolha a data de envio.');
+        if (!due) return err('Escolha a data do retorno previsto.');
+        if (due < sent) return err('O retorno não pode ser antes do envio.');
+        Object.assign(x, { labId: lab, sentAt: sent, dueDate: due, status: 'enviada' });
+        prLog(x, modo === 'enviar' ? 'envio' : 'reenvio', `${modo === 'enviar' ? 'Enviada' : 'Reenviada'} ao laboratório (${getLab(lab).name}) em ${fmtDMY(sent)}, retorno previsto para ${fmtDMY(due)}.${obs ? ' ' + obs : ''}`);
+      }
+      save(); back(); toast(modo === 'prazo' ? 'Retorno previsto mudou.' : 'Prótese no laboratório.');
+    };
+  }
+
+  function openProsthesisCancel(id, back) {
+    if (!allow('pacientes.editar')) return;
+    const x = getProtese(id);
+    if (!x) return;
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">${esc(prPaciente(x))} · ${esc(x.type)}</div><h2>Cancelar esta prótese?</h2></div>${closeX}</div>
+      <form id="pcForm" class="stack" novalidate>
+        <p class="hint" style="margin:0">Ela sai da lista "Em andamento", mas continua no histórico do paciente.</p>
+        <label class="field"><span class="label">Motivo</span><input id="pcReason" autocomplete="off" placeholder="Ex.: paciente desistiu"></label>
+        <div class="error" id="pcErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" id="pcBack">Voltar</button><button type="submit" class="btn btn-danger solid">Cancelar prótese</button></div>
+      </form>`);
+    $('#pcBack').onclick = back;
+    $('#pcForm').onsubmit = e => {
+      e.preventDefault();
+      const r = cleanSpaces($('#pcReason').value);
+      if (!r) { $('#pcErr').textContent = 'Escreva o motivo.'; $('#pcErr').hidden = false; return; }
+      x.status = 'cancelada';
+      prLog(x, 'cancelada', 'Cancelada. Motivo: ' + r);
+      save(); back(); toast('Prótese cancelada.');
+    };
+  }
+
+  // ---------- Mensagem para o protético (cobrança) ----------
+  function prMensagem(x) {
+    const lab = getLab(x.labId), late = prAtraso(x);
+    const clinic = cleanSpaces(db.settings.clinicName) || cleanSpaces(session && session.clinica && session.clinica.nome);
+    const nome = lab ? cleanSpaces(lab.name) : '';
+    return `Olá${nome ? ', ' + nome : ''}! Aqui é da ${clinic || 'clínica'}. A prótese (${x.type}) do(a) paciente ${prPaciente(x)} foi enviada em ${x.sentAt ? fmtDM(x.sentAt) : '—'}`
+      + `${x.dueDate ? `, com retorno previsto para ${fmtDM(x.dueDate)}` : ''}${late ? `, e ainda não chegou (${late} ${late === 1 ? 'dia' : 'dias'} de atraso)` : ''}. Consegue me dizer quando fica pronta? Obrigado(a)!`;
+  }
+  function openProsthesisCharge(id, back) {
+    if (!allow('pacientes.editar')) return;
+    const x = getProtese(id);
+    if (!x) return;
+    const lab = getLab(x.labId), phone = lab ? waPhone(lab.phone) : '';
+    openModal(`
+      <div class="modal-head"><div><button type="button" class="link" id="pmBack">‹ Voltar</button><div class="eyebrow">Para ${esc(lab ? lab.name : 'o protético')}${lab && lab.phone ? ' · ' + esc(fmtPhone(lab.phone)) : ''}</div><h2>Mensagem para o protético</h2></div>${closeX}</div>
+      <div><textarea id="pmText" rows="5">${esc(prMensagem(x))}</textarea></div>
+      <p class="hint" style="margin-top:8px">Você pode mudar o texto. Nada é enviado sozinho: o WhatsApp abre com a mensagem e você toca em enviar.</p>
+      ${phone ? '' : `<div class="error" style="margin-top:10px">${lab ? 'O WhatsApp deste protético está vazio ou incompleto. Confira em Protéticos.' : 'Esta prótese não tem protético.'}</div>`}
+      <div class="modal-foot">
+        <button type="button" class="btn" id="pmCopy">Copiar mensagem</button>
+        <button type="button" class="btn btn-primary" id="pmOpen"${phone ? '' : ' disabled'}>Abrir WhatsApp</button>
+      </div>`);
+    $('#pmBack').onclick = back;
+    $('#pmOpen').onclick = () => {
+      openWa(phone, $('#pmText').value);
+      x.lastChargeAt = new Date().toISOString();
+      prLog(x, 'cobranca', `Mensagem para o protético pelo WhatsApp${prAtraso(x) ? ' (cobrança de atraso)' : ''}.`);
+      save(); back(); toast('Mensagem pronta no WhatsApp. É só tocar em enviar.');
+    };
+    $('#pmCopy').onclick = () => {
+      const done = () => toast('Mensagem copiada.');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText($('#pmText').value).then(done, () => { $('#pmText').select(); toast('Copie a mensagem do texto acima.'); });
+      else { $('#pmText').select(); toast('Copie a mensagem do texto acima.'); }
+    };
+  }
+
+  // ---------- Cadastro e edição de prótese ----------
+  function openProsthesisForm(opts) {
+    if (!allow('pacientes.editar') || !proteseAtiva()) return;
+    opts = opts || {};
+    const x = opts.id ? getProtese(opts.id) : null;
+    const d = opts.draft || (x ? { patientId: x.patientId, type: x.type, labId: x.labId, sentAt: x.sentAt || '', dueDate: x.dueDate || '', notes: x.notes || '' }
+      : { patientId: opts.patientId || '', type: '', labId: '', sentAt: '', dueDate: '', notes: '' });
+    const fixo = !!(x || opts.patientId);
+    const back = opts.back || openProsthesesModal;
+    const labs = db.labs.filter(l => l.active !== false || l.id === d.labId).sort(byName);
+    const p0 = getPatient(d.patientId);
+    openModal(`
+      <div class="modal-head"><div><button type="button" class="link" id="pfBack">‹ Voltar</button><div class="eyebrow">Prótese</div><h2>${x ? 'Editar prótese' : 'Cadastrar prótese'}</h2></div>${closeX}</div>
+      <form id="pfForm" class="stack" novalidate>
+        <div class="field"><span class="label">Paciente <span class="req">*</span></span>
+          ${fixo ? `<div class="pf-pac"><b>${esc(p0 ? p0.name : 'Paciente')}</b></div>`
+            : `<div class="sr-qwrap"><input id="pfPacQ" type="search" autocomplete="off" placeholder="Buscar paciente pelo nome ou telefone" value="${esc(p0 ? p0.name : '')}"></div><div class="plist" id="pfPacList"></div>`}
+        </div>
+        <label class="field"><span class="label">Tipo / descrição <span class="req">*</span></span><input id="pfType" list="pfTypes" autocomplete="off" placeholder="Ex.: coroa, protocolo, PPR" value="${esc(d.type)}">
+          <datalist id="pfTypes">${PR_TIPOS.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
+        <label class="field"><span class="label">Protético responsável</span><select id="pfLab"><option value="">${labs.length ? 'Escolha o protético' : 'Nenhum protético cadastrado'}</option>${labs.map(l => `<option value="${l.id}"${l.id === d.labId ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select>
+          <button type="button" class="link" id="pfNewLab" style="margin-top:4px">+ Cadastrar protético</button></label>
+        <div class="two">
+          <label class="field"><span class="label">Data de envio</span><input type="date" id="pfSent" value="${d.sentAt}"></label>
+          <label class="field"><span class="label">Retorno previsto</span><input type="date" id="pfDue" value="${d.dueDate}"></label>
+        </div>
+        <p class="hint" style="margin-top:-6px">Sem data de envio, a prótese fica como "Aguardando envio".</p>
+        <label class="field"><span class="label">Anotações</span><textarea id="pfNotes" rows="3" placeholder="Ex.: cor A2, moldagem em silicone">${esc(d.notes)}</textarea></label>
+        <div class="error" id="pfErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" id="pfCancel">Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button></div>
+      </form>`);
+    const ler = () => Object.assign(d, { type: cleanSpaces($('#pfType').value), labId: $('#pfLab').value, sentAt: $('#pfSent').value, dueDate: $('#pfDue').value, notes: $('#pfNotes').value.trim() });
+    $('#pfBack').onclick = back; $('#pfCancel').onclick = back;
+    $('#pfSent').onchange = e => { if (e.target.value && !$('#pfDue').value) $('#pfDue').value = addDays(e.target.value, prDias()); };
+    $('#pfNewLab').onclick = () => { ler(); openLabForm(null, () => openProsthesisForm(Object.assign({}, opts, { draft: d })), labId => { d.labId = labId; }); };
+    if (!fixo) {
+      const drawPac = () => {
+        const q = $('#pfPacQ').value.trim();
+        const chosen = getPatient(d.patientId);
+        if (chosen && q === chosen.name) { $('#pfPacList').innerHTML = ''; return; }
+        d.patientId = '';
+        const list = q ? searchPatients(q, 6) : [];
+        $('#pfPacList').innerHTML = list.map(p => `<button type="button" class="result" data-pfp="${p.id}"><span class="result-name">${esc(p.name)}</span><span class="muted">${esc(phoneOut(p.phone))}</span></button>`).join('')
+          || (q ? '<p class="muted">Ninguém encontrado. O cadastro do paciente é feito no botão Novo horário.</p>' : '');
+        $$('[data-pfp]', $('#pfPacList')).forEach(b => b.onclick = () => { d.patientId = b.dataset.pfp; $('#pfPacQ').value = getPatient(d.patientId).name; drawPac(); });
+      };
+      $('#pfPacQ').oninput = drawPac;
+      drawPac();
+      if (!phoneMQ.matches && !d.patientId) $('#pfPacQ').focus();
+    } else if (!phoneMQ.matches) $('#pfType').focus();
+    $('#pfForm').onsubmit = e => {
+      e.preventDefault();
+      ler();
+      const err = m => { $('#pfErr').textContent = m; $('#pfErr').hidden = false; };
+      if (!getPatient(d.patientId)) return err('Escolha o paciente.');
+      if (!d.type) return err('Escreva o tipo ou a descrição da prótese.');
+      if (d.sentAt && !d.labId) return err('Escolha o protético que recebeu a prótese.');
+      if (d.dueDate && !d.sentAt) return err('Escreva a data de envio, ou deixe o retorno em branco.');
+      if (d.sentAt && d.dueDate && d.dueDate < d.sentAt) return err('O retorno não pode ser antes do envio.');
+      const now = new Date().toISOString();
+      let alvo = x;
+      if (!alvo) {
+        alvo = { id: uid(), patientId: d.patientId, type: d.type, labId: d.labId, sentAt: d.sentAt, dueDate: d.dueDate, notes: d.notes,
+          status: d.sentAt ? 'enviada' : 'preparo', history: [], createdAt: now };
+        prLog(alvo, 'cadastro', 'Cadastrada.');
+        if (d.sentAt) prLog(alvo, 'envio', `Enviada ao laboratório (${getLab(d.labId).name}) em ${fmtDMY(d.sentAt)}${d.dueDate ? `, retorno previsto para ${fmtDMY(d.dueDate)}` : ''}.`);
+        db.prostheses.push(alvo);
+      } else {
+        const mudou = [];
+        if (alvo.type !== d.type) mudou.push('tipo');
+        if (alvo.labId !== d.labId) mudou.push('protético');
+        if ((alvo.sentAt || '') !== d.sentAt) mudou.push('envio');
+        if ((alvo.dueDate || '') !== d.dueDate) mudou.push('retorno previsto');
+        if ((alvo.notes || '') !== d.notes) mudou.push('anotações');
+        Object.assign(alvo, { type: d.type, labId: d.labId, sentAt: d.sentAt, dueDate: d.dueDate, notes: d.notes });
+        if (alvo.status === 'preparo' && d.sentAt) { alvo.status = 'enviada'; prLog(alvo, 'envio', `Enviada ao laboratório (${getLab(d.labId).name}) em ${fmtDMY(d.sentAt)}.`); }
+        else if (mudou.length) prLog(alvo, 'edicao', 'Dados alterados: ' + mudou.join(', ') + '.');
+      }
+      const p = getPatient(d.patientId);
+      if (p && p.temProtese !== true) p.temProtese = true;
+      save();
+      toast(x ? 'Prótese salva.' : 'Prótese cadastrada.');
+      openProsthesisDetail(alvo.id, opts.back);
+    };
+  }
+
+  // ---------- Protéticos (laboratórios) ----------
+  function openLabsModal(back) {
+    if (!allow('pacientes.ver') || !proteseAtiva()) return;
+    closeMenu();
+    const labs = db.labs.slice().sort((a, b) => (a.active === false) - (b.active === false) || byName(a, b));
+    openModal(`
+      <div class="modal-head"><div>${back ? '<button type="button" class="link" id="lbBack">‹ Próteses</button>' : ''}<div class="eyebrow">Controle de próteses</div><h2>Protéticos (laboratórios)</h2></div>${closeX}</div>
+      ${prEditar() ? '<div class="pr-top"><button type="button" class="btn btn-primary" id="lbNew">+ Novo protético</button></div>' : ''}
+      <div class="plist">${labs.length ? labs.map(l => {
+        const n = db.prostheses.filter(x => x.labId === l.id && prAberta(x)).length, late = db.prostheses.filter(x => x.labId === l.id && prAtraso(x)).length;
+        return `<button type="button" class="result" data-lb="${l.id}"><span><span class="result-name">${esc(l.name)}</span>${l.active === false ? ' <span class="pill st-deleted">Inativo</span>' : ''}<br><span class="muted">${l.phone ? esc(fmtPhone(l.phone)) : 'Sem WhatsApp'}</span></span>
+          <span class="muted" style="text-align:right">${n} em andamento${late ? `<br><b style="color:var(--red-ink)">${late} em atraso</b>` : ''}</span></button>`;
+      }).join('') : '<p class="muted">Nenhum protético cadastrado ainda.</p>'}</div>`);
+    const again = () => openLabsModal(back);
+    if ($('#lbBack')) $('#lbBack').onclick = back;
+    if ($('#lbNew')) $('#lbNew').onclick = () => openLabForm(null, again);
+    $$('[data-lb]').forEach(b => b.onclick = () => {
+      if (!prEditar()) { prState.lab = b.dataset.lb; prState.status = 'todas'; return openProsthesesModal(); }
+      openLabForm(b.dataset.lb, again);
+    });
+  }
+  function openLabForm(id, back, onSaved) {
+    if (!allow('pacientes.editar')) return;
+    const l = id ? getLab(id) : null;
+    openModal(`
+      <div class="modal-head"><div><button type="button" class="link" id="lfBack">‹ Voltar</button><div class="eyebrow">Protético (laboratório)</div><h2>${l ? esc(l.name) : 'Novo protético'}</h2></div>${closeX}</div>
+      <form id="lfForm" class="stack" novalidate>
+        <label class="field"><span class="label">Nome <span class="req">*</span></span><input id="lfName" autocomplete="off" autocapitalize="words" placeholder="Ex.: Lab Sorriso · Carlos" value="${esc(l ? l.name : '')}"></label>
+        <label class="field"><span class="label">WhatsApp</span><input id="lfPhone" type="tel" inputmode="tel" placeholder="(11) 91234-5678" value="${esc(l && l.phone ? fmtPhone(l.phone) : '')}"></label>
+        <label class="field"><span class="label">Observação</span><input id="lfNotes" autocomplete="off" placeholder="Ex.: busca às terças" value="${esc(l ? l.notes || '' : '')}"></label>
+        ${l ? `<label class="fitrow"><input type="checkbox" id="lfActive"${l.active !== false ? ' checked' : ''}><span>Ativo (aparece na hora de escolher o protético)</span></label>` : ''}
+        ${l ? `<button type="button" class="link" id="lfList">Ver as próteses deste protético</button>` : ''}
+        <div class="error" id="lfErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" id="lfCancel">Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button></div>
+      </form>`);
+    $('#lfBack').onclick = back; $('#lfCancel').onclick = back;
+    if ($('#lfList')) $('#lfList').onclick = () => { prState.lab = l.id; prState.status = 'todas'; openProsthesesModal(); };
+    if (!phoneMQ.matches) $('#lfName').focus();
+    $('#lfForm').onsubmit = e => {
+      e.preventDefault();
+      const err = m => { $('#lfErr').textContent = m; $('#lfErr').hidden = false; };
+      const name = cleanSpaces($('#lfName').value), ph = $('#lfPhone').value.trim();
+      if (!name) return err('Escreva o nome do protético ou do laboratório.');
+      if (ph && !waPhone(ph)) return err('O WhatsApp parece incompleto. Escreva com DDD, por exemplo (11) 91234-5678.');
+      if (db.labs.some(o => o !== l && norm(o.name) === norm(name))) return err('Já existe um protético com esse nome.');
+      const now = new Date().toISOString();
+      let alvo = l;
+      if (alvo) Object.assign(alvo, { name, phone: digits(ph), notes: cleanSpaces($('#lfNotes').value), active: $('#lfActive').checked, editedAt: now });
+      else { alvo = { id: uid(), name, phone: digits(ph), notes: cleanSpaces($('#lfNotes').value), active: true, createdAt: now }; db.labs.push(alvo); }
+      save();
+      toast('Protético salvo.');
+      if (onSaved) onSaved(alvo.id);
+      back();
+    };
+  }
+
+  // ---------- Na ficha do paciente ----------
+  function prFichaHtml(p) {
+    if (!prVer()) return '';
+    const lista = db.prostheses.filter(x => x.patientId === p.id).sort(prOrdem);
+    const sim = p.temProtese === true || lista.length > 0, nao = !sim && p.temProtese === false;
+    const ed = prEditar();
+    return `<div class="row-between"><h3>Prótese</h3>${sim && ed ? '<button type="button" class="btn btn-small" id="pdPrNew">+ Cadastrar prótese</button>' : ''}</div>
+      <div class="pr-ask"><span>Tem prótese?</span>
+        <button type="button" class="btn btn-small${sim ? ' on' : ''}" id="pdPrYes" aria-pressed="${sim}"${ed ? '' : ' disabled'}>Sim</button>
+        <button type="button" class="btn btn-small${nao ? ' on' : ''}" id="pdPrNo" aria-pressed="${nao}"${ed && !lista.length ? '' : ' disabled'}>Não</button>
+      </div>
+      ${lista.length ? `<div class="sr-list" style="margin-top:8px">${lista.map(prItem).join('')}</div>` : sim ? '<p class="muted" style="margin-top:8px">Nenhuma prótese cadastrada para este paciente.</p>' : ''}`;
+  }
+  function prFichaWire(p) {
+    if (!$('#pdPrYes')) return;
+    const marcar = v => () => { if (!allow('pacientes.editar')) return; p.temProtese = v; save(); openPatientDetail(p.id); };
+    $('#pdPrYes').onclick = () => { if (p.temProtese === true) return; marcar(true)(); };
+    $('#pdPrNo').onclick = marcar(false);
+    const voltar = () => openPatientDetail(p.id);
+    voltar.prPaciente = true;
+    if ($('#pdPrNew')) $('#pdPrNew').onclick = () => openProsthesisForm({ patientId: p.id, back: voltar });
+    $$('[data-pr]').forEach(b => b.onclick = () => openProsthesisDetail(b.dataset.pr, voltar));
+    $$('[data-prcob]').forEach(b => b.onclick = () => openProsthesisCharge(b.dataset.prcob, voltar));
+  }
+
+  // ---------- Configurações do módulo ----------
+  function openModulesModal() {
+    if (!allow('config')) return;
+    closeMenu();
+    const m = db.modules || {};
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Módulo de próteses</h2></div>${closeX}</div>
+      <form id="mdForm" class="stack" novalidate>
+        <p class="hint" style="margin:0">Controle das próteses enviadas ao laboratório: protéticos, prazos, atrasos e cobrança pelo WhatsApp. Ligado, aparece no Menu a seção <b>Próteses</b> e, na ficha do paciente, "Tem prótese?". Desligar só esconde: nada é apagado.</p>
+        <label class="fitrow"><input type="checkbox" id="mdOn"${m.protese ? ' checked' : ''}><span><b>Ligar o controle de próteses</b></span></label>
+        <label class="field"><span class="label">Prazo padrão do laboratório (dias)</span><input type="number" id="mdDays" min="1" max="120" step="1" inputmode="numeric" value="${prDias()}">
+          <span class="hint">Usado para sugerir o retorno previsto a partir da data de envio.</span></label>
+        <div class="error" id="mdErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button></div>
+      </form>`);
+    $('#mdForm').onsubmit = e => {
+      e.preventDefault();
+      const n = Number($('#mdDays').value);
+      if (!isInt($('#mdDays').value.trim()) || n < 1 || n > 120) { $('#mdErr').textContent = 'Escreva um prazo de 1 a 120 dias.'; $('#mdErr').hidden = false; return; }
+      db.modules = Object.assign({}, db.modules || {}, { protese: $('#mdOn').checked, proteseDias: n });
+      save(); closeModal(true);
+      toast(db.modules.protese ? 'Controle de próteses ligado. Veja no Menu → Próteses.' : 'Controle de próteses desligado.');
+    };
+  }
+  // Aviso de atraso (uma vez por dia neste aparelho, ao entrar)
+  let prAvisoDia = '';
+  function avisarProtesesAtrasadas() {
+    if (!prVer() || prAvisoDia === todayStr()) return;
+    const n = prAtrasadas().length;
+    if (!n) return;
+    prAvisoDia = todayStr();
+    toast(`${n === 1 ? '1 prótese está' : n + ' próteses estão'} em atraso no laboratório. Veja em Menu → Próteses.`);
   }
 
   function openPatientDetail(id) {
@@ -3030,11 +3571,13 @@
       </dl>
       <button type="button" class="btn" id="pdEdit" style="display:inline-flex;align-items:center;gap:8px">${I.edit}Editar dados</button>
       ${online() && can('confirmar') ? '<button type="button" class="btn btn-link-pac" id="pdArea" style="display:inline-flex;align-items:center;gap:8px;margin-left:6px">' + I.key + 'Enviar acesso à área do paciente</button>' : ''}
+      ${prFichaHtml(p)}
       <div class="row-between"><h3>Consultas (${hist.length})</h3><button type="button" class="btn btn-small" id="pdNew">+ Novo horário</button></div>
       ${hist.length ? `<ul class="hist">${items}</ul>` : '<p class="muted">Nenhuma consulta ainda.</p>'}`, true);
     $('#pdBack').onclick = openPatientsModal;
     $('#pdEdit').onclick = () => openPatientEdit(id);
     if ($('#pdArea')) $('#pdArea').onclick = () => openPatientAreaInvite(id);
+    prFichaWire(p);
     $('#pdNew').onclick = () => { closeModal(true); openApptDrawer({ patientId: id }); };
   }
 
@@ -4008,7 +4551,7 @@
     block: 'bloqueio', unblock: 'bloqueio', lunch: 'bloqueio', lunchoff: 'bloqueio', lunchreset: 'bloqueio',
     hours: 'dentistas.editar', dentists: 'dentistas.editar',
     history: 'pacientes.ver', patients: 'pacientes.ver', privacy: 'privacidade',
-    customize: 'config', types: 'config', users: 'usuarios', area: 'config',
+    customize: 'config', types: 'config', users: 'usuarios', area: 'config', modulos: 'config', proteses: 'pacientes.ver', labs: 'pacientes.ver',
     export: 'backup.exportar', import: 'backup.restaurar', cloud: 'backup.nuvem'
   };
 
@@ -4314,6 +4857,7 @@
       ? `Olá, ${u.name}. Você entrou sem internet: pode usar normalmente, e tudo vai para o servidor quando a conexão voltar.`
       : `Olá, ${u.name}.`);
     autoSync();
+    setTimeout(avisarProtesesAtrasadas, 4500);   // só com o módulo de próteses ligado e se houver atraso
   }
 
   // Mostra e esconde o que cada perfil pode usar
@@ -4512,9 +5056,9 @@
   const SYNC_KEY = 'denteSempre.sync';
   const SYNC_AREAS = [
     { id: 'agenda', label: 'Agenda', sub: 'Consultas, encaixes, bloqueios e almoço do dia', parts: ['appointments', 'blocks', 'lunchDays', 'replies'] },
-    { id: 'pacientes', label: 'Pacientes', sub: 'Cadastro dos pacientes', parts: ['patients'] },
+    { id: 'pacientes', label: 'Pacientes', sub: 'Cadastro dos pacientes', parts: ['patients', 'labs', 'prostheses'] },
     { id: 'dentistas', label: 'Dentistas', sub: 'Cadastro, expediente e almoço padrão', parts: ['dentists'] },
-    { id: 'configuracoes', label: 'Configurações da clínica', sub: 'Nome, cor, logo e tipos de consulta', parts: ['settings', 'types', 'typeStyles', 'area'] },
+    { id: 'configuracoes', label: 'Configurações da clínica', sub: 'Nome, cor, logo e tipos de consulta', parts: ['settings', 'types', 'typeStyles', 'area', 'modules'] },
     { id: 'anotacoes', label: 'Anotações', sub: 'Do dia e da recepção', parts: ['notesGeneral', 'notesDays'] }
   ];
   const PART_AREA = {};
@@ -4530,6 +5074,9 @@
     Object.keys(d.notes.days).forEach(k => { out['notesDays:' + k] = d.notes.days[k]; });
     Object.keys(d.replies || {}).forEach(k => { out['replies:' + k] = d.replies[k]; });
     if (d.area) out['area:config'] = d.area;
+    (d.labs || []).forEach(x => { out['labs:' + x.id] = x; });
+    (d.prostheses || []).forEach(x => { out['prostheses:' + x.id] = x; });
+    if (d.modules) out['modules:config'] = d.modules;
     if (d.notes.general) out['notesGeneral:geral'] = d.notes.general;
     const s = {};
     CLINIC_SETTINGS.forEach(k => { s[k] = d.settings[k]; });
@@ -4768,6 +5315,9 @@
     if (part === 'notesGeneral') return 'Anotações da recepção';
     if (part === 'replies') return 'Resposta do paciente';
     if (part === 'area') return 'Área do paciente (regras)';
+    if (part === 'labs') { const l = getLab(id); return apagado || !l ? 'Protético apagado' : `Protético · ${l.name}`; }
+    if (part === 'prostheses') { const x = getProtese(id); return apagado || !x ? 'Prótese apagada' : `Prótese · ${prPaciente(x)} · ${x.type}`; }
+    if (part === 'modules') return 'Módulos opcionais';
     return 'Configurações da clínica';
   }
   // Chegou resposta de paciente pelo link: avisa a recepção
@@ -4793,6 +5343,13 @@
     else if (part === 'notesDays') { if (del) delete db.notes.days[id]; else db.notes.days[id] = v; }
     else if (part === 'replies') { if (del) delete db.replies[id]; else db.replies[id] = v; }
     else if (part === 'area') db.area = del ? null : v;
+    else if (part === 'labs' || part === 'prostheses') {
+      const arr = db[part], j = arr.findIndex(x => x.id === id);
+      if (del) { if (j >= 0) arr.splice(j, 1); }
+      else if (j >= 0) arr[j] = v;
+      else arr.push(v);
+    }
+    else if (part === 'modules') db.modules = del ? null : v;
     else if (part === 'notesGeneral') db.notes.general = del ? '' : String(v);
     else if (part === 'settings' && !del) CLINIC_SETTINGS.forEach(k => { if (k in v) db.settings[k] = v[k]; });
     else if (part === 'types' && !del) db.types = v;
@@ -5962,6 +6519,225 @@
   // =====================================================================
   //  Menu de base: todas as opções, agrupadas. A agenda continua atrás.
   // =====================================================================
+  // ---------- Regras do dia (30/10) ----------
+  // 1) Dia passado: só o administrador altera. 2) Toda consulta precisa de status final (Veio / Não veio).
+  // As funções que já existiam continuam iguais: aqui elas só ganham uma conferência antes (ou um aviso depois).
+  const AVISO_DIA = 'Este dia já passou. Só o administrador pode alterar.';
+  const souAdmin = () => { const u = currentUser(); return !!(u && u.role === 'admin'); };
+  const diaPassado = date => !!date && date < todayStr();
+  const podeMexerNoDia = date => !diaPassado(date) || souAdmin();
+  function liberaDia(date) { if (podeMexerNoDia(date)) return true; toast(AVISO_DIA); return false; }
+
+  // Pendências contam a partir do dia anterior à primeira abertura desta versão (o histórico antigo não entra)
+  const PEND_KEY = 'denteSempre.pendenciasDesde';
+  function pendDesde() {
+    try {
+      let v = localStorage.getItem(PEND_KEY);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) { v = addDays(todayStr(), -1); localStorage.setItem(PEND_KEY, v); }
+      return v;
+    } catch (e) { return todayStr(); }
+  }
+  pendDesde();
+  // Consultas sem status: dias anteriores e, se pedir, as de hoje que já passaram do horário
+  function pendList(incluiHoje) {
+    const hoje = todayStr(), desde = pendDesde();
+    return db.appointments.filter(a => a.status === 'scheduled' && a.date >= desde &&
+      (a.date < hoje || (incluiHoje && a.date === hoje && statusInfo(a).key === 'late')))
+      .sort((x, y) => x.date.localeCompare(y.date) || x.start.localeCompare(y.start) ||
+        String((getDentist(x.dentistId) || {}).name).localeCompare(String((getDentist(y.dentistId) || {}).name)));
+  }
+  const ehPendente = a => !!a && a.status === 'scheduled' && diaPassado(a.date) && a.date >= pendDesde();
+  function pendHtml(lista, comAbrir) {
+    const hoje = todayStr(), ontem = addDays(hoje, -1);
+    let out = '', dia = '';
+    lista.forEach(a => {
+      if (a.date !== dia) {
+        if (dia) out += '</ul>';
+        dia = a.date;
+        const nome = a.date === hoje ? 'Hoje (já passou do horário)' : (a.date === ontem ? 'Ontem · ' : '') + longDate(a.date);
+        out += `<h3 class="pd-dia">${esc(nome)}</h3><ul class="pd-list">`;
+      }
+      const p = getPatient(a.patientId) || { name: 'Paciente' }, d = getDentist(a.dentistId) || { name: '' };
+      out += `<li class="pd-row" data-pid="${a.id}">
+        <div class="pd-info"><b class="pd-hora">${a.start}</b><span><span class="pd-nome">${esc(p.name)}</span><small>${esc(a.typeName)}${d.name ? ' · ' + esc(d.name) : ''}</small></span></div>
+        <div class="pd-bts"><button type="button" class="btn btn-ok" data-pv="veio">Veio</button><button type="button" class="btn" data-pv="faltou">Não veio</button>${comAbrir ? '<button type="button" class="link" data-pv="abrir">Abrir</button>' : ''}</div>
+      </li>`;
+    });
+    return out + (dia ? '</ul>' : '');
+  }
+  // Clique em Veio / Não veio numa lista de pendências
+  function pendClique(box, depois) {
+    box.onclick = e => {
+      const b = e.target.closest('[data-pv]'), li = e.target.closest('[data-pid]');
+      if (!b || !li) return;
+      const id = li.dataset.pid;
+      if (b.dataset.pv === 'abrir') return openApptModal(id);
+      if (b.dataset.pv === 'veio') markArrived(id, true); else markNoShow(id, true);
+      if (depois) depois();
+    };
+  }
+
+  // Tela obrigatória ao abrir: consultas de dias anteriores sem status travam a agenda até marcar
+  let pendTelaAberta = false;
+  function pendGate() {
+    const el = $('#pendScreen');
+    if (!el) return;
+    const me = currentUser();
+    const pronto = !!(me && !me.mustChange && isActivated() && !storageProblem && db.dentists.length && can('agenda.editar'));
+    const lista = pronto ? pendList(false) : [];
+    if (!lista.length) {
+      el.hidden = true;
+      if (pendTelaAberta && pronto) setTimeout(() => toast('Pronto. Todas as consultas têm status e a agenda está liberada.'), 0);
+      pendTelaAberta = false;
+      return;
+    }
+    const n = lista.length;
+    $('#pdCount').textContent = `${n} ${n === 1 ? 'consulta ficou' : 'consultas ficaram'} sem status. Marque se o paciente veio ou não veio para liberar a agenda.`;
+    $('#pdBody').innerHTML = pendHtml(lista, souAdmin());
+    $('#pdAdmin').hidden = !souAdmin();
+    if (!pendTelaAberta) $('#pendScreen .pd-scroll').scrollTop = 0;
+    el.hidden = false;
+    pendTelaAberta = true;
+  }
+  pendClique($('#pdBody'));
+  $('#pdExit').onclick = () => openExitDialog();
+
+  // Janela de pendências (Menu → Recepção do dia, aviso ao fechar e aviso ao sair)
+  function openPendModal(modo) {
+    if (!allow('agenda.editar')) return;
+    const lista = pendList(true);
+    const fechar = modo === 'fechar';
+    const titulo = fechar ? 'Ainda tem paciente sem status' : 'Pendências do dia';
+    const texto = lista.length
+      ? (fechar ? 'Antes de fechar o programa, marque se cada paciente veio ou não veio. Se fechar assim, na próxima abertura o programa pede esses status antes de liberar a agenda.'
+        : 'Consultas que já passaram do horário e ainda não têm Veio ou Não veio.')
+      : (fechar ? 'Tudo marcado. Já pode fechar o programa.' : 'Nenhuma consulta sem status. Tudo em dia.');
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">${fechar ? 'Antes de fechar' : 'Recepção do dia'}</div><h2>${lista.length ? titulo : 'Tudo marcado'}</h2></div>${closeX}</div>
+      <p class="hint">${texto}</p>
+      ${lista.length ? `<div class="pd-box" id="pmBody">${pendHtml(lista, souAdmin())}</div>` : ''}
+      <div class="modal-foot">
+        ${fechar ? `<button type="button" class="btn${lista.length ? '' : ' btn-primary solid'}" id="pmClose">${lista.length ? 'Fechar mesmo assim' : 'Fechar o programa'}</button>` : ''}
+        <button type="button" class="btn${fechar && !lista.length ? '' : ' btn-primary solid'}" data-close-modal>${fechar ? 'Voltar ao programa' : 'Fechar'}</button>
+      </div>`, true);
+    if ($('#pmBody')) pendClique($('#pmBody'), () => openPendModal(modo));
+    if ($('#pmClose')) $('#pmClose').onclick = () => { fecharMesmoAssim = true; closeModal(true); window.close(); setTimeout(() => { fecharMesmoAssim = false; }, 3000); };
+  }
+
+  // Programa do computador: não fecha com consulta em aberto (mostra o aviso e a lista)
+  let fecharMesmoAssim = false;
+  if (APP.desktop) {
+    window.addEventListener('beforeunload', e => {
+      if (fecharMesmoAssim || storageProblem || !currentUser() || !isActivated() || !can('agenda.editar')) return;
+      if (!pendList(true).length) return;
+      e.preventDefault();
+      e.returnValue = false;
+      setTimeout(() => openPendModal('fechar'), 0);
+    });
+  }
+
+  // Conferências antes das funções que mudam uma consulta (as funções continuam as mesmas)
+  const _markArrived = markArrived, _markNoShow = markNoShow, _releaseSlot = releaseSlot, _openDeleteModal = openDeleteModal;
+  const _openApptDrawer = openApptDrawer, _onSubmitAppt = onSubmitAppt, _openApptModal = openApptModal;
+  const _render = render, _openExitDialog = openExitDialog, _baseMenuGroups = baseMenuGroups;
+  const travado = a => !!a && can('agenda.editar') && !podeMexerNoDia(a.date);
+  // Veio / Não veio: no dia passado só o administrador; quem não é administrador só dá o status que faltou, pela tela de pendências
+  markArrived = function (id, viaPendencias) {
+    const a = getAppt(id);
+    if (travado(a) && !(viaPendencias === true && a.status === 'scheduled')) { toast(AVISO_DIA); return; }
+    return _markArrived(id);
+  };
+  markNoShow = function (id, viaPendencias) {
+    const a = getAppt(id);
+    if (travado(a) && !(viaPendencias === true && a.status === 'scheduled')) { toast(AVISO_DIA); return; }
+    return _markNoShow(id);
+  };
+  releaseSlot = function (id) { if (travado(getAppt(id))) { toast(AVISO_DIA); return; } return _releaseSlot(id); };
+  openDeleteModal = function (id) { if (travado(getAppt(id))) { toast(AVISO_DIA); return; } return _openDeleteModal(id); };
+  // Novo horário, alterar, remarcar e encaixe
+  openApptDrawer = function (opts) {
+    opts = opts || {};
+    if (can('agenda.editar') && !souAdmin()) {
+      const a = opts.apptId ? getAppt(opts.apptId) : null;
+      if (a) { if (!liberaDia(a.date)) return; }
+      else if (opts.date) { if (!liberaDia(opts.date)) return; }
+      else if (opts.time) { if (!liberaDia(state.date)) return; }
+      else if (diaPassado(state.date)) opts = Object.assign({}, opts, { date: todayStr() });   // olhando um dia passado: o novo horário começa em hoje
+    }
+    return _openApptDrawer(opts);
+  };
+  onSubmitAppt = function (e) {
+    if (!souAdmin()) {
+      const orig = form.editingId ? getAppt(form.editingId) : null;
+      const date = $('#fDate').value;
+      if ((orig && diaPassado(orig.date)) || diaPassado(date)) {
+        e.preventDefault();
+        hideFormError();
+        return showFormError(orig && diaPassado(orig.date) ? AVISO_DIA : AVISO_DIA + ' Escolha hoje ou uma data futura.');
+      }
+    }
+    return _onSubmitAppt(e);
+  };
+  // Detalhe da consulta num dia passado: aviso no lugar dos botões de mudar
+  openApptModal = function (id, opts) {
+    _openApptModal(id, opts);
+    const a = getAppt(id), m = $('#modal');
+    if (!travado(a) || $('#modalWrap').hidden) return;
+    ['#aCame', '#aMissed', '#aResched', '#aEdit', '#aDel', '#aRelease', '#aFitHere'].forEach(s => { const b = $(s, m); if (b) b.remove(); });
+    const acts = $('.actions', m);
+    if (acts && !acts.children.length) acts.remove();
+    const aviso = document.createElement('div');
+    aviso.className = 'dp-aviso';
+    aviso.innerHTML = `<span class="dp-ico" aria-hidden="true">${I.lock}</span><div><b>${AVISO_DIA}</b>` +
+      (ehPendente(a) ? `<p>Esta consulta ficou sem status. Marque como foi:</p>
+        <div class="dp-bts"><button type="button" class="btn btn-ok" id="dpCame">Veio</button><button type="button" class="btn" id="dpMissed">Não veio</button></div>` : '') + '</div>';
+    const ref = $('.actions', m);
+    if (ref) m.insertBefore(aviso, ref); else m.appendChild(aviso);
+    if ($('#dpCame')) $('#dpCame').onclick = () => markArrived(a.id, true);
+    if ($('#dpMissed')) $('#dpMissed').onclick = () => markNoShow(a.id, true);
+  };
+  // Depois de desenhar a tela: confere se tem pendência de dia anterior
+  render = function () {
+    const r = _render.apply(this, arguments);
+    pendGate();
+    return r;
+  };
+  // Sair: avisa se tem paciente sem status
+  openExitDialog = function () {
+    const r = _openExitDialog.apply(this, arguments);
+    if ($('#exGo') && can('agenda.editar')) {
+      const lista = pendList(true);
+      if (lista.length) {
+        const nomes = lista.slice(0, 4).map(a => `${a.start} ${esc((getPatient(a.patientId) || { name: 'Paciente' }).name)}`).join(', ');
+        const w = document.createElement('div');
+        w.className = 'exit-warn pd-exit';
+        w.innerHTML = `${lista.length === 1 ? '1 consulta está' : lista.length + ' consultas estão'} sem status (Veio / Não veio): ${nomes}${lista.length > 4 ? '…' : ''}. <button type="button" class="link" id="exPend">Marcar agora</button>`;
+        const foot = $('#modal .modal-foot');
+        if (foot) foot.parentNode.insertBefore(w, foot);
+        $('#exPend').onclick = () => openPendModal('sair');
+      }
+    }
+    return r;
+  };
+  // Menu → Recepção do dia → Pendências do dia
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroups.apply(this, arguments);
+    if (!can('agenda.editar')) return gs;
+    const n = pendList(true).length;
+    const item = { id: 'pendencias', icon: I.check, label: 'Pendências do dia', sub: 'Consultas sem Veio / Não veio',
+      state: n ? [`${n} sem status`, 'bad'] : ['Em dia', ''], run: () => openPendModal('menu') };
+    const g = gs.find(x => x.title === 'Recepção do dia');
+    if (g) { const i = g.items.findIndex(it => it.id === 'daylist'); g.items.splice(i >= 0 ? i + 1 : g.items.length, 0, item); }
+    else gs.splice(1, 0, { title: 'Recepção do dia', items: [item] });
+    return gs;
+  };
+  // Virou o dia com o programa aberto, ou voltou para o app do celular: confere de novo
+  let pendHoje = todayStr();
+  setInterval(() => { if (todayStr() !== pendHoje) { pendHoje = todayStr(); pendGate(); } }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pendGate(); });
+  // Com a tela de pendências aberta, os atalhos de teclado da agenda não agem por trás dela
+  document.addEventListener('keydown', e => { if (!$('#pendScreen').hidden && $('#modalWrap').hidden) e.stopPropagation(); }, true);
+
   function baseMenuGroups() {
     const today = todayStr();
     const nToday = db.appointments.filter(a => a.date === today && a.status === 'scheduled').length;
@@ -5980,6 +6756,11 @@
         { id: 'patients', icon: I.users, label: 'Pacientes', sub: 'Buscar, ver histórico e editar dados', run: openPatientsModal },
         { id: 'bday', icon: I.gift, label: 'Aniversariantes do mês', sub: nBday ? `${nBday} em ${MONTHS[month - 1]}` : `Nenhum em ${MONTHS[month - 1]}`, run: () => openBirthdaysModal() }
       ] },
+      ...(proteseAtiva() ? [{ title: 'Próteses', items: [
+        { id: 'proteses', icon: I.tooth, label: 'Próteses', sub: (() => { const n = db.prostheses.filter(prAberta).length; return n ? `${n} em andamento` : 'Nenhuma em andamento'; })(),
+          state: prAtrasadas().length ? [`${prAtrasadas().length} em atraso`, 'bad'] : null, run: openProsthesesModal },
+        { id: 'labs', icon: I.lab, label: 'Protéticos (laboratórios)', sub: 'Nome e WhatsApp', run: () => openLabsModal() }
+      ] }] : []),
       { title: 'Dentistas e horários', items: [
         { id: 'dentists', icon: I.clock, label: 'Dentistas e horários', sub: 'Cadastro, expediente por dia e almoço', run: () => openDentistsModal() }
       ] },
@@ -5991,6 +6772,7 @@
       ] },
       { title: 'Configurações', items: [
         { id: 'customize', icon: I.home, label: 'Personalizar', sub: 'Cores, logo e nome da clínica', run: openCustomizeModal },
+        { id: 'modulos', icon: I.tooth, label: 'Módulo de próteses', sub: 'Controle de próteses e protéticos (opcional)', state: proteseAtiva() ? ['Ligado', ''] : ['Desligado', ''], run: openModulesModal },
         ...(online() ? [{ id: 'area', icon: I.key, label: 'Área do paciente', sub: 'WhatsApp da recepção e regras para cancelar', run: openAreaSettings }] : []),
         { id: 'types', icon: I.palette, label: 'Cores e ícones dos tipos', sub: 'Aparecem na grade', run: openTypesModal },
         { id: 'export', icon: I.download, label: 'Exportar backup', sub: `Último: ${last}`, state: last === 'nunca' ? ['Nunca feito', 'bad'] : null, run: () => exportBackup() },

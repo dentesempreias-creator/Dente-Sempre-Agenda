@@ -133,7 +133,7 @@ Passo a passo:
 5. No fim, o script mostra a **chave pública** para colocar em `app/config.json`.
 6. Teste: abra `https://api.seudominio.com.br/api/situacao` (deve responder `"ok": true`).
 
-Depois disso, use o comando **`dente-sempre`** no VPS para tudo (veja a seção 6).
+Depois disso, use o comando **`dente-sempre`** no VPS para tudo (veja a seção 11).
 
 ### Outras opções
 
@@ -328,7 +328,130 @@ O resto do servidor não mudou. O link simples (`/p/...`) continua igual.
 
 ---
 
-## 9. Ativação e o que já está preparado para vender
+## 9. Controle de próteses (módulo opcional)
+
+Acompanha as próteses enviadas ao laboratório: quem é o protético, quando foi, quando volta, se atrasou, e o histórico de idas e voltas. **Desligado, nada aparece**: a agenda, os pacientes e o resto ficam exatamente como antes.
+
+**Ligar:** o administrador vai em Menu → Configurações → **Módulo de próteses**, marca "Ligar o controle de próteses" e escolhe o **prazo padrão do laboratório**. O padrão é 10 dias, e ele serve para sugerir o retorno previsto. Desligar só esconde o módulo: nada é apagado. A escolha vale para todos os aparelhos da clínica, pela sincronização.
+
+**Onde fica** (com o módulo ligado):
+
+- **Menu → Próteses:** a lista geral. No Menu já aparece "3 em andamento" e, se houver, **"1 em atraso"** em vermelho.
+- **Menu → Protéticos (laboratórios):** cadastro com nome, WhatsApp e observação. Um protético que não é mais usado pode ser marcado como inativo.
+- **Ficha do paciente** (Pacientes → paciente): "**Tem prótese?** Sim / Não". Com Sim, aparecem as próteses dele e o botão **+ Cadastrar prótese**.
+
+**Cadastrar uma prótese**, pela ficha ou por Próteses → **+ Nova prótese**:
+
+- **Tipo / descrição:** coroa, protocolo, PPR etc. A lista sugere os tipos, mas pode escrever qualquer coisa.
+- **Protético responsável**, com o link "+ Cadastrar protético" ali mesmo.
+- **Data de envio.** Em branco, a prótese fica como "Aguardando envio".
+- **Retorno previsto:** é preenchido sozinho com a data de envio mais o prazo padrão, e pode ser mudado.
+- **Anotações**, como cor e material.
+
+**O caminho de uma prótese** (botões no detalhe dela):
+
+| Situação | Botões |
+|---|---|
+| Aguardando envio | Enviar ao laboratório |
+| No laboratório | Voltou pronta · Voltou para prova · Mensagem para o protético · Mudar o retorno previsto |
+| **Em atraso** (no laboratório e passou do retorno previsto) | os mesmos, com **Cobrar o protético** em destaque |
+| Na clínica (prova) | Reenviar ao laboratório · Ficou pronta |
+| Pronta para entregar | Entregue ao paciente · Voltar ao laboratório |
+| Entregue / Cancelada | saem de "Em andamento" e continuam no histórico |
+
+Cada passo fica no **Histórico de envios e retornos**, com data, hora e quem fez. Ficam guardadas também a data em que a prótese voltou e a data em que foi entregue.
+
+**Atraso e cobrança:**
+
+- **Na lista de próteses:** faixa vermelha "1 prótese em atraso no laboratório", com o link "Ver só as atrasadas". As atrasadas aparecem primeiro, com "Em atraso · 5 dias" e o botão **Cobrar**.
+- **Ao entrar no programa:** aviso uma vez por dia, por exemplo "2 próteses estão em atraso no laboratório. Veja em Menu → Próteses.". O aviso aparece na tela da agenda, sem mudar a agenda.
+- **Cobrar** abre a mensagem pronta, que pode ser editada. Exemplo: "Olá, Carlos! Aqui é da Clínica Sorriso. A prótese (Coroa) do(a) paciente Maria Souza foi enviada em 14/10, com retorno previsto para 26/10, e ainda não chegou (3 dias de atraso). Consegue me dizer quando fica pronta? Obrigado(a)!"
+- **Abrir WhatsApp** abre a conversa com o protético, e a cobrança fica registrada no histórico.
+
+**Filtros na lista:**
+
+- **Situação:** em andamento, em atraso, aguardando envio, no laboratório, na clínica, pronta, entregues, canceladas ou todas.
+- **Protético.**
+- **Busca** por paciente ou tipo.
+
+**Quem usa:**
+
+- Recepção e Administrador veem e mudam.
+- Só o Administrador liga ou desliga o módulo.
+- O dentista não vê o módulo, como já acontece com a lista de pacientes.
+
+**Sem internet e sincronização:**
+
+- Funciona sem internet, como o resto do programa.
+- As próteses e os protéticos sincronizam entre os aparelhos como os pacientes.
+- O servidor não precisou mudar.
+- Enquanto o módulo não é usado, nada novo é enviado.
+
+---
+
+## 10. Regras do dia: dia passado e status obrigatório
+
+Duas regras protegem o registro de quem veio e quem faltou. Elas valem no computador e no celular, com ou sem internet.
+
+### Dia passado: só o administrador altera
+
+Depois que o dia termina, as consultas daquele dia ficam travadas para a **Recepção** (o Dentista já não muda a agenda). Num dia passado, a recepção não consegue:
+
+- criar horário, nem encaixe;
+- alterar, remarcar ou excluir uma consulta;
+- marcar Veio ou Não veio, nem liberar o horário de uma falta.
+
+Quando alguém tenta, aparece o aviso **"Este dia já passou. Só o administrador pode alterar."**:
+
+- no detalhe da consulta, os botões de mudar saem e o aviso fica no lugar (o WhatsApp continua);
+- no botão direito, no clique num horário livre e nos atalhos, aparece o mesmo aviso embaixo da tela;
+- se a data de um novo horário for mudada para um dia que já passou, o formulário não salva e mostra o aviso.
+
+Olhando um dia passado, o botão **Novo horário** abre já com a data de hoje.
+
+**O administrador não tem trava:** entra com o usuário dele e altera, remarca, exclui ou muda o status de qualquer dia, como antes. Se a recepção precisar corrigir um dia passado, chama o administrador, ou sai e entra como administrador.
+
+Ver o dia passado continua igual para todos: agenda, lista do dia, busca e histórico do paciente.
+
+### Status obrigatório: nenhum paciente fica em aberto
+
+Toda consulta precisa terminar com **Veio** (Chegou) ou **Não veio** (Faltou).
+
+**Tela de pendências ao abrir.** Ao entrar no programa, se alguma consulta de um dia anterior ficou sem status, aparece uma tela que cobre a agenda. Ela lista essas consultas por dia ("Ontem · Quinta-feira, 29 de outubro"), com hora, paciente, tipo e dentista, e os botões **Veio** e **Não veio**.
+
+- Cada toque grava na hora e a linha sai da lista.
+- Quando a lista acaba, a tela some e aparece "Pronto. Todas as consultas têm status e a agenda está liberada.".
+- Para a recepção, esta tela é a única forma de dar status a uma consulta de dia passado, e só a uma que ficou sem status.
+- O administrador também vê a tela e tem o link **Abrir**, para excluir ou remarcar em vez de marcar (por exemplo, quando o paciente desmarcou por telefone e ninguém tirou da agenda).
+- O link **Sair** permite entrar com outro usuário.
+- O dentista não recebe a tela, porque não muda a agenda.
+
+A tela também aparece se o programa ficar aberto de um dia para o outro: ao virar o dia, ou ao voltar para o app do celular.
+
+**Pendências do dia (Menu → Recepção do dia).** Mostra quantas estão sem status ("2 sem status" ou "Em dia"). Abre a lista das consultas de dias anteriores e também as **de hoje que já passaram do horário**. Assim dá para fechar o dia no fim do expediente.
+
+**Ao fechar o programa do computador.** Se houver consulta sem status, o programa não fecha direto. Aparece a janela "**Ainda tem paciente sem status**", com a lista e os botões Veio / Não veio, e mais:
+
+- **Voltar ao programa**;
+- **Fechar mesmo assim** (para uma emergência). Nesse caso, na próxima abertura a tela de pendências pede os status antes de liberar a agenda.
+
+Marcando todos, a janela diz "Tudo marcado. Já pode fechar o programa.".
+
+**Ao sair (encerrar sessão),** a janela de Sair avisa quem está sem status, com o link "Marcar agora".
+
+**No celular** não dá para impedir que o app seja fechado ou que o telefone desligue. Por isso o controle é feito na próxima abertura: a tela de pendências aparece antes da agenda.
+
+**De quando conta:** as pendências contam a partir do dia anterior à primeira abertura desta versão em cada aparelho. O histórico antigo que ficou "Sem registro" não trava ninguém. O administrador pode corrigi-lo quando quiser.
+
+Detalhes:
+
+- As regras ficam no programa, e o servidor não mudou. Uma alteração feita sem internet no dia continua sincronizando normalmente no dia seguinte.
+- Bloqueios e almoço não mudaram.
+- As permissões de antes continuam iguais. A regra do dia passado só restringe ainda mais quem não é administrador.
+
+---
+
+## 11. Ativação e o que já está preparado para vender
 
 ### Criar uma clínica (com o servidor ligado)
 
@@ -405,7 +528,7 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 
 ---
 
-## 10. O que ficou pronto e o que falta para vender
+## 12. O que ficou pronto e o que falta para vender
 
 ### Pronto
 
@@ -419,7 +542,9 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 - Licença assinada, ligada à clínica e ao aparelho, com renovação, suspensão e revogação.
 - Planos (Teste, Básico, Profissional) com limites de aparelhos, dentistas e usuários conferidos no servidor.
 - Link para o paciente confirmar ou pedir remarque pelo WhatsApp, com a resposta aparecendo na agenda.
+- Controle de próteses (módulo opcional): protéticos, prazos, atrasos, cobrança pelo WhatsApp e histórico de envios e retornos, na ficha do paciente e na lista geral.
 - Área do paciente (`/area`): entra com telefone e código, vê só as próprias consultas, confirma, pede remarque ou cancela pelas regras da clínica e fala com a recepção pelo WhatsApp.
+- Regras do dia: dia passado só o administrador altera, e nenhuma consulta fica sem Veio / Não veio (tela de pendências ao abrir, aviso ao fechar o programa do computador e ao sair).
 - Busca de consultas por paciente, procedimento, período, situação e dentista. Respeita as permissões e funciona sem internet.
 - Telas ajustadas para o celular: barra embaixo, cartões maiores, janelas de baixo para cima e WhatsApp direto no app.
 - O pagamento está preparado (`aoConfirmarPagamento` em `planos.js`) e o painel tem as rotas reservadas (`/api/painel/...`).
