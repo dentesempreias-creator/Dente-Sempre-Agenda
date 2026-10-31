@@ -1,5 +1,5 @@
 {
-  "servidor": "https://api.seudominio.com.br",
-  "chavePublica": "",
+  "servidor": "https://api.agendadentesempre.com.br",
+  "chavePublica": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEl6SrKh82hcQ8OoT4AvIb5dWD7t8PnnBHiric3TNJcHB2vF0K/NQFCJLhp+T6PfZBSDu+69IKdi5nY/f3yeasmg==",
   "ofuscar": true
 }

@@ -39,6 +39,7 @@ id dentesempre >/dev/null 2>&1 || useradd --system --home "$DESTINO" --shell /us
 mkdir -p "$DESTINO/dados"
 if [ "$ORIGEM" != "$DESTINO" ]; then
   cp -r "$ORIGEM/servidor.js" "$ORIGEM/certificado.js" "$ORIGEM/planos.js" "$ORIGEM/paciente.js" "$ORIGEM/area.js" "$ORIGEM/package.json" "$ORIGEM/hospedagem" "$DESTINO/"
+  cp "$ORIGEM/pagamento.js" "$ORIGEM/painel.js" "$DESTINO/"
 fi
 chown -R root:root "$DESTINO"
 chown -R dentesempre:dentesempre "$DESTINO/dados"
@@ -50,6 +51,22 @@ cat > /usr/local/bin/dente-sempre <<EOS
 cd $DESTINO && exec sudo -u dentesempre node servidor.js "\$@"
 EOS
 chmod 755 /usr/local/bin/dente-sempre
+
+# Senhas e tokens (painel e Mercado Pago) ficam fora do código, só para o root ler
+if [ ! -f /etc/dente-sempre.env ]; then
+  cat > /etc/dente-sempre.env <<EOS
+# Configuração secreta do Dente Sempre. Depois de mudar: systemctl restart dente-sempre
+ENDERECO_PUBLICO=https://$DOMINIO
+# Senha do painel (https://$DOMINIO/painel), pelo menos 12 caracteres
+PAINEL_SENHA=$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)
+# Mercado Pago (veja o README, seção Pagamento)
+MP_ACCESS_TOKEN=
+MP_WEBHOOK_SEGREDO=
+PRECO_BASICO=
+PRECO_PROFISSIONAL=
+EOS
+  chmod 600 /etc/dente-sempre.env
+fi
 
 echo "== 5/6 Ligando os serviços"
 cp "$DESTINO/hospedagem/dente-sempre.service" /etc/systemd/system/dente-sempre.service
@@ -76,3 +93,4 @@ echo
 echo "Criar a primeira clínica:   dente-sempre nova-clinica \"Nome da clínica\" --plano basico"
 echo "Ver se está ligado:  systemctl status dente-sempre    |  Registros:  journalctl -u dente-sempre -f"
 echo "IMPORTANTE: guarde uma cópia de $DESTINO/dados/licenca-privada.pem fora do servidor."
+echo "Painel: https://$DOMINIO/painel  (a senha está em /etc/dente-sempre.env, linha PAINEL_SENHA)"
