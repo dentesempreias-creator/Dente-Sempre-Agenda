@@ -14,6 +14,8 @@ Environment=PORTA=3000
 Environment=CONFIAR_PROXY=1
 Environment=HSTS=1
 Environment=COPIA_HORAS=6
+# Senha do painel e dados do Mercado Pago (o "-" deixa ligar mesmo sem o arquivo)
+EnvironmentFile=-/etc/dente-sempre.env
 ExecStart=/usr/bin/node servidor.js
 Restart=always
 RestartSec=3

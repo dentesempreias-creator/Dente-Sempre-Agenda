@@ -22,6 +22,8 @@
 //    node servidor.js copia-clinica <codigo>
 //    node servidor.js restaurar-clinica <codigo> <arquivo.db>   (pode ser com o servidor ligado)
 //  Versão anterior (banco.json):  node servidor.js migrar-json [dados/banco.json]
+//  Painel de administração:  https://<servidor>/painel   (precisa de PAINEL_SENHA; veja painel.js)
+//  Pagamento (Mercado Pago):  https://<servidor>/assinar  (precisa de MP_ACCESS_TOKEN e dos preços; veja pagamento.js)
 // =====================================================================
 
 // O SQLite do Node ainda avisa que é "experimental"; o aviso só confunde quem lê.
@@ -38,6 +40,8 @@ const { DatabaseSync } = require('node:sqlite');
 const planos = require('./planos.js');
 const { criarLinkDoPaciente } = require('./paciente.js');
 const { criarAreaDoPaciente } = require('./area.js');
+const { criarPagamento } = require('./pagamento.js');
+const { criarPainel } = require('./painel.js');
 
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';                          // atrás do Caddy/Nginx: 127.0.0.1
@@ -639,6 +643,11 @@ let lp = null;
 const linkPaciente = () => lp || (lp = criarLinkDoPaciente({ sistema, bancoDaClinica, clinicaPorId, emTransacao, getMeta, setMeta, planos, agora, recusa }));
 let areaP = null;
 const areaPaciente = () => areaP || (areaP = criarAreaDoPaciente({ sistema, bancoDaClinica, clinicaPorId, emTransacao, getMeta, setMeta, planos, agora, recusa }));
+let pagP = null;
+const pagamento = () => pagP || (pagP = criarPagamento({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, emTransacao, planos, agora, lerUsuario, senhaConfere }));
+let painelP = null;
+const painelAdm = () => painelP || (painelP = criarPainel({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
+  novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento }));
 
 // Só para teste no navegador (SERVIR_PROGRAMA=1). Em uso real, a clínica usa o aplicativo.
 function servirHtml(res) {
@@ -672,6 +681,10 @@ function criarServidor(opcoesTls) {
     }
     if (req.method === 'GET' && url.pathname === '/api/situacao') return json(res, 200, { ok: true, servidor: 'Dente Sempre', versao: 2, hora: agora() });
     if (req.method === 'GET' && url.pathname === '/api/chave-publica') return json(res, 200, { ok: true, chavePublica: chavePublicaB64() });
+    // Painel de administração (só para o dono do Dente Sempre, com senha) e pagamento pelo Mercado Pago
+    const pedidoSeguro = !!(req.socket.encrypted || (CONFIAR_PROXY && req.headers['x-forwarded-proto'] === 'https'));
+    if (url.pathname === '/painel' || url.pathname.startsWith('/painel/')) return painelAdm().atender(req, res, url, ipDoPedido(req), pedidoSeguro);
+    if (url.pathname === '/assinar' || url.pathname.startsWith('/assinar/') || url.pathname === '/api/pagamento/aviso') return pagamento().atender(req, res, url, ipDoPedido(req), pedidoSeguro);
     // [PAINEL] reservado para o painel de administração das clínicas (ainda não existe)
     if (url.pathname.startsWith('/api/painel/')) return json(res, 501, { ok: false, codigo: 'painel', erro: 'O painel de administração das clínicas ainda não está disponível.' });
     const rota = Object.prototype.hasOwnProperty.call(ROTAS, url.pathname) ? ROTAS[url.pathname] : null;

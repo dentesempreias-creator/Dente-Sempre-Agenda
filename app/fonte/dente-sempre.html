@@ -6738,6 +6738,27 @@
   // Com a tela de pendências aberta, os atalhos de teclado da agenda não agem por trás dela
   document.addEventListener('keydown', e => { if (!$('#pendScreen').hidden && $('#modalWrap').hidden) e.stopPropagation(); }, true);
 
+  // ---------- Assinar ou renovar o plano (30/10) ----------
+  // Só com o servidor e só para o administrador: abre a página de pagamento do servidor no navegador.
+  function abrirAssinatura() {
+    const L = licencaAtual() || {};
+    const codigo = L.codigo || device.clinica || '';
+    abrirExterno(String(SERVIDOR.url).replace(/\/+$/, '') + '/assinar' + (codigo ? '?clinica=' + encodeURIComponent(codigo) : ''));
+    toast('A página de assinatura abriu no navegador.');
+  }
+  const _baseMenuGroupsPlano = baseMenuGroups;
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroupsPlano.apply(this, arguments);
+    if (!online() || role() !== 'admin') return gs;
+    const L = licencaAtual() || {};
+    const sub = L.planoNome ? `Plano ${L.planoNome}${L.validaAte ? ' · vale até ' + fmtDMY(L.validaAte.slice(0, 10)) : ''}` : 'Escolher o plano e pagar pela internet';
+    const item = { id: 'assinar', icon: ic('<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M6.5 15h4"/>'), label: 'Assinar ou renovar o plano', sub, run: abrirAssinatura };
+    const g = gs.find(x => x.title === 'Configurações');
+    if (g) { const i = g.items.findIndex(it => it.id === 'activation'); g.items.splice(i >= 0 ? i + 1 : g.items.length, 0, item); }
+    else gs.push({ title: 'Configurações', items: [item] });
+    return gs;
+  };
+
   function baseMenuGroups() {
     const today = todayStr();
     const nToday = db.appointments.filter(a => a.date === today && a.status === 'scheduled').length;

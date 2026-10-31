@@ -18,6 +18,8 @@ dente-sempre/
 │   ├── planos.js                 ← planos e limites (o único arquivo que decide o que cada clínica pode usar)
 │   ├── paciente.js               ← link do paciente: página de confirmação pelo WhatsApp
 │   ├── area.js                   ← área do paciente: entra com telefone + código e vê as próprias consultas
+│   ├── pagamento.js              ← pagamento pelo Mercado Pago: /assinar e o aviso automático (seção 12)
+│   ├── painel.js                 ← painel de administração em /painel, com senha (seção 12)
 │   ├── Dockerfile                ← para Fly.io, Railway, Render...
 │   └── hospedagem/               ← instalação num VPS com HTTPS automático (Caddy)
 └── .github/workflows/gerar-apps.yml   ← gera o APK e os instaladores no GitHub, de graça
@@ -33,6 +35,7 @@ dente-sempre/
 4. **Gere os aplicativos** (seções 2 e 3).
 5. Crie uma clínica: `dente-sempre nova-clinica "Clínica Sorriso" --plano basico`.
 6. Entregue para a clínica: o **código da clínica**, o **usuário admin com a senha provisória** e a **chave de ativação**.
+7. Para cobrar pela internet, configure o Mercado Pago e use o painel `/painel` (seção 12).
 
 > Os aplicativos só aceitam licenças assinadas pela chave do **seu** servidor. Se trocar de servidor (ou perder o arquivo `dados/licenca-privada.pem`), precisa gerar os aplicativos de novo. **Guarde uma cópia desse arquivo fora do servidor.**
 
@@ -173,6 +176,8 @@ Depois disso, use o comando **`dente-sempre`** no VPS para tudo (veja a seção 
 | `FUSO` | fuso da clínica (para saber que dia e hora é no link e na área do paciente) | America/Sao_Paulo |
 | `AREA_CODIGO_HORAS` | validade do código da área do paciente | 48 |
 | `AREA_SESSAO_DIAS` | o paciente fica conectado por até tantos dias sem uso | 30 |
+
+As variáveis do pagamento e do painel estão na seção 12.
 
 ---
 
@@ -528,7 +533,105 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 
 ---
 
-## 12. O que ficou pronto e o que falta para vender
+## 12. Pagamento e painel de administração
+
+Duas páginas novas no servidor. Elas só funcionam depois de configuradas: sem a configuração, o painel aparece como "desligado" e a página de assinatura não mostra o formulário de pagar. Nada do programa muda.
+
+| Página | Quem usa | Para quê |
+|---|---|---|
+| `https://api.seudominio.com.br/assinar` | o **administrador da clínica** | escolher o plano (Básico ou Profissional) e o período, e pagar no Mercado Pago (Pix, cartão ou boleto) |
+| `https://api.seudominio.com.br/painel` | **só você** (dono do Dente Sempre), com senha | ver e cuidar de todas as clínicas |
+
+### Configurar o Mercado Pago (uma vez)
+
+1. Crie uma conta de vendedor no Mercado Pago (de preferência com CNPJ) e entre em **mercadopago.com.br/developers → Suas integrações → Criar aplicação**. Escolha **Pagamentos on-line → Checkout Pro**.
+2. Na aplicação, abra **Credenciais de produção** e copie o **Access Token** (começa com `APP_USR-`). Ele é secreto: não mande por WhatsApp nem coloque no site.
+3. Ainda na aplicação, abra **Webhooks → Configurar notificações**:
+   - Modo de produção, URL: `https://api.seudominio.com.br/api/pagamento/aviso`
+   - Evento: marque **Pagamentos**.
+   - Salve e copie a **Assinatura secreta** que aparece.
+4. No VPS, edite o arquivo de configuração (o `instalar-vps.sh` já cria ele):
+   ```bash
+   nano /etc/dente-sempre.env
+   ```
+   e preencha:
+   ```
+   MP_ACCESS_TOKEN=APP_USR-...........
+   MP_WEBHOOK_SEGREDO=a-assinatura-secreta-do-passo-3
+   PRECO_BASICO=99,90
+   PRECO_PROFISSIONAL=199,90
+   ```
+   Os preços são **por mês**. Os valores acima são só exemplo: use os seus.
+5. Religue: `systemctl restart dente-sempre`.
+6. Teste: abra `https://api.seudominio.com.br/assinar`. Devem aparecer os planos com os seus preços. Faça uma compra pequena de verdade (por exemplo, criando uma clínica de teste e pagando 1 mês com Pix) e veja no painel se o plano mudou.
+
+> Em Fly.io, Railway ou Render, coloque as mesmas variáveis na configuração do serviço (Secrets/Variables), junto com `ENDERECO_PUBLICO=https://seu-endereco`.
+
+### Como o pagamento funciona
+
+1. O administrador da clínica abre a página de assinatura. Ele pode chegar por três caminhos:
+   - no programa, em **Menu → Configurações → Assinar ou renovar o plano** (aparece só para o administrador, quando há servidor);
+   - pelo botão **Assinar** do site de venda;
+   - pelo endereço direto.
+2. Ele escolhe o plano e o período (1, 3, 6 ou 12 meses) e digita o **código da clínica, o usuário e a senha de administrador** (os mesmos do programa). Recepção e dentista não conseguem pagar.
+3. O servidor cria o pedido e leva a pessoa para a página do Mercado Pago.
+4. Quando o pagamento é aprovado, o Mercado Pago avisa o servidor. O servidor **não confia no aviso**: ele pergunta ao próprio Mercado Pago como está aquele pagamento. Só muda o plano se o pagamento estiver aprovado, em reais e no valor certo do pedido.
+5. Com tudo certo, o servidor chama `aoConfirmarPagamento` (em `planos.js`) e grava o plano e a data nova. Os meses pagos começam a contar **depois** dos dias que a clínica ainda tem (de teste ou de plano).
+6. Os aparelhos recebem o plano novo na próxima sincronização.
+
+Cuidados que já estão no código:
+- Um mesmo pagamento vale **uma vez só**. Se o aviso chegar repetido, os meses não são somados de novo.
+- Avisos sem a assinatura secreta certa são recusados.
+- Cinco senhas erradas na página de assinatura bloqueiam novas tentativas por 15 minutos.
+- Uma clínica **suspensa** que paga volta a ficar **ativa**, porque é isso que o `aoConfirmarPagamento` faz.
+- Se um pagamento for **devolvido ou contestado** depois, o painel mostra "Devolvido", mas o plano **não volta sozinho**. Você decide no painel (por exemplo, mudando a data ou suspendendo a clínica).
+
+### Acessar o painel
+
+1. A senha do painel fica em `/etc/dente-sempre.env`, na linha `PAINEL_SENHA`. O `instalar-vps.sh` cria uma senha aleatória de 20 caracteres e mostra o endereço no fim da instalação. Para ver ou trocar a senha:
+   ```bash
+   nano /etc/dente-sempre.env
+   systemctl restart dente-sempre
+   ```
+   A senha precisa ter **pelo menos 12 caracteres**. Sem ela, o painel fica desligado. Trocar a senha desconecta quem estava dentro.
+2. Abra `https://api.seudominio.com.br/painel` e digite a senha. Você fica conectado até ficar 12 horas sem usar o painel, ou até clicar em **Sair**.
+
+O que dá para fazer no painel:
+
+| Tela | O que faz |
+|---|---|
+| **Clínicas** | lista de todas as clínicas, com plano, situação, validade e aparelhos em uso; busca por nome ou código; totais no topo |
+| **Nova clínica** | cria a clínica com plano e dias. Mostra **uma vez só** o código, o usuário, a senha provisória e a chave de ativação, e já monta o texto para mandar à clínica |
+| Ficha da clínica (clique no nome) | **suspender / reativar**; **gerar chave nova** (as antigas continuam valendo); **senha nova do administrador**; **mudar plano e validade** à mão; ver os **aparelhos ativados** e desativar ou liberar cada um; ver as chaves e os pagamentos da clínica |
+| **Pagamentos** | se o Mercado Pago está configurado e todos os pedidos, com a situação de cada um |
+
+Proteções do painel:
+- cinco senhas erradas bloqueiam o acesso por 15 minutos;
+- o cookie só vale para `/painel`, só por HTTPS e não é lido por scripts;
+- todo botão tem uma proteção contra envio a partir de outro site;
+- as páginas não aparecem no Google.
+
+Os comandos `dente-sempre ...` da seção 11 continuam funcionando do mesmo jeito.
+
+### Variáveis do pagamento e do painel
+
+| Variável | Para quê | Padrão |
+|---|---|---|
+| `PAINEL_SENHA` | senha do painel (mínimo 12 caracteres) | — (painel desligado) |
+| `PAINEL_SESSAO_HORAS` | depois de quantas horas sem uso o painel pede a senha de novo | 12 |
+| `MP_ACCESS_TOKEN` | Access Token de produção do Mercado Pago | — (pagamento desligado) |
+| `MP_WEBHOOK_SEGREDO` | assinatura secreta dos webhooks | — (recomendado) |
+| `ENDERECO_PUBLICO` | endereço do servidor na internet, ex.: `https://api.seudominio.com.br` | o endereço do pedido |
+| `PRECO_BASICO` / `PRECO_PROFISSIONAL` | preço por mês, ex.: `99,90` | — (o plano sem preço não aparece) |
+| `PAGAMENTO_MESES` | períodos oferecidos | `1,3,6,12` |
+
+### Botão "Assinar" no site
+
+No `site/index.html`, preencha `assinar: 'https://api.seudominio.com.br/assinar'` no `CONFIG`. Os planos Básico e Profissional ganham o botão **Assinar**, e o botão de contato vira **Tirar dúvidas**. Vazio, o site fica como antes.
+
+---
+
+## 13. O que ficou pronto e o que falta para vender
 
 ### Pronto
 
@@ -547,7 +650,8 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 - Regras do dia: dia passado só o administrador altera, e nenhuma consulta fica sem Veio / Não veio (tela de pendências ao abrir, aviso ao fechar o programa do computador e ao sair).
 - Busca de consultas por paciente, procedimento, período, situação e dentista. Respeita as permissões e funciona sem internet.
 - Telas ajustadas para o celular: barra embaixo, cartões maiores, janelas de baixo para cima e WhatsApp direto no app.
-- O pagamento está preparado (`aoConfirmarPagamento` em `planos.js`) e o painel tem as rotas reservadas (`/api/painel/...`).
+- Pagamento pelo Mercado Pago (`/assinar`): o administrador escolhe o plano e paga, e o plano e a validade mudam sozinhos quando o pagamento é aprovado (seção 12).
+- Painel de administração (`/painel`, com senha): lista de clínicas, criar, suspender e reativar, aparelhos, chave nova, senha nova do administrador, mudar plano e ver pagamentos.
 - Instalação em VPS com HTTPS automático, cópias automáticas e Dockerfile.
 - Todas as funções de antes continuam iguais, inclusive as permissões:
   - agenda, pacientes, dentistas e permissões;
@@ -557,8 +661,8 @@ O que **nenhum** programa consegue impedir 100%: alguém com muito conhecimento 
 ### Falta para começar a vender
 
 1. **Contratar o servidor e o domínio** e rodar o `instalar-vps.sh`. Depois, gerar os apps com o endereço e a chave de verdade.
-2. **Pagamento** (Mercado Pago, Asaas, Stripe...). Falta ligar o aviso de pagamento confirmado ao `aoConfirmarPagamento` em `planos.js`, que já muda o plano e a data.
-3. **Painel de administração** (tela para você criar clínicas, ver aparelhos e suspender). Hoje isso é feito pelos comandos `dente-sempre ...`, e as rotas estão reservadas em `/api/painel/`.
+2. **Configurar o Mercado Pago**: criar a aplicação, colocar o token, a assinatura secreta e os preços em `/etc/dente-sempre.env` e fazer uma compra pequena de verdade (seção 12). O pagamento foi testado aqui com um Mercado Pago simulado, porque este ambiente não acessa o Mercado Pago de verdade.
+3. **Definir os preços** do Básico e do Profissional.
 4. **Assinatura digital dos instaladores**:
    - Windows: certificado de assinatura de código, ≈ US$ 100 a 400 por ano. Sem ele, o Windows mostra "Editor desconhecido".
    - Mac: conta Apple Developer, US$ 99 por ano.
