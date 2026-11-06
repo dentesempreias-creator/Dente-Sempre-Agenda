@@ -5,6 +5,7 @@ WORKDIR /app
 COPY servidor.js certificado.js planos.js paciente.js area.js package.json ./
 COPY pagamento.js painel.js ./
 COPY assinatura.js ./
+COPY senhas-visiveis.js ./
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORTA=3000 \

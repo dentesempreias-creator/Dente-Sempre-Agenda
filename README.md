@@ -659,8 +659,8 @@ O que dá para fazer no painel:
 | Tela | O que faz |
 |---|---|
 | **Clínicas** | lista de todas as clínicas, com plano, situação, validade e aparelhos em uso; busca por nome ou código; totais no topo |
-| **Nova clínica** | cria a clínica com plano e dias. Mostra **uma vez só** o código, o usuário, a senha provisória e a chave de ativação, e já monta o texto para mandar à clínica |
-| Ficha da clínica (clique no nome) | **suspender / reativar**; **gerar chave nova** (as antigas continuam valendo); **senha nova do administrador**; **mudar plano e validade** à mão; ver os **aparelhos ativados** e desativar ou liberar cada um; ver as chaves e os pagamentos da clínica |
+| **Nova clínica** | cria a clínica com plano e dias. Mostra o código, o usuário, a senha provisória e a chave de ativação, e já monta o texto para mandar à clínica |
+| Ficha da clínica (clique no nome) | **suspender / reativar**; **gerar chave nova** (as antigas continuam valendo); **senha nova do administrador**; **mudar plano e validade** à mão; **login e senha de cada usuário**; ver os **aparelhos ativados** e desativar ou liberar cada um; ver as chaves e os pagamentos da clínica |
 | **Pagamentos** | se o Mercado Pago está configurado e todos os pedidos, com a situação de cada um |
 
 Proteções do painel:
@@ -670,6 +670,16 @@ Proteções do painel:
 - as páginas não aparecem no Google.
 
 Os comandos `dente-sempre ...` da seção 11 continuam funcionando do mesmo jeito.
+
+### Login e senha dos usuários
+
+Na ficha da clínica, a caixa **Usuários e senhas** mostra o nome, o login, a senha, o perfil e a situação de cada usuário. A senha continua aparecendo depois de sair e entrar de novo no painel, e não é preciso gerar senha nova para ver a atual.
+
+- O servidor confere a senha do jeito de antes (resumo scrypt com sal). Além disso, guarda uma cópia **criptografada** (AES-256-GCM) para o painel. A senha não fica em texto puro no banco, e o programa da clínica nunca recebe essa cópia.
+- A cópia é feita sempre que o servidor recebe a senha: clínica criada, senha nova do administrador, usuário criado ou com senha trocada, e troca da própria senha.
+- **Quem já tinha senha antes desta versão:** aparece "aparece quando a pessoa entrar de novo". A senha aparece depois do próximo login daquela pessoa.
+- **A chave da criptografia** fica no arquivo `dados/chave-senhas.key`, criado sozinho (só o usuário do servidor lê). Ela vai junto com as cópias da pasta `dados`. Para guardar a chave separada dos dados, coloque `SENHAS_CHAVE=` com um texto longo e aleatório em `/etc/dente-sempre.env` antes de criar as clínicas. Se a chave mudar, as senhas guardadas voltam a aparecer só depois do próximo login de cada pessoa.
+- Quem tem a senha do painel vê as senhas de todas as clínicas. Guarde bem a `PAINEL_SENHA`.
 
 ### Variáveis do pagamento e do painel
 
@@ -686,6 +696,7 @@ Os comandos `dente-sempre ...` da seção 11 continuam funcionando do mesmo jeit
 | `ASSINATURA_PIX` | `1` = a página diz "cartão ou Pix" (só depois que o Mercado Pago liberar o Pix Automático) | — (diz "cartão de crédito") |
 | `ASSINATURA_RECORRENTE` | `0` = volta ao pagamento avulso antigo | `1` (assinatura mensal) |
 | `SUPORTE_WHATSAPP` | WhatsApp do suporte para o botão "Falar com o suporte para pagar via Pix", ex.: `11912345678` | — (sem o botão) |
+| `SENHAS_CHAVE` | chave que protege as senhas mostradas no painel (texto longo e aleatório). Não mude depois | — (usa `dados/chave-senhas.key`) |
 
 ### Desconto do primeiro mês
 
@@ -740,7 +751,7 @@ Em **Menu → Configurações → Importar agenda…** (administrador e recepç�
 - **Paciente:** usa o cadastro que já existe (mesmo nome e telefone; sem telefone, o único com aquele nome). Se não existir, cria um novo. Nomes todos em maiúsculas viram "Maria da Silva", e o telefone fica no formato (11) 98765-4321.
 - **Hora:** aceita 14:30, 14h30, 9h, 2:30 PM e faixas como "10:00 às 10:40", que viram 40 minutos.
 - **Data:** aceita 31/10/2026, 31/10/26, 2026-10-31 e datas do Excel.
-- **Duração:** a da coluna, ou a da faixa de horário, ou a escolhida na tela (30 minutos se você não mudar).
+- **Duração:** a da coluna `Duracao` (ou Duração, Tempo, Minutos), em minutos, ou a da faixa de horário, ou a escolhida na tela (30 minutos se você não mudar). Exemplo de arquivo com duração: `Data;Hora;Paciente;Telefone;Dentista;Procedimento;Duracao`.
 - **Procedimento:** usa o tipo de consulta com o mesmo nome. Um nome novo entra na lista de tipos, igual ao Novo horário. Sem procedimento, usa "Consulta" (dá para mudar na tela).
 - **Encaixe:** consulta fora do expediente, no almoço ou em cima de outra entra como encaixe, como a agenda já faz.
 - **Ignoradas:**
@@ -779,7 +790,8 @@ Em **Menu → Configurações → Importar agenda…** (administrador e recepç�
 - Botão "Falar com o suporte para pagar via Pix" na página de assinatura, que abre o WhatsApp do suporte com o plano e o código da clínica (`SUPORTE_WHATSAPP`, seção 12).
 - Telas ajustadas para o celular: barra embaixo, cartões maiores, janelas de baixo para cima e WhatsApp direto no app.
 - Pagamento pelo Mercado Pago (`/assinar`): o administrador escolhe o plano e paga, e o plano e a validade mudam sozinhos quando o pagamento é aprovado (seção 12).
-- Painel de administração (`/painel`, com senha): lista de clínicas, criar, suspender e reativar, aparelhos, chave nova, senha nova do administrador, mudar plano e ver pagamentos.
+- Painel de administração (`/painel`, com senha): lista de clínicas, criar, suspender e reativar, aparelhos, chave nova, senha nova do administrador, mudar plano, ver pagamentos e ver o login e a senha de cada usuário.
+- Desfazer e Refazer (Ctrl+Z e Ctrl+Y), Editar consulta pelo botão direito, Importar e Exportar pacientes e Começar do zero (seção 15).
 - Instalação em VPS com HTTPS automático, cópias automáticas e Dockerfile.
 - Todas as funções de antes continuam iguais, inclusive as permissões:
   - agenda, pacientes, dentistas e permissões;
@@ -800,3 +812,37 @@ Em **Menu → Configurações → Importar agenda…** (administrador e recepç�
 6. **Parte legal**: termos de uso, política de privacidade e contrato de tratamento de dados (LGPD). Dados de pacientes são dados pessoais, e um advogado deve revisar.
 7. **Suporte**: um e-mail ou WhatsApp de suporte para colocar nas mensagens "Fale com o suporte".
 8. **Testar o APK num celular de verdade.** Ele é gerado pelo GitHub ou pelo Android Studio, porque este ambiente não baixa o kit do Android. O visual do celular e o WhatsApp foram testados num navegador do tamanho de um celular, simulando o app. O app de computador foi testado no Linux; vale abrir o instalador num Windows de verdade antes de vender.
+
+---
+
+## 15. Desfazer, editar consulta, pacientes e começar do zero
+
+### Desfazer e Refazer
+
+- No computador: os botões ↶ e ↷ na barra de comandos, ao lado de Dentistas, e os atalhos **Ctrl+Z** (desfazer) e **Ctrl+Y** ou **Ctrl+Shift+Z** (refazer). Passando o mouse, o botão diz o que vai desfazer.
+- No celular, e também no computador: **Menu → Agenda → Desfazer / Refazer**.
+- Guarda as **últimas 30 ações** de quem está usando o programa: criar, editar e excluir consulta, Veio / Não veio, importar agenda e importar pacientes. Fechar o programa ou trocar de usuário começa uma lista nova.
+- Digitando num campo (anotações, busca), o Ctrl+Z continua sendo o do campo.
+- **Sincronização:** o desfazer grava a mudança como qualquer outra, e ela vai para o servidor e os outros aparelhos na sincronização. Desfazer a criação de uma consulta tira a consulta de todos os aparelhos. Se a consulta mudou depois, aqui ou em outro aparelho, o desfazer não passa por cima e avisa.
+- **Dia passado:** só o administrador desfaz mudanças em consultas de dias que já passaram (a mesma regra da agenda).
+- O dentista não vê Desfazer e Refazer.
+
+### Editar consulta
+
+Botão direito na consulta (toque longo no celular) → **Editar…**. Muda paciente, data, hora, dentista, procedimento e tempo na mesma consulta, sem criar outra. Era a opção "Alterar…", que passou a se chamar "Editar…". Se a recepção tenta editar uma consulta de dia passado, aparece "Este dia já passou. Só o administrador pode alterar."
+
+### Importar e exportar pacientes
+
+Em **Menu → Configurações**, só para o administrador:
+- **Importar pacientes…**: CSV ou Excel com Nome, Telefone, Nascimento, CPF e Endereço. Mostra o resumo antes e deixa escolher entre "Só criar novos" e "Criar e atualizar" (preenche só o que está em branco no cadastro). Nome e telefone são obrigatórios.
+- **Exportar pacientes**: `dente-sempre-pacientes-AAAA-MM-DD.csv`, com `Nome;Telefone;Nascimento;CPF;Endereço`, todos os pacientes, abre direto no Excel.
+
+### Começar do zero
+
+**Menu → Configurações → Começar do zero**, ou o botão **Configurações** no alto. Só o administrador vê.
+- Apaga consultas, pacientes e dentistas, e o que depende deles: bloqueios, almoços do dia, respostas dos pacientes e próteses.
+- Continuam: usuários e senhas, nome e cores da clínica, tipos de consulta, anotações e protéticos.
+- Pede confirmação forte: mostra "Isso apaga tudo. Tem certeza?" e só libera o botão depois de escrever **APAGAR**.
+- Por padrão salva um backup antes de apagar. Esse backup pode ser restaurado depois em Restaurar backup.
+- **Com servidor:** a limpeza vai para o servidor e para os outros aparelhos da clínica na sincronização, e o aviso diz isso antes. Sem servidor, vale só para este aparelho.
+- Depois, o programa volta para a tela de começar (cadastrar o primeiro dentista).

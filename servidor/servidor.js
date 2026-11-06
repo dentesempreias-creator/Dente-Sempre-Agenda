@@ -117,6 +117,22 @@ function senhaConfere(reg, senha) {
   const a = Buffer.from(resumo(senha, reg.sal), 'hex'), b = Buffer.from(reg.resumo, 'hex');
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+// Painel: além do resumo, uma cópia criptografada da senha para o dono ver no /painel (06/11)
+const { criarCofre } = require('./senhas-visiveis.js');
+const cofre = criarCofre(PASTA_DADOS);
+const _novaSenhaResumo = novaSenha;
+novaSenha = function (senha) {
+  const r = _novaSenhaResumo(senha);
+  try { r.cofre = cofre.fechar(senha); } catch (e) { /* sem cópia: o login continua igual */ }
+  return r;
+};
+// Quem já tinha senha antes desta versão: a cópia é guardada no próximo login
+function guardarNoCofre(d, u, senha) {
+  try {
+    if (!u || !u.senha || typeof senha !== 'string' || cofre.abrir(u.senha.cofre) === senha) return;
+    d.prepare('UPDATE usuarios SET senha = ? WHERE id = ?').run(JSON.stringify(Object.assign({}, u.senha, { cofre: cofre.fechar(senha) })), u.id);
+  } catch (e) { /* o login nunca falha por causa disso */ }
+}
 const senhaProvisoria = () => {
   const alfa = 'abcdefghjkmnpqrstuvwxyz23456789';
   return [...crypto.randomBytes(10)].map(b => alfa[b % alfa.length]).join('');
@@ -435,6 +451,7 @@ const ROTAS = {
       throw recusa(401, 'senha', 'Clínica, usuário ou senha não conferem.');
     }
     tentativas.delete(chave);
+    guardarNoCofre(d, u, corpo.senha);   // painel: senha visível (06/11)
     const st = planos.situacao(clinica);
     if (!st.ok) throw recusa(403, 'licenca', st.motivo);
     const token = clinica.id + '.' + crypto.randomBytes(32).toString('hex');
@@ -650,7 +667,7 @@ let assP = null;   // assinatura recorrente (Mercado Pago Assinaturas)
 const assinatura = () => assP || (assP = criarAssinatura({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, emTransacao, planos, agora, lerUsuario, senhaConfere, pagamento }));
 let painelP = null;
 const painelAdm = () => painelP || (painelP = criarPainel({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
-  novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento }));
+  novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre }));
 
 // Só para teste no navegador (SERVIR_PROGRAMA=1). Em uso real, a clínica usa o aplicativo.
 function servirHtml(res) {

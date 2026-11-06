@@ -11,7 +11,8 @@
 //    - ver os aparelhos ativados (e desativar ou liberar um aparelho);
 //    - gerar chave de ativação nova;
 //    - senha provisória nova para o administrador da clínica;
-//    - pagamentos recebidos pelo Mercado Pago.
+//    - pagamentos recebidos pelo Mercado Pago;
+//    - login e senha de cada usuário da clínica (ficha da clínica).
 //
 //  Segurança:
 //   - desligado enquanto PAINEL_SENHA não existir (mínimo 12 caracteres);
@@ -41,7 +42,7 @@ const senhaForm = token => sha('dente-sempre-painel-form|' + token).slice(0, 32)
 
 function criarPainel(ctx) {
   const { sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
-    novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento } = ctx;
+    novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre } = ctx;
   let preparado = false;
   const s = () => { const db = sistema(); if (!preparado) { db.exec(SCHEMA); preparado = true; } return db; };
   const ligado = () => SENHA.length >= 12;
@@ -229,6 +230,7 @@ function criarPainel(ctx) {
         <dt>Usuários ativos</dt><dd>${cont.usuarios} de ${lim.usuarios}</dd>
         <dt>Criada em</dt><dd>${dataBR(c.criadaEm)}</dd>
       </dl></div>
+      ${caixaUsuarios(c)}
       <div class="caixa"><h2>Mudar plano</h2>
         <form method="post" action="/painel/acao">${oculto(info)}<input type="hidden" name="c" value="${esc(c.codigo)}"><input type="hidden" name="acao" value="plano">
           <div class="linha"><label><span>Plano</span><select name="plano">${Object.keys(planos.PLANOS).map(p => `<option value="${p}"${c.plano === p ? ' selected' : ''}>${esc(planos.nomeDoPlano(p))}</option>`).join('')}</select></label>
@@ -246,6 +248,22 @@ function criarPainel(ctx) {
         ${chaves.map(k => `<tr><td class="mono">${esc(k.chave)}</td><td>${dataBR(k.criadaEm)}</td><td>${k.bloqueada ? '<span class="tag mal">Bloqueada</span>' : '<span class="tag ok">Vale</span>'}</td></tr>`).join('')}</table></div>
       <div class="caixa rolar"><h2>Pagamentos</h2>
         ${pedidos.length ? tabelaPedidos(pedidos, false) : '<p style="margin:0">Nenhum pagamento pela internet ainda.</p>'}</div>`, info);
+  }
+
+  // Usuários da clínica com login e senha (06/11). A senha vem da cópia criptografada (senhas-visiveis.js).
+  function caixaUsuarios(c) {
+    let us = [];
+    try { us = bancoDaClinica(c.id).prepare('SELECT * FROM usuarios ORDER BY criadoEm').all(); } catch (e) { us = []; }
+    const papel = { admin: 'Administrador', recepcao: 'Recepção', dentista: 'Dentista' };
+    const senhaDe = u => { try { const s = JSON.parse(u.senha); return cofre ? cofre.abrir(s && s.cofre) : null; } catch (e) { return null; } };
+    return `<div class="caixa rolar"><h2>Usuários e senhas</h2>
+      ${us.length ? `<table><tr><th>Nome</th><th>Login</th><th>Senha</th><th>Perfil</th><th>Situação</th></tr>
+      ${us.map(u => { const s = senhaDe(u); return `<tr><td>${esc(u.name)}</td><td class="mono">${esc(u.login)}</td>
+        <td>${s != null ? `<span class="mono">${esc(s)}</span>` : '<span class="muted">aparece quando a pessoa entrar de novo</span>'}</td>
+        <td>${esc(papel[u.role] || u.role)}</td>
+        <td>${!u.active ? '<span class="tag mal">Desativado</span>' : u.mustChange ? '<span class="tag esp">Senha provisória</span>' : '<span class="tag ok">Ativo</span>'}</td></tr>`; }).join('')}</table>`
+      : '<p style="margin:0">Nenhum usuário.</p>'}
+      <p class="muted" style="margin:10px 0 0">Para entrar: código da clínica <span class="mono">${esc(c.codigo)}</span>, login e senha. "Senha provisória" = o programa pede para trocar no primeiro acesso.</p></div>`;
   }
 
   function tabelaPedidos(lista, comClinica) {
@@ -315,7 +333,7 @@ function criarPainel(ctx) {
   // =====================================================================
   function atender(req, res, url, ip, seguro) {
     const enviar = (status, html, extra) => {
-      res.writeHead(status, Object.assign({ 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow',
+      res.writeHead(status, Object.assign({ 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store',
         'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" }, extra || {}));
       res.end(html);
     };
@@ -363,7 +381,7 @@ function criarPainel(ctx) {
           try { r = criarClinica({ nome: v.nome, codigo: v.codigo || undefined, plano: v.plano, dias: v.dias || undefined }); }
           catch (e) { return enviar(400, paginaNova(info, v, e.message)); }
           const servidor = String(process.env.ENDERECO_PUBLICO || '').replace(/\/+$/, '');
-          return ir('/painel/clinica?c=' + encodeURIComponent(r.clinica.codigo) + '&aviso=' + guardarAviso(msg('ok', `Clínica criada. Guarde estes dados agora: a senha provisória não aparece de novo.
+          return ir('/painel/clinica?c=' + encodeURIComponent(r.clinica.codigo) + '&aviso=' + guardarAviso(msg('ok', `Clínica criada. A senha também fica na ficha da clínica, em Usuários e senhas.
             <dl style="margin:10px 0"><dt>Código da clínica</dt><dd class="mono">${esc(r.clinica.codigo)}</dd><dt>Usuário</dt><dd class="mono">${esc(r.login)}</dd>
             <dt>Senha provisória</dt><dd class="mono">${esc(r.senha)}</dd><dt>Chave de ativação</dt><dd class="mono">${esc(r.chave)}</dd></dl>
             <label style="margin:0"><span>Texto para mandar à clínica</span><textarea rows="9" readonly>${esc(textoParaClinica(r, servidor))}</textarea></label>`)));

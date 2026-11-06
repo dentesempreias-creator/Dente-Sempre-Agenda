@@ -41,6 +41,7 @@ if [ "$ORIGEM" != "$DESTINO" ]; then
   cp -r "$ORIGEM/servidor.js" "$ORIGEM/certificado.js" "$ORIGEM/planos.js" "$ORIGEM/paciente.js" "$ORIGEM/area.js" "$ORIGEM/package.json" "$ORIGEM/hospedagem" "$DESTINO/"
   cp "$ORIGEM/pagamento.js" "$ORIGEM/painel.js" "$DESTINO/"
   cp "$ORIGEM/assinatura.js" "$DESTINO/"
+  cp "$ORIGEM/senhas-visiveis.js" "$DESTINO/"
 fi
 chown -R root:root "$DESTINO"
 chown -R dentesempre:dentesempre "$DESTINO/dados"

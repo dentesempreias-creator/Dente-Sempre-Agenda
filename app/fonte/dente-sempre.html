@@ -7620,6 +7620,234 @@
     return gs;
   };
 
+  // ---------- Desfazer e Refazer (06/11) ----------
+  // Guarda as últimas 30 ações: criar, editar e excluir consulta, Veio / Não veio, importar agenda e importar pacientes.
+  // Cada ação guarda só os registros que ela mudou (como estavam antes e como ficaram). Desfazer põe o "antes" de volta
+  // e Refazer põe o "depois", e só nos registros que continuam do jeito que a ação deixou: o que mudou depois
+  // (aqui ou em outro aparelho, pela sincronização) não é passado por cima. O resultado é gravado com save(),
+  // como qualquer mudança, e vai para o servidor na sincronização normal.
+  const DESF_MAX = 30;
+  let desfPilha = [], refPilha = [], desfDono = null, desfRodando = false;
+  function desfFoto() {
+    const m = new Map();
+    db.appointments.forEach(x => m.set('appointments:' + x.id, JSON.stringify(x)));
+    db.patients.forEach(x => m.set('patients:' + x.id, JSON.stringify(x)));
+    m.set('types:lista', JSON.stringify(db.types));
+    return m;
+  }
+  function desfDiferenca(antes, depois) {
+    const out = [];
+    depois.forEach((v, k) => { const a = antes.has(k) ? antes.get(k) : null; if (a !== v) out.push({ k, antes: a, depois: v }); });
+    antes.forEach((v, k) => { if (!depois.has(k)) out.push({ k, antes: v, depois: null }); });
+    return out;
+  }
+  const desfEu = () => { const u = currentUser(); return u ? u.id : null; };
+  function desfConfereDono() { if (desfDono !== desfEu()) { desfPilha = []; refPilha = []; desfDono = desfEu(); } }
+  function desfZerar() { desfPilha = []; refPilha = []; desfBotoes(); }
+  // Nome da ação, para o botão e o aviso
+  function desfNome(mud, rotulo) {
+    if (rotulo) return rotulo;
+    const ap = mud.filter(c => c.k.startsWith('appointments:'));
+    if (!ap.length) return 'Última ação';
+    const c = ap[0], a = JSON.parse(c.depois || c.antes), b = c.antes ? JSON.parse(c.antes) : null;
+    const p = getPatient(a.patientId), quem = p ? p.name : 'paciente';
+    const acao = !b ? 'Criar consulta' : a.status === 'deleted' && b.status !== 'deleted' ? 'Excluir consulta'
+      : a.status === 'arrived' && b.status !== 'arrived' ? 'Marcar Veio' : a.status === 'no_show' && b.status !== 'no_show' ? 'Marcar Não veio' : 'Editar consulta';
+    return `${acao} · ${quem}`;
+  }
+  // Envolve uma função: tira a "foto" antes, roda, e guarda o que mudou
+  function desfRastrear(fn, rotulo) {
+    return function () {
+      if (desfRodando || storageProblem) return fn.apply(this, arguments);
+      const antes = desfFoto(), nome = typeof rotulo === 'function' ? rotulo() : rotulo;
+      desfRodando = true;
+      let r;
+      try { r = fn.apply(this, arguments); }
+      finally { desfRodando = false; desfGuardar(antes, nome); }
+      return r;
+    };
+  }
+  function desfGuardar(antes, rotulo) {
+    const mud = desfDiferenca(antes, desfFoto());
+    if (!mud.length) return;
+    desfConfereDono();
+    desfPilha.push({ nome: desfNome(mud, rotulo), mud, em: new Date().toISOString() });
+    if (desfPilha.length > DESF_MAX) desfPilha.splice(0, desfPilha.length - DESF_MAX);
+    refPilha = [];
+    desfBotoes();
+  }
+  // Põe uma ação de volta (desfazer) ou de novo (refazer)
+  function desfAplicar(refazer) {
+    desfConfereDono();
+    const pilha = refazer ? refPilha : desfPilha, outra = refazer ? desfPilha : refPilha;
+    const verbo = refazer ? 'refazer' : 'desfazer';
+    if (!pilha.length) { toast(refazer ? 'Nada para refazer.' : 'Nada para desfazer.'); return; }
+    if (!allow('agenda.editar') || storageProblem) return;
+    const item = pilha[pilha.length - 1];
+    const de = refazer ? 'antes' : 'depois', para = refazer ? 'depois' : 'antes';
+    // Dia passado: só o administrador muda (a mesma regra da agenda)
+    if (!souAdmin() && item.mud.some(c => c.k.startsWith('appointments:') && [c.antes, c.depois].some(v => v && diaPassado(JSON.parse(v).date)))) { toast(AVISO_DIA); return; }
+    if (item.mud.some(c => c.k.startsWith('patients:')) && !allow('pacientes.editar')) return;
+    const foto = desfFoto();
+    const vale = item.mud.filter(c => (foto.has(c.k) ? foto.get(c.k) : null) === c[de]);
+    // Paciente que sairia mas tem consulta que não é desta ação: fica
+    const saiAp = new Set(vale.filter(c => c.k.startsWith('appointments:') && !c[para]).map(c => c.k.slice(13)));
+    const usados = new Set(db.appointments.filter(a => !saiAp.has(a.id)).map(a => a.patientId));
+    const fazer = vale.filter(c => !(c.k.startsWith('patients:') && !c[para] && usados.has(c.k.slice(9))));
+    const ficou = item.mud.length - fazer.length;
+    pilha.pop();
+    if (!fazer.length) { toast(`Não deu para ${verbo} “${item.nome}”: isso mudou depois (aqui ou em outro aparelho).`); desfBotoes(); return; }
+    fazer.forEach(c => {
+      const i = c.k.indexOf(':'), parte = c.k.slice(0, i), id = c.k.slice(i + 1), v = c[para] ? JSON.parse(c[para]) : null;
+      if (parte === 'types') { if (v) db.types = v; return; }
+      const lista = db[parte], j = lista.findIndex(x => x.id === id);
+      if (v && j >= 0) lista[j] = v; else if (v) lista.push(v); else if (j >= 0) lista.splice(j, 1);
+    });
+    outra.push(item);
+    if (outra.length > DESF_MAX) outra.splice(0, outra.length - DESF_MAX);
+    save();
+    render();
+    desfBotoes();
+    toast(`${refazer ? 'Refeito' : 'Desfeito'}: ${item.nome}.${ficou ? ` ${ficou} ${ficou === 1 ? 'item mudou' : 'itens mudaram'} depois e ${ficou === 1 ? 'ficou' : 'ficaram'} como ${ficou === 1 ? 'está' : 'estão'}.` : ''}`);
+  }
+  const desfazer = () => desfAplicar(false), refazer = () => desfAplicar(true);
+  // Botões na barra de comandos (computador). No celular eles ficam no Menu.
+  (function () {
+    const st = document.createElement('style');
+    st.textContent = '.commandbar .cmd.cmd-desf{padding:0 3px!important}.cmd-desf svg{flex:none}.cmd-desf[disabled]{opacity:.38;cursor:default}#redoBtn svg{transform:scaleX(-1)}@media (max-width:600px){.cmd-desf{display:none!important}}';
+    document.head.appendChild(st);
+    const bar = $('.commandbar'), ref = bar && $('.cmd-spacer', bar);
+    if (!bar || !ref) return;
+    const mk = (id, txt, atalho, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'cmd cmd-desf'; b.id = id; b.dataset.perm = 'agenda.editar';
+      b.setAttribute('aria-keyshortcuts', atalho); b.setAttribute('aria-label', txt);
+      b.innerHTML = I.undo;
+      b.onclick = fn;
+      bar.insertBefore(b, ref);
+      return b;
+    };
+    mk('undoBtn', 'Desfazer', 'Control+Z', desfazer);
+    mk('redoBtn', 'Refazer', 'Control+Y', refazer);
+    if (!can('agenda.editar')) $$('.cmd-desf', bar).forEach(el => { el.hidden = true; });
+  })();
+  function desfBotoes() {
+    desfConfereDono();
+    const u = $('#undoBtn'), r = $('#redoBtn');
+    if (u) { const it = desfPilha[desfPilha.length - 1]; u.disabled = !it; u.title = it ? `Desfazer: ${it.nome} (Ctrl+Z)` : 'Desfazer (Ctrl+Z): nada para desfazer'; }
+    if (r) { const it = refPilha[refPilha.length - 1]; r.disabled = !it; r.title = it ? `Refazer: ${it.nome} (Ctrl+Y)` : 'Refazer (Ctrl+Y): nada para refazer'; }
+  }
+  desfBotoes();
+  // Atalhos: Ctrl+Z desfaz; Ctrl+Y (ou Ctrl+Shift+Z) refaz. Digitando num campo, o Ctrl+Z continua sendo o do campo.
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.isComposing) return;
+    const k = String(e.key).toLowerCase();
+    if (k !== 'z' && k !== 'y') return;
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (!$('#modalWrap').hidden || !$('#drawer').hidden || !menu.hidden || !$('#baseMenu').hidden || !$('#pendScreen').hidden ||
+      !$('#activation').hidden || !$('#loginScreen').hidden || !$('#waitScreen').hidden || !$('#firstUse').hidden || !$('#storageProblem').hidden) return;
+    if (!currentUser() || !can('agenda.editar')) return;
+    e.preventDefault();
+    if (k === 'y' || e.shiftKey) refazer(); else desfazer();
+  });
+  // As ações que entram no histórico (as funções continuam as mesmas; só ganham a "foto" antes e depois)
+  onSubmitAppt = desfRastrear(onSubmitAppt);
+  markArrived = desfRastrear(markArrived);
+  markNoShow = desfRastrear(markNoShow);
+  const _openDeleteModalDesf = openDeleteModal;
+  openDeleteModal = function () {
+    const r = _openDeleteModalDesf.apply(this, arguments);
+    const f = $('#delForm');
+    if (f && f.onsubmit) f.onsubmit = desfRastrear(f.onsubmit);
+    return r;
+  };
+  impImportar = desfRastrear(impImportar, () => imp ? `Importar agenda (${imp.arquivo})` : 'Importar agenda');
+  pimImportar = desfRastrear(pimImportar, () => pim ? `Importar pacientes (${pim.arquivo})` : 'Importar pacientes');
+  // Mudou o usuário: o histórico de desfazer é de quem fez
+  const _renderDesf = render;
+  render = function () { const r = _renderDesf.apply(this, arguments); desfBotoes(); return r; };
+
+  // ---------- Editar consulta (06/11) ----------
+  // A opção que já existia no botão direito ("Alterar…") passa a se chamar "Editar…". Ela abre a mesma tela,
+  // muda a consulta que já existe (paciente, data, hora, dentista, procedimento e tempo) e já segue a regra do
+  // dia passado ("Este dia já passou. Só o administrador pode alterar.").
+  const _apptMenuItemsEd = apptMenuItems;
+  apptMenuItems = function () {
+    return _apptMenuItemsEd.apply(this, arguments).map(it => it && it.act === 'edit' ? Object.assign({}, it, { label: 'Editar…' }) : it);
+  };
+
+  // ---------- Começar do zero (06/11) ----------
+  // Configurações → Começar do zero (só o administrador). Apaga consultas, pacientes e dentistas deste aparelho
+  // (e o que depende deles: bloqueios, almoços do dia, respostas dos pacientes e próteses).
+  // Usuários, senhas, configurações, tipos, anotações e protéticos continuam.
+  function abrirComecarDoZero() {
+    if (!souAdmin()) { toast('Só o administrador pode usar Começar do zero.'); return; }
+    const n = (x, um, varios) => `${x.toLocaleString('pt-BR')} ${x === 1 ? um : varios}`;
+    const servidor = online();
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Começar do zero</h2></div>${closeX}</div>
+      <div class="stack">
+        <div class="dp-aviso"><span class="dp-ico" aria-hidden="true">${I.trash}</span><div><b>Isso apaga tudo. Tem certeza?</b>
+          <p>Vão ser apagados ${n(db.appointments.length, 'consulta', 'consultas')}, ${n(db.patients.length, 'paciente', 'pacientes')} e ${n(db.dentists.length, 'dentista', 'dentistas')}${servidor ? ', aqui e também no servidor e nos outros aparelhos da clínica (na próxima sincronização)' : ' deste aparelho'}. Não dá para desfazer.</p></div></div>
+        <p class="hint" style="margin:0">Continuam: usuários e senhas, nome e cores da clínica, tipos de consulta e anotações.</p>
+        <label class="fitrow"><input type="checkbox" id="czBackup" checked><span>Salvar um backup antes de apagar (recomendado)</span></label>
+        <label class="field"><span class="label">Para confirmar, escreva APAGAR</span><input id="czTexto" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+        <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="button" class="btn btn-danger solid" id="czIr" disabled>Apagar tudo</button></div>
+      </div>`);
+    const txt = $('#czTexto'), bt = $('#czIr');
+    txt.oninput = () => { bt.disabled = cleanSpaces(txt.value).toUpperCase() !== 'APAGAR'; };
+    if (!phoneMQ.matches) txt.focus();
+    bt.onclick = () => {
+      if (bt.disabled || !souAdmin() || storageProblem) return;
+      if ($('#czBackup').checked) exportBackup(true);
+      flushNote();
+      db.appointments = []; db.patients = []; db.dentists = [];
+      db.blocks = []; db.lunchDays = {}; db.replies = {}; db.prostheses = [];
+      state.dentistId = null;
+      desfZerar();
+      save();
+      closeModal(true);
+      render();
+      toast(servidor ? 'Pronto. Tudo apagado; os outros aparelhos ficam iguais na próxima sincronização.' : 'Pronto. Tudo apagado. Comece cadastrando um dentista.');
+    };
+  }
+
+  // Botão Configurações (no alto, à direita): Começar do zero no fim da lista, antes de Sair
+  const _openMenuV6 = openMenu;
+  openMenu = function (titulo, itens) {
+    if (titulo === 'Configurações' && Array.isArray(itens) && souAdmin() && !itens.some(it => it && it.act === 'comecar-zero')) {
+      itens = itens.slice();
+      const i = itens.findIndex(it => it && it.act === 'exit');
+      itens.splice(i >= 0 ? i : itens.length, 0, { header: 'Dados' }, { act: 'comecar-zero', label: 'Começar do zero…', icon: I.trash, cls: 'danger', run: abrirComecarDoZero }, { sep: true });
+      const args = Array.from(arguments); args[1] = itens;
+      return _openMenuV6.apply(this, args);
+    }
+    return _openMenuV6.apply(this, arguments);
+  };
+
+  // Menu: Desfazer / Refazer (também no celular) e Começar do zero
+  const _baseMenuGroupsV6 = baseMenuGroups;
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroupsV6.apply(this, arguments);
+    if (can('agenda.editar')) {
+      desfConfereDono();
+      const u = desfPilha[desfPilha.length - 1], r = refPilha[refPilha.length - 1];
+      const itens = [
+        { id: 'desfazer', icon: I.undo, label: 'Desfazer', sub: u ? u.nome : 'Nada para desfazer', run: desfazer },
+        { id: 'refazer', icon: I.undo.replace('<svg ', '<svg style="transform:scaleX(-1)" '), label: 'Refazer', sub: r ? r.nome : 'Nada para refazer', run: refazer }
+      ];
+      const g = gs.find(x => x.title === 'Agenda');
+      if (g) g.items.push(...itens); else gs.unshift({ title: 'Agenda', items: itens });
+    }
+    if (souAdmin()) {
+      const item = { id: 'comecar-zero', icon: I.trash, ico: 'warn', label: 'Começar do zero', sub: 'Apaga consultas, pacientes e dentistas', run: abrirComecarDoZero };
+      const g = gs.find(x => x.title === 'Configurações');
+      if (g) g.items.push(item); else gs.push({ title: 'Configurações', items: [item] });
+    }
+    return gs;
+  };
+
   function baseMenuGroups() {
     const today = todayStr();
     const nToday = db.appointments.filter(a => a.date === today && a.status === 'scheduled').length;
