@@ -1,0 +1,127 @@
+# =====================================================================
+#  Dente Sempre — gera os aplicativos
+#
+#  Roda manualmente: Actions > Gerar aplicativos > Run workflow
+#  Ou ao criar uma tag: git tag v1.0.1 && git push --tags
+#
+#  Lê servidor e chave pública do arquivo app/config.json
+# =====================================================================
+name: Gerar aplicativos
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gerar-apps-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Windows (instalador .exe)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/desktop/package-lock.json
+
+      - name: Conferir config.json
+        run: |
+          node -e "
+            const c = require('./config.json');
+            const erro = m => { console.log('::error::' + m); process.exit(1); };
+            let u; try { u = new URL(String(c.servidor || '')); } catch (e) { erro('config.json: servidor vazio ou inválido. Coloque o endereço https:// do servidor.'); }
+            if (u.protocol !== 'https:') erro('config.json: o servidor precisa começar com https://');
+            if (u.hostname === 'api.seudominio.com.br') erro('config.json: o servidor ainda é o endereço de exemplo. Coloque o endereço real.');
+            if (!String(c.chavePublica || '').trim()) erro('config.json: chavePublica vazia. No servidor, rode: dente-sempre chave-publica');
+            console.log('Servidor: ' + u.origin);
+          "
+
+      - name: Instalar
+        run: npm ci && npm --prefix desktop ci
+
+      - name: Preparar página
+        run: node preparar.js
+
+      - name: Gerar instalador
+        working-directory: app/desktop
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dente-sempre-windows
+          path: app/desktop/dist/*.exe
+          if-no-files-found: error
+
+  android:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            app/celular/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            app/celular/android/*.gradle*
+            app/celular/android/**/gradle-wrapper.properties
+
+      - name: Conferir config.json
+        run: |
+          node -e "
+            const c = require('./config.json');
+            const erro = m => { console.log('::error::' + m); process.exit(1); };
+            let u; try { u = new URL(String(c.servidor || '')); } catch (e) { erro('config.json: servidor vazio ou inválido. Coloque o endereço https:// do servidor.'); }
+            if (u.protocol !== 'https:') erro('config.json: o servidor precisa começar com https://');
+            if (u.hostname === 'api.seudominio.com.br') erro('config.json: o servidor ainda é o endereço de exemplo. Coloque o endereço real.');
+            if (!String(c.chavePublica || '').trim()) erro('config.json: chavePublica vazia. No servidor, rode: dente-sempre chave-publica');
+            console.log('Servidor: ' + u.origin);
+          "
+
+      - name: Instalar
+        run: npm ci && npm --prefix celular ci
+
+      - name: Preparar página e copiar para o Android
+        run: |
+          node preparar.js
+          cd celular && npx cap sync android
+
+      - name: Gerar APK de teste (debug)
+        working-directory: app/celular/android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dente-sempre-android
+          path: app/celular/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
