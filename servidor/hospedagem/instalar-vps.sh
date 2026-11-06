@@ -40,6 +40,7 @@ mkdir -p "$DESTINO/dados"
 if [ "$ORIGEM" != "$DESTINO" ]; then
   cp -r "$ORIGEM/servidor.js" "$ORIGEM/certificado.js" "$ORIGEM/planos.js" "$ORIGEM/paciente.js" "$ORIGEM/area.js" "$ORIGEM/package.json" "$ORIGEM/hospedagem" "$DESTINO/"
   cp "$ORIGEM/pagamento.js" "$ORIGEM/painel.js" "$DESTINO/"
+  cp "$ORIGEM/assinatura.js" "$DESTINO/"
 fi
 chown -R root:root "$DESTINO"
 chown -R dentesempre:dentesempre "$DESTINO/dados"
@@ -64,6 +65,13 @@ MP_ACCESS_TOKEN=
 MP_WEBHOOK_SEGREDO=
 PRECO_BASICO=
 PRECO_PROFISSIONAL=
+# Preço do 1º mês na primeira assinatura (vazio = sem promoção)
+PRECO_BASICO_PROMO=
+PRECO_PROFISSIONAL_PROMO=
+# 1 = a página diz "cartão ou Pix" (só depois que o Mercado Pago liberar o Pix Automático na sua conta)
+ASSINATURA_PIX=
+# WhatsApp do suporte, com DDD (ex.: 11912345678). Mostra o botão "Falar com o suporte para pagar via Pix" em /assinar. Vazio = sem o botão
+SUPORTE_WHATSAPP=
 EOS
   chmod 600 /etc/dente-sempre.env
 fi

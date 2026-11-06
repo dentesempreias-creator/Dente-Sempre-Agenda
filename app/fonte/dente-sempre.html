@@ -896,6 +896,27 @@
     .pd-bts .btn{flex:1;height:44px}
     .pd-scroll{max-height:none}
   }
+  /* Importar agenda de outro sistema */
+  .imp-prev{overflow:auto;max-height:260px;border:1px solid var(--line);background:#fff}
+  .imp-prev table{border-collapse:collapse;font-size:13px;min-width:100%}
+  .imp-prev th,.imp-prev td{padding:5px 8px;border-bottom:1px solid var(--line-soft);text-align:left;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  .imp-prev th{background:var(--pane-head);position:sticky;top:0;color:#33405a;font-weight:600}
+  .imp-tit{font-size:15px;margin:4px 0 0}
+  .imp-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .imp-campos select,.imp-campos input,.imp-dent select{width:100%}
+  .imp-dent{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 12px;align-items:center}
+  .imp-dent span{overflow-wrap:anywhere}
+  .imp-res{border:1px solid var(--line-soft);background:#fafbfd;padding:10px 12px}
+  .imp-num{display:flex;gap:22px;flex-wrap:wrap;margin:0 0 6px}
+  .imp-num div{display:flex;flex-direction:column;font-size:14px}
+  .imp-num b{font-size:24px;line-height:1.1}
+  .imp-ok b{color:var(--green-ink)} .imp-ign b{color:var(--amber-ink)}
+  .imp-motivos{margin:0 0 8px;padding-left:18px;font-size:14px;color:var(--muted)}
+  #impLista{width:100%;font-size:13px}
+  @media (max-width:600px){
+    .imp-campos,.imp-dent{grid-template-columns:1fr}
+    .imp-dent select{margin-bottom:6px}
+  }
 </style>
 </head>
 <body>
@@ -6756,6 +6777,846 @@
     const g = gs.find(x => x.title === 'Configurações');
     if (g) { const i = g.items.findIndex(it => it.id === 'activation'); g.items.splice(i >= 0 ? i + 1 : g.items.length, 0, item); }
     else gs.push({ title: 'Configurações', items: [item] });
+    return gs;
+  };
+
+  // ---------- Importar agenda de outro sistema (31/10) ----------
+  // Planilha (CSV, TXT, Excel .xlsx, .xls salvo como página/XML) ou backup em .zip com planilhas dentro.
+  // Cada consulta entra no mesmo formato do "Novo horário" e tudo é gravado com save():
+  // funciona sem internet e vai para o servidor na próxima sincronização, como qualquer outra mudança.
+  const IMP_CAMPOS = [
+    { k: 'nome', label: 'Nome do paciente', req: true },
+    { k: 'tel', label: 'Telefone' },
+    { k: 'data', label: 'Data', req: true },
+    { k: 'hora', label: 'Hora', req: true },
+    { k: 'dent', label: 'Dentista' },
+    { k: 'proc', label: 'Procedimento' },
+    { k: 'dur', label: 'Duração (minutos)' },
+    { k: 'sit', label: 'Situação (para pular as canceladas)' }
+  ];
+  // Nomes de coluna comuns (Global, Excel e outros sistemas). A ordem importa: o primeiro que servir fica com a coluna.
+  const IMP_NOMES = [
+    ['tel', /(telefone|celular|fone|whats|contato|tel\b)/],
+    ['dur', /(duracao|tempo|minutos|\bmin\b)/],
+    ['sit', /(situacao|status|estado)/],
+    ['dent', /(dentista|profissional|doutor|dr\b|dra\b|medico|cirurgiao|responsavel|agenda de|prestador)/],
+    ['proc', /(procedimento|tipo|servico|tratamento|motivo|especialidade|consulta|descricao|observ)/],
+    ['data', /(data|dia\b|date)(?!.*nasc)/],
+    ['hora', /(hora|horario|inicio|time|\bhr\b)/],
+    ['nome', /(paciente|cliente|nome|pessoa)/]
+  ];
+  const IMP_NAO = { proc: /(data|hora|dia\b)/, dent: /(data|hora)/, nome: /(dentista|profissional|doutor|medico|tel|fone|nasc|mae|pai|resp)/ };
+  const IMP_MAX_LINHAS = 20000, IMP_MAX_MB = 20;
+  let imp = null;   // importação aberta: { arquivo, linhas, cab, map, durPadrao, dentMap, dentUnico, tipoPadrao }
+
+  // ----- Ler o arquivo -----
+  function impTexto(u8) {
+    let t;
+    try { t = new TextDecoder('utf-8', { fatal: true }).decode(u8); }
+    catch (e) { t = new TextDecoder('windows-1252').decode(u8); }   // planilhas antigas do Windows
+    return t.replace(/^﻿/, '');
+  }
+  function impCsv(t) {
+    const amostra = t.slice(0, 30000).split(/\r\n|\n|\r/).filter(l => l.trim()).slice(0, 30);
+    let sep = ',', melhor = -1;
+    [';', ',', '\t', '|'].forEach(s => {
+      const n = amostra.map(l => l.split(s).length - 1);
+      const com = n.filter(x => x > 0);
+      const nota = com.length ? com.length * 10 + Math.min(...com) - (Math.max(...com) - Math.min(...com)) : 0;
+      if (nota > melhor) { melhor = nota; sep = s; }
+    });
+    const linhas = [];
+    let lin = [], campo = '', aspas = false;
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (aspas) {
+        if (c === '"') { if (t[i + 1] === '"') { campo += '"'; i++; } else aspas = false; }
+        else campo += c;
+        continue;
+      }
+      if (c === '"' && campo.trim() === '') { aspas = true; campo = ''; continue; }
+      if (c === sep) { lin.push(campo.trim()); campo = ''; continue; }
+      if (c === '\n' || c === '\r') {
+        if (c === '\r' && t[i + 1] === '\n') i++;
+        lin.push(campo.trim()); linhas.push(lin); lin = []; campo = '';
+        if (linhas.length > IMP_MAX_LINHAS + 1) break;
+        continue;
+      }
+      campo += c;
+    }
+    if (campo.trim() !== '' || lin.length) { lin.push(campo.trim()); linhas.push(lin); }
+    return linhas;
+  }
+  function impHtml(t) {
+    const doc = new DOMParser().parseFromString(t, 'text/html');
+    let tab = null;
+    doc.querySelectorAll('table').forEach(x => { if (!tab || x.rows.length > tab.rows.length) tab = x; });
+    if (!tab) return [];
+    return [...tab.rows].slice(0, IMP_MAX_LINHAS + 1).map(r => [...r.cells].map(c => cleanSpaces(c.textContent)));
+  }
+  function impXml2003(t) {
+    const doc = new DOMParser().parseFromString(t, 'application/xml');
+    const ws = doc.getElementsByTagNameNS('*', 'Worksheet')[0] || doc;
+    return [...ws.getElementsByTagNameNS('*', 'Row')].slice(0, IMP_MAX_LINHAS + 1).map(r => {
+      const out = [];
+      [...r.getElementsByTagNameNS('*', 'Cell')].forEach(c => {
+        const ix = Number(c.getAttribute('ss:Index') || c.getAttributeNS('urn:schemas-microsoft-com:office:spreadsheet', 'Index'));
+        if (ix > 0) while (out.length < ix - 1) out.push('');
+        const d = c.getElementsByTagNameNS('*', 'Data')[0];
+        const tipo = d ? (d.getAttribute('ss:Type') || d.getAttributeNS('urn:schemas-microsoft-com:office:spreadsheet', 'Type')) : '';
+        const v = d ? d.textContent : '';
+        out.push(tipo === 'DateTime' ? v : cleanSpaces(v));
+      });
+      return out;
+    });
+  }
+  // .zip e .xlsx: lê o índice do zip e descompacta só o que precisa (sem biblioteca de fora)
+  function impZip(buf) {
+    const dv = new DataView(buf), u8 = new Uint8Array(buf);
+    let fim = -1;
+    for (let i = u8.length - 22; i >= Math.max(0, u8.length - 70000); i--) if (dv.getUint32(i, true) === 0x06054b50) { fim = i; break; }
+    if (fim < 0) throw new Error('zip');
+    const n = dv.getUint16(fim + 10, true), arquivos = {};
+    let p = dv.getUint32(fim + 16, true);
+    for (let k = 0; k < n && p + 46 <= u8.length; k++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) break;
+      const ln = dv.getUint16(p + 28, true), lx = dv.getUint16(p + 30, true), lc = dv.getUint16(p + 32, true);
+      const nome = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + ln));
+      arquivos[nome] = { metodo: dv.getUint16(p + 10, true), tam: dv.getUint32(p + 20, true), real: dv.getUint32(p + 24, true), off: dv.getUint32(p + 42, true) };
+      p += 46 + ln + lx + lc;
+    }
+    const lerBytes = async nome => {
+      const a = arquivos[nome];
+      if (!a) return null;
+      const ini = a.off + 30 + dv.getUint16(a.off + 26, true) + dv.getUint16(a.off + 28, true);
+      const dados = u8.subarray(ini, ini + a.tam);
+      if (a.metodo === 0) return dados;
+      if (a.metodo !== 8 || typeof DecompressionStream === 'undefined') throw new Error('zip-metodo');
+      const s = new Blob([dados]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return new Uint8Array(await new Response(s).arrayBuffer());
+    };
+    return { arquivos, lerBytes, ler: async nome => { const b = await lerBytes(nome); return b ? new TextDecoder().decode(b) : null; } };
+  }
+  async function impXlsx(z) {
+    const xml = t => new DOMParser().parseFromString(t, 'application/xml');
+    const tags = (d, nome) => [...d.getElementsByTagNameNS('*', nome)];
+    const textoDe = el => tags(el, 't').map(x => x.textContent).join('');
+    const ss = await z.ler('xl/sharedStrings.xml');
+    const partilhadas = ss ? tags(xml(ss), 'si').map(textoDe) : [];
+    let alvo = 'xl/worksheets/sheet1.xml';
+    try {
+      const wb = xml(await z.ler('xl/workbook.xml'));
+      const folha = tags(wb, 'sheet')[0];
+      const rid = folha && (folha.getAttribute('r:id') || folha.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id'));
+      const rels = xml(await z.ler('xl/_rels/workbook.xml.rels'));
+      const rel = tags(rels, 'Relationship').find(r => r.getAttribute('Id') === rid);
+      if (rel) { const tg = rel.getAttribute('Target'); alvo = tg.startsWith('/') ? tg.slice(1) : 'xl/' + tg.replace(/^\.\//, ''); }
+    } catch (e) { /* fica com a primeira folha */ }
+    const folhaTxt = await z.ler(alvo) || await z.ler('xl/worksheets/sheet1.xml');
+    if (!folhaTxt) throw new Error('xlsx');
+    const col = ref => { let n = 0; const m = /^[A-Z]+/.exec(ref || '') || ['']; for (const ch of m[0]) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; };
+    return tags(xml(folhaTxt), 'row').slice(0, IMP_MAX_LINHAS + 1).map(r => {
+      const out = [];
+      tags(r, 'c').forEach((c, i) => {
+        const ix = c.getAttribute('r') ? col(c.getAttribute('r')) : i;
+        while (out.length < ix) out.push('');
+        const t = c.getAttribute('t'), v = tags(c, 'v')[0];
+        let val = '';
+        if (t === 's') val = partilhadas[Number(v && v.textContent)] || '';
+        else if (t === 'inlineStr') val = textoDe(c);
+        else if (t === 'b') val = v && v.textContent === '1' ? 'sim' : 'não';
+        else if (v && v.textContent !== '') val = t === 'str' || t === 'e' ? v.textContent : (isFinite(Number(v.textContent)) ? Number(v.textContent) : v.textContent);
+        out[ix] = typeof val === 'string' ? cleanSpaces(val) : val;
+      });
+      return out;
+    });
+  }
+  async function impLerArquivo(f) {
+    const nome = String(f.name || '');
+    const ext = (/\.([a-z0-9]+)$/i.exec(nome) || ['', ''])[1].toLowerCase();
+    if (f.size > IMP_MAX_MB * 1024 * 1024) throw new Error(`O arquivo tem mais de ${IMP_MAX_MB} MB. Exporte só a agenda (por exemplo, de hoje em diante).`);
+    const buf = await f.arrayBuffer(), u8 = new Uint8Array(buf);
+    if (u8[0] === 0xD0 && u8[1] === 0xCF && u8[2] === 0x11 && u8[3] === 0xE0) {
+      throw new Error('Este arquivo é do formato antigo do Excel (.xls). Abra no Excel ou no LibreOffice, use "Salvar como" e escolha CSV ou .xlsx. Depois importe o arquivo novo.');
+    }
+    if (u8[0] === 0x50 && u8[1] === 0x4B) {
+      let z;
+      try { z = impZip(buf); } catch (e) { throw new Error('Não consegui abrir este arquivo compactado.'); }
+      try {
+        if (z.arquivos['xl/workbook.xml']) return await impXlsx(z);
+        // backup em .zip: usa a planilha da agenda que estiver dentro
+        const nomes = Object.keys(z.arquivos).filter(x => /\.(csv|txt|tsv|xlsx)$/i.test(x));
+        if (!nomes.length) throw new Error('vazio');
+        nomes.sort((a, b) => (/agend|consult|marca/i.test(b) - /agend|consult|marca/i.test(a)) || z.arquivos[b].real - z.arquivos[a].real);
+        const escolhido = nomes[0];
+        if (/\.xlsx$/i.test(escolhido)) { const b = await z.lerBytes(escolhido); return impXlsx(impZip(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))); }
+        return impCsv(impTexto(await z.lerBytes(escolhido)));
+      } catch (e) {
+        if (e && e.message === 'zip-metodo') throw new Error('Este aparelho não consegue abrir este arquivo do Excel. Salve a planilha como CSV e importe de novo.');
+        throw new Error('Não achei uma planilha dentro deste arquivo. Exporte a agenda do outro sistema como planilha (Excel ou CSV).');
+      }
+    }
+    if (/^(bak|fdb|gdb|fbk|gbk|mdb|accdb|db|sqlite|sql|dmp|backup)$/.test(ext)) {
+      throw new Error('Este é o backup do banco de dados do outro sistema, e ele não dá para ler direto. No Global (ou no outro sistema), exporte a agenda como planilha (Excel ou CSV) e importe essa planilha aqui.');
+    }
+    const t = impTexto(u8);
+    if (/^\s*[{[]/.test(t)) {
+      let j = null; try { j = JSON.parse(t); } catch (e) { j = null; }
+      if (j && j.app === 'dente-sempre') throw new Error('Este é um backup do próprio Dente Sempre. Para ele, use Menu → Configurações → Restaurar backup.');
+      throw new Error('Não reconheci este arquivo. Use uma planilha: CSV, TXT ou Excel.');
+    }
+    if (/urn:schemas-microsoft-com:office:spreadsheet|<Workbook[\s>]/i.test(t.slice(0, 5000))) return impXml2003(t);
+    if (/<table[\s>]/i.test(t)) return impHtml(t);
+    return impCsv(t);
+  }
+
+  // ----- Entender os valores -----
+  function impDia(a, m, d) {
+    if (a < 1900 || a > 2200 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const x = new Date(a, m - 1, d);
+    return x.getMonth() === m - 1 ? dateStr(x) : null;
+  }
+  function impData(v) {
+    if (typeof v === 'number') {
+      if (v < 20000 || v > 90000) return null;   // número do Excel: dias desde 30/12/1899
+      const x = new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 86400000);
+      return impDia(x.getUTCFullYear(), x.getUTCMonth() + 1, x.getUTCDate());
+    }
+    const s = cleanSpaces(v);
+    let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+    if (m) return impDia(+m[1], +m[2], +m[3]);
+    m = /(?:^|\D)(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})(?!\d)/.exec(s);
+    if (m) { let a = +m[3]; if (m[3].length === 2) a += 2000; return impDia(a, +m[2], +m[1]); }   // dia/mês/ano (Brasil)
+    if (/^\d{5}(\.\d+)?$/.test(s)) return impData(Number(s));
+    return null;
+  }
+  // → { ini: minutos, fim: minutos ou null }
+  function impHora(v, daData) {
+    if (typeof v === 'number') {
+      const f = v % 1;
+      if (!f && v >= 1) return daData ? null : (v <= 23 ? { ini: v * 60, fim: null } : null);
+      return { ini: Math.round(f * 1440) % 1440, fim: null };
+    }
+    const s = norm(v);
+    if (!s) return null;
+    if (!daData && /^\d{3,4}$/.test(s)) { const n = +s; return n % 100 < 60 && n < 2400 ? { ini: Math.floor(n / 100) * 60 + n % 100, fim: null } : null; }
+    if (!daData && /^\d{1,2}$/.test(s) && +s <= 23) return { ini: +s * 60, fim: null };
+    if (!daData && /^0?[.,]\d+$/.test(s)) return impHora(Number(s.replace(',', '.')));
+    const re = /(\d{1,2})\s*(?:[:h]\s*(\d{2})?)(?::\d{2})?\s*(am|pm|a\.m\.|p\.m\.)?/g;
+    const achou = [];
+    let m;
+    while ((m = re.exec(s)) && achou.length < 2) {
+      let h = +m[1]; const mi = +(m[2] || 0);
+      if (m[3]) { const pm = m[3][0] === 'p'; if (h === 12) h = pm ? 12 : 0; else if (pm) h += 12; }
+      if (h <= 23 && mi < 60) achou.push(h * 60 + mi);
+    }
+    if (!achou.length) return null;
+    return { ini: achou[0], fim: achou[1] > achou[0] ? achou[1] : null };
+  }
+  function impDuracao(v) {
+    if (typeof v === 'number') return v > 0 && v < 1 ? Math.round(v * 1440) : Math.round(v);
+    const s = norm(v);
+    let m = /^(\d{1,2}):(\d{2})/.exec(s);
+    if (m) return +m[1] * 60 + +m[2];
+    m = /(\d+)\s*h(?:oras?)?\s*(\d+)?/.exec(s);
+    if (m) return +m[1] * 60 + +(m[2] || 0);
+    m = /(\d+)/.exec(s);
+    return m ? +m[1] : null;
+  }
+  function impTelefone(v) {
+    let d = digits(v);
+    if (d.length > 11 && d.startsWith('55')) d = d.slice(2);
+    if (d.length === 11 && d[0] === '0') d = d.slice(1);
+    if (d.length === 12 && d[0] === '0') d = d.slice(1);
+    return d.length >= 8 ? fmtPhone(d) : '';
+  }
+  const IMP_MINUSC = ['da', 'de', 'do', 'das', 'dos', 'e', 'di', 'du'];
+  function impNome(v) {
+    const s = cleanSpaces(v);
+    if (!s || s !== s.toUpperCase() || !/[A-ZÀ-Ý]/.test(s)) return s;   // só arruma nome todo em maiúsculas
+    return s.toLowerCase().split(' ').map((w, i) => i && IMP_MINUSC.includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+  const impSemTitulo = s => norm(s).replace(/[.]/g, ' ').replace(/^(dr|dra|doutor|doutora|prof|profa|cd)\s+/, '').replace(/\s+/g, ' ').trim();
+  function impAcharDentista(v) {
+    const a = impSemTitulo(v);
+    if (!a) return '';
+    const lista = db.dentists.map(d => ({ d, n: impSemTitulo(d.name) }));
+    const igual = lista.filter(x => x.n === a);
+    if (igual.length === 1) return igual[0].d.id;
+    const parecido = lista.filter(x => x.n && (x.n.startsWith(a + ' ') || a.startsWith(x.n + ' ') || x.n.split(' ')[0] === a));
+    return parecido.length === 1 ? parecido[0].d.id : '';
+  }
+  const impCancelada = v => /(cancel|desmarc|exclu|apagad|remarcad|desistiu)/.test(norm(v));
+  const impCel = (lin, ix) => ix >= 0 && lin[ix] != null ? lin[ix] : '';
+  const impVazia = lin => !lin.some(c => String(c == null ? '' : c).trim() !== '');
+
+  // ----- Adivinhar as colunas -----
+  function impCabecalho(linhas) {
+    const l0 = (linhas[0] || []).map(x => String(x == null ? '' : x));
+    if (!l0.length) return false;
+    const comDado = l0.filter(x => impData(x) || /\d{2}:\d{2}/.test(x) || digits(x).length >= 8).length;
+    const comNome = l0.filter(x => IMP_NOMES.some(([, re]) => re.test(norm(x)))).length;
+    return comNome > 0 && comDado === 0;
+  }
+  function impAdivinhar() {
+    const map = {};
+    IMP_CAMPOS.forEach(c => { map[c.k] = -1; });
+    const usadas = new Set();
+    const cols = Math.max(0, ...imp.linhas.slice(0, 50).map(l => l.length));
+    if (imp.cab) {
+      const nomes = (imp.linhas[0] || []).map(x => norm(x));
+      IMP_NOMES.forEach(([k, re]) => {
+        if (map[k] >= 0) return;
+        const i = nomes.findIndex((n, ix) => !usadas.has(ix) && re.test(n) && !(IMP_NAO[k] && IMP_NAO[k].test(n)));
+        if (i >= 0) { map[k] = i; usadas.add(i); }
+      });
+    }
+    // Sem nome de coluna (ou faltou alguma): olha o conteúdo
+    const corpo = (imp.cab ? imp.linhas.slice(1) : imp.linhas).filter(l => !impVazia(l)).slice(0, 40);
+    const fracao = (ix, teste) => corpo.length ? corpo.filter(l => teste(impCel(l, ix))).length / corpo.length : 0;
+    const livre = () => [...Array(cols).keys()].filter(i => !usadas.has(i));
+    const pegar = (k, teste, min) => {
+      if (map[k] >= 0) return;
+      let melhor = -1, nota = min;
+      livre().forEach(i => { const f = fracao(i, teste); if (f > nota) { nota = f; melhor = i; } });
+      if (melhor >= 0) { map[k] = melhor; usadas.add(melhor); }
+    };
+    pegar('data', v => !!impData(v), 0.6);
+    if (map.hora < 0 && map.data >= 0 && fracao(map.data, v => !!impHora(v, true)) > 0.6) { /* data e hora na mesma coluna */ }
+    else pegar('hora', v => typeof v === 'number' ? v < 1 : /^\s*\d{1,2}\s*[:h]\s*\d{0,2}/i.test(String(v)), 0.6);
+    pegar('tel', v => { const d = digits(v); return d.length >= 10 && d.length <= 13 && !impData(v); }, 0.5);
+    pegar('nome', v => typeof v === 'string' && /[a-zà-ú]{2,}\s+[a-zà-ú]{2,}/i.test(v) && !/\d/.test(v), 0.5);
+    return map;
+  }
+  function impDentValores() {
+    const ix = imp.map.dent, cont = new Map();
+    if (ix < 0) return [];
+    (imp.cab ? imp.linhas.slice(1) : imp.linhas).forEach(l => {
+      if (impVazia(l)) return;
+      const v = cleanSpaces(impCel(l, ix)), k = norm(v);
+      const x = cont.get(k) || { v: v || '(em branco)', n: 0 };
+      x.n++; cont.set(k, x);
+    });
+    return [...cont.entries()].map(([k, x]) => ({ k, v: x.v, n: x.n })).sort((a, b) => b.n - a.n);
+  }
+
+  // ----- Conferir (simular) ou importar de verdade -----
+  function impProcessar(aplicar) {
+    const r = { entra: [], ign: [], novosPac: 0, encaixes: 0, novosTipos: 0, falta: IMP_CAMPOS.filter(c => c.req && imp.map[c.k] < 0 && !(c.k === 'hora' && imp.map.data >= 0 && imp.horaNaData)).map(c => c.label) };
+    if (r.falta.length) return r;
+    const hoje = todayStr(), admin = role() === 'admin', agora = new Date().toISOString();
+    const M = imp.map, corpo = imp.cab ? imp.linhas.slice(1) : imp.linhas, base = imp.cab ? 2 : 1;
+    // Consultas que já estão na agenda: mesmo paciente (o mesmo cadastro ou o mesmo nome) + data + hora
+    const chaves = new Set(), doArquivo = new Set();
+    const chavesDe = (nome, pid, date, start) => [norm(nome) + '|' + date + '|' + start].concat(pid ? ['#' + pid + '|' + date + '|' + start] : []);
+    const pacPorId = new Map(db.patients.map(p => [p.id, p]));
+    db.appointments.forEach(a => {
+      if (a.status === 'deleted') return;
+      const p = pacPorId.get(a.patientId);
+      if (p) chavesDe(p.name, p.id, a.date, a.start).forEach(k => chaves.add(k));
+    });
+    // Pacientes que já existem (e os novos desta importação)
+    const porNomeTel = new Map(), porNome = new Map();
+    const indexar = p => {
+      const n = norm(p.name);
+      porNomeTel.set(n + '|' + digits(p.phone), p);
+      if (!porNome.has(n)) porNome.set(n, []);
+      porNome.get(n).push(p);
+    };
+    db.patients.forEach(indexar);
+    const tipos = new Map(db.types.map(t => [norm(t), t]));
+    const ocup = new Map();   // dentista|data → o que já ocupa (consultas, bloqueios, almoço)
+    const ocupado = (dId, date) => { const k = dId + '|' + date; if (!ocup.has(k)) ocup.set(k, occupying(dId, date)); return ocup.get(k); };
+    corpo.forEach((lin, i) => {
+      if (impVazia(lin)) return;
+      const linha = base + i;
+      const ign = motivo => r.ign.push({ linha, motivo, txt: lin.filter(x => String(x).trim() !== '').slice(0, 6).join(' · ') });
+      const nome = impNome(impCel(lin, M.nome));
+      if (!nome) return ign('sem o nome do paciente');
+      const vData = impCel(lin, M.data), date = impData(vData);
+      if (!date) return ign('data que não deu para entender');
+      const h = M.hora >= 0 && String(impCel(lin, M.hora)).trim() !== '' ? impHora(impCel(lin, M.hora)) : impHora(vData, true);
+      if (!h) return ign('hora que não deu para entender');
+      if (M.sit >= 0 && impCancelada(impCel(lin, M.sit))) return ign('cancelada no outro sistema');
+      let dentistId = imp.dentUnico;
+      if (M.dent >= 0) dentistId = imp.dentMap[norm(cleanSpaces(impCel(lin, M.dent)))] || '';
+      if (!dentistId || !getDentist(dentistId)) return ign('dentista sem correspondência no Dente Sempre');
+      if (date < hoje && !admin) return ign('dia que já passou (só o administrador importa)');
+      let dur = M.dur >= 0 ? impDuracao(impCel(lin, M.dur)) : null;
+      if (!dur && h.fim) dur = h.fim - h.ini;
+      if (!dur || dur < 5 || dur > 480) dur = imp.durPadrao;
+      const start = fromMin(h.ini);
+      if (h.ini < ABS_START || h.ini + dur > ABS_END) return ign(`horário fora da agenda (${fromMin(ABS_START)} às ${fromMin(ABS_END)})`);
+      const tel = M.tel >= 0 ? impTelefone(impCel(lin, M.tel)) : '';
+      // Paciente: mesmo nome e telefone; sem telefone, o único com esse nome; senão, cadastro novo
+      const n = norm(nome);
+      let p = porNomeTel.get(n + '|' + digits(tel));
+      if (!p) { const mesmos = porNome.get(n) || []; if (mesmos.length === 1 && (!tel || !digits(mesmos[0].phone))) p = mesmos[0]; }
+      const ks = chavesDe(nome, p && p.id, date, start);
+      if (ks.some(k => chaves.has(k))) return ign('já está na agenda (mesmo paciente, data e hora)');
+      if (ks.some(k => doArquivo.has(k))) return ign('repetida no arquivo (mesmo paciente, data e hora)');
+      const ocu = ocupado(dentistId, date);
+      if (ocu.some(o => o.kind === 'block' && o.start < h.ini + dur && h.ini < o.end)) return ign('horário bloqueado na agenda do dentista');
+      if (!p) {
+        p = { id: uid(), name: nome, phone: tel, birth: '', cpf: '', rg: '', address: '', createdAt: agora };
+        if (aplicar) db.patients.push(p);
+        indexar(p);
+        r.novosPac++;
+      }
+      // Procedimento: usa o tipo que já existe com o mesmo nome; um nome novo vira tipo novo (como no Novo horário)
+      const procTxt = cleanSpaces(impCel(lin, M.proc)) || imp.tipoPadrao;
+      let type = tipos.get(norm(procTxt));
+      if (!type) { type = procTxt.slice(0, 60); tipos.set(norm(type), type); r.novosTipos++; if (aplicar) db.types.push(type); }
+      // Fora do expediente ou em cima de outra consulta / almoço: entra como encaixe, igual à agenda faz
+      const fit = !isInsideHours(dentistId, date, h.ini, h.ini + dur) || ocu.some(o => o.kind !== 'block' && o.start < h.ini + dur && h.ini < o.end);
+      if (fit) r.encaixes++;
+      const a = {
+        id: uid(), dentistId, patientId: p.id, typeName: type,
+        date, start, duration: dur, fit, status: 'scheduled',
+        delayMinutes: null, arrivedAt: null, noShowAt: null, released: false,
+        scheduledAt: agora, editedAt: null, deletedAt: null, deleteReason: ''
+      };
+      if (aplicar) db.appointments.push(a);
+      ocu.push({ kind: 'appt', id: a.id, start: h.ini, end: h.ini + dur, ref: a });
+      chavesDe(nome, p.id, date, start).forEach(k => doArquivo.add(k));
+      r.entra.push({ a, p });
+    });
+    return r;
+  }
+
+  // ----- Telas -----
+  function abrirImportacao() {
+    if (!allow('agenda.editar') || !allow('pacientes.editar')) return;
+    if (!db.dentists.length) { toast('Cadastre os dentistas antes de importar a agenda.'); return; }
+    imp = null;
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Importar agenda</h2></div>${closeX}</div>
+      <div class="stack">
+        <p style="margin:0">Traga as consultas de outro sistema, como o <b>Global</b>, ou de uma planilha. Você confere as colunas antes, e nada entra repetido: se o mesmo paciente já tem consulta na mesma data e hora, a linha é pulada.</p>
+        <dl class="facts"><dt>Arquivos</dt><dd>CSV ou TXT (separado por ponto e vírgula, vírgula ou tab), Excel (.xlsx), .xls salvo como página ou XML, ou um .zip com a planilha dentro</dd>
+          <dt>No Global</dt><dd>Exporte a agenda (ou o relatório de agendamentos) para Excel ou CSV e escolha esse arquivo aqui</dd>
+          <dt>Colunas</dt><dd>Nome do paciente, data e hora (obrigatórias). Telefone, dentista e procedimento, se tiver</dd></dl>
+        ${role() !== 'admin' ? '<p class="hint" style="margin:0">Consultas de dias que já passaram só o administrador importa.</p>' : ''}
+        <div class="error" id="impErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="button" class="btn btn-primary" id="impEscolher">${I.upload} Escolher arquivo</button></div>
+      </div>`, true);
+    $('#impEscolher').onclick = () => {
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = '.csv,.txt,.tsv,.xlsx,.xls,.xml,.htm,.html,.zip,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/zip';
+      inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) impAbrirArquivo(f); };
+      inp.click();
+    };
+  }
+  async function impAbrirArquivo(f) {
+    const erro = msg => { const e = $('#impErr'); if (e) { e.textContent = msg; e.hidden = false; } else toast(msg); };
+    let linhas;
+    try { linhas = await impLerArquivo(f); }
+    catch (e) { return erro(e && e.message && !/^(zip|xlsx)/.test(e.message) ? e.message : `Não consegui ler “${f.name}”. Salve a agenda como CSV ou Excel e tente de novo.`); }
+    linhas = (linhas || []).filter(l => Array.isArray(l) && !impVazia(l));
+    if (linhas.length < 1) return erro(`“${f.name}” está vazio ou não tem uma tabela.`);
+    if (linhas.length > IMP_MAX_LINHAS + 1) return erro(`O arquivo tem mais de ${IMP_MAX_LINHAS.toLocaleString('pt-BR')} linhas. Exporte só uma parte da agenda (por exemplo, de hoje em diante) e importe em partes.`);
+    imp = { arquivo: f.name, linhas, cab: false, map: {}, durPadrao: 30, dentMap: {}, dentUnico: (activeDentists()[0] || db.dentists[0]).id, tipoPadrao: 'Consulta', horaNaData: false };
+    imp.cab = impCabecalho(linhas);
+    impPrepararColunas();
+    impTelaColunas();
+  }
+  function impPrepararColunas() {
+    imp.map = impAdivinhar();
+    imp.dentMap = {};
+    impPrepararDentistas();
+  }
+  function impPrepararDentistas() {
+    impDentValores().forEach(x => { if (!(x.k in imp.dentMap)) imp.dentMap[x.k] = impAcharDentista(x.v); });   // guarda o que a pessoa já escolheu
+    const corpo = (imp.cab ? imp.linhas.slice(1) : imp.linhas).slice(0, 40);
+    imp.horaNaData = imp.map.data >= 0 && corpo.length > 0 && corpo.filter(l => impHora(impCel(l, imp.map.data), true)).length / corpo.length > 0.6;
+  }
+  function impTelaColunas() {
+    const cols = Math.min(40, Math.max(...imp.linhas.slice(0, 50).map(l => l.length)));
+    const nomeCol = i => { const t = imp.cab ? cleanSpaces(impCel(imp.linhas[0], i)) : ''; return `Coluna ${i + 1}${t ? ': ' + t : ''}`; };
+    const corpo = imp.cab ? imp.linhas.slice(1) : imp.linhas;
+    // números do Excel: data (dias desde 1899) e hora (fração do dia) aparecem como a pessoa vê no Excel
+    const mostra = v => {
+      if (typeof v !== 'number') return String(v == null ? '' : v);
+      if (v >= 20000 && v <= 90000) { const d = impData(v), f = v % 1; return d ? fmtDMY(d) + (f ? ' ' + fromMin(Math.round(f * 1440) % 1440) : '') : String(v); }
+      if (v > 0 && v < 1) return fromMin(Math.round(v * 1440) % 1440);
+      return String(v).replace('.', ',');
+    };
+    const opcoes = sel => `<option value="-1">— não tem —</option>` + [...Array(cols).keys()].map(i => `<option value="${i}"${i === sel ? ' selected' : ''}>${esc(nomeCol(i))}</option>`).join('');
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Importar agenda</div><h2>${esc(imp.arquivo)}</h2></div>${closeX}</div>
+      <div class="stack">
+        <p class="hint" style="margin:0">${corpo.length.toLocaleString('pt-BR')} ${corpo.length === 1 ? 'linha' : 'linhas'} · prévia das primeiras:</p>
+        <div class="imp-prev"><table><thead><tr>${[...Array(cols).keys()].map(i => `<th>${esc(nomeCol(i))}</th>`).join('')}</tr></thead>
+          <tbody>${corpo.slice(0, 6).map(l => `<tr>${[...Array(cols).keys()].map(i => `<td>${esc(mostra(impCel(l, i)))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        <label class="fitrow"><input type="checkbox" id="impCab"${imp.cab ? ' checked' : ''}><span>A primeira linha tem os nomes das colunas</span></label>
+        <h3 class="imp-tit">Qual coluna é cada informação</h3>
+        <div class="imp-campos">${IMP_CAMPOS.map(c => `<label class="field"><span class="label">${esc(c.label)}${c.req ? ' <span class="req">*</span>' : ''}</span><select data-imp="${c.k}">${opcoes(imp.map[c.k])}</select></label>`).join('')}
+          <label class="field"><span class="label">Duração quando não tiver</span><select id="impDur">${[15, 20, 30, 40, 45, 60, 90].map(n => `<option value="${n}"${n === imp.durPadrao ? ' selected' : ''}>${n} minutos</option>`).join('')}</select></label>
+          <label class="field"><span class="label">Procedimento quando não tiver</span><input type="text" id="impTipo" maxlength="60" value="${esc(imp.tipoPadrao)}"></label></div>
+        <div id="impDent"></div>
+        <div id="impRes" class="imp-res" aria-live="polite"></div>
+        <div class="modal-foot"><button type="button" class="btn" id="impOutro">Outro arquivo</button><button type="button" class="btn btn-primary" id="impIr" disabled>Importar</button></div>
+      </div>`, true);
+    $('#impCab').onchange = e => { imp.cab = e.target.checked; impPrepararColunas(); impTelaColunas(); };
+    $$('[data-imp]').forEach(s => s.onchange = () => {
+      imp.map[s.dataset.imp] = Number(s.value);
+      if (s.dataset.imp === 'dent' || s.dataset.imp === 'data') impPrepararDentistas();
+      impTelaDentistas(); impConferir();
+    });
+    $('#impDur').onchange = e => { imp.durPadrao = Number(e.target.value); impConferir(); };
+    $('#impTipo').oninput = e => { imp.tipoPadrao = cleanSpaces(e.target.value) || 'Consulta'; impConferirDepois(); };
+    $('#impOutro').onclick = abrirImportacao;
+    $('#impIr').onclick = impImportar;
+    impTelaDentistas();
+    impConferir();
+  }
+  function impTelaDentistas() {
+    const box = $('#impDent');
+    if (!box) return;
+    const ops = sel => db.dentists.map(d => `<option value="${esc(d.id)}"${d.id === sel ? ' selected' : ''}>${esc(d.name)}${isActiveDentist(d) ? '' : ' (inativo)'}</option>`).join('');
+    if (imp.map.dent < 0) {
+      box.innerHTML = `<label class="field"><span class="label">Dentista de todas as consultas</span><select id="impDentUnico">${ops(imp.dentUnico)}</select>
+        <span class="hint">O arquivo não tem a coluna do dentista. Para trazer vários dentistas, importe um arquivo por dentista.</span></label>`;
+      $('#impDentUnico').onchange = e => { imp.dentUnico = e.target.value; impConferir(); };
+      return;
+    }
+    const vals = impDentValores();
+    box.innerHTML = `<h3 class="imp-tit">Dentistas do arquivo → dentistas do Dente Sempre</h3>
+      <div class="imp-dent">${vals.slice(0, 60).map(x => `<span><b>${esc(x.v)}</b> <small class="hint">${x.n} ${x.n === 1 ? 'consulta' : 'consultas'}</small></span>
+        <select data-impd="${esc(x.k)}"><option value="">Não importar estas</option>${ops(imp.dentMap[x.k])}</select>`).join('')}</div>
+      ${vals.length > 60 ? `<p class="hint">Mais ${vals.length - 60} nomes diferentes na coluna. Confira se a coluna escolhida é mesmo a do dentista.</p>` : ''}`;
+    $$('[data-impd]', box).forEach(s => s.onchange = () => { imp.dentMap[s.dataset.impd] = s.value; impConferir(); });
+  }
+  let impTimer = null;
+  function impConferirDepois() { clearTimeout(impTimer); impTimer = setTimeout(impConferir, 250); }
+  function impConferir() {
+    const box = $('#impRes'), bt = $('#impIr');
+    if (!box || !imp) return;
+    const r = impProcessar(false);
+    if (r.falta.length) {
+      box.innerHTML = `<p style="margin:0">Escolha a coluna de: <b>${esc(r.falta.join(', '))}</b>.</p>`;
+      bt.disabled = true; bt.textContent = 'Importar';
+      return;
+    }
+    const grupos = {};
+    r.ign.forEach(x => { grupos[x.motivo] = (grupos[x.motivo] || 0) + 1; });
+    const n = r.entra.length;
+    box.innerHTML = `<div class="imp-num"><div class="imp-ok"><b>${n.toLocaleString('pt-BR')}</b>${n === 1 ? 'vai entrar' : 'vão entrar'}</div>
+        <div class="imp-ign"><b>${r.ign.length.toLocaleString('pt-BR')}</b>${r.ign.length === 1 ? 'vai ser ignorada' : 'vão ser ignoradas'}</div></div>
+      ${n ? `<p class="hint" style="margin:0 0 6px">${r.novosPac} ${r.novosPac === 1 ? 'paciente novo' : 'pacientes novos'}${r.encaixes ? ` · ${r.encaixes} como encaixe (fora do expediente ou junto com outra consulta)` : ''}${r.novosTipos ? ` · ${r.novosTipos} ${r.novosTipos === 1 ? 'procedimento novo' : 'procedimentos novos'} na lista de tipos` : ''}</p>` : ''}
+      ${Object.keys(grupos).length ? `<ul class="imp-motivos">${Object.entries(grupos).sort((a, b) => b[1] - a[1]).map(([m, q]) => `<li>${q} · ${esc(m)}</li>`).join('')}</ul>` : ''}
+      ${n ? `<div class="imp-prev"><table><thead><tr><th>Data</th><th>Hora</th><th>Paciente</th><th>Telefone</th><th>Dentista</th><th>Procedimento</th></tr></thead><tbody>
+        ${r.entra.slice(0, 8).map(({ a, p }) => `<tr><td>${fmtDMY(a.date)}</td><td>${a.start}${a.fit ? ' ⚡' : ''}</td><td>${esc(p.name)}</td><td>${esc(p.phone)}</td><td>${esc((getDentist(a.dentistId) || {}).name || '')}</td><td>${esc(a.typeName)}</td></tr>`).join('')}
+        </tbody></table></div>` : ''}`;
+    bt.disabled = !n;
+    bt.textContent = n ? `Importar ${n.toLocaleString('pt-BR')} ${n === 1 ? 'consulta' : 'consultas'}` : 'Importar';
+  }
+  function impImportar() {
+    if (!imp || storageProblem) return;
+    if (!allow('agenda.editar') || !allow('pacientes.editar')) return;
+    $('#impIr').disabled = true;
+    const r = impProcessar(true);
+    if (r.falta.length || !r.entra.length) return impConferir();
+    save();
+    const primeira = r.entra.map(x => x.a).filter(a => a.date >= todayStr()).sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start))[0];
+    const sync = !online() ? 'Elas ficaram salvas neste aparelho.'
+      : estaOffline() ? 'Sem internet agora: elas ficaram salvas neste aparelho e vão para o servidor sozinhas quando a internet voltar.'
+      : 'Elas vão para o servidor na sincronização automática e aparecem nos outros aparelhos.';
+    const lista = r.ign.map(x => `Linha ${x.linha}: ${x.motivo}${x.txt ? ' — ' + x.txt : ''}`);
+    const arquivo = imp.arquivo;
+    imp = null;
+    render();
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Importar agenda</div><h2>Importação concluída</h2></div>${closeX}</div>
+      <div class="stack">
+        <div class="imp-num"><div class="imp-ok"><b>${r.entra.length.toLocaleString('pt-BR')}</b>${r.entra.length === 1 ? 'importada' : 'importadas'}</div>
+          <div class="imp-ign"><b>${r.ign.length.toLocaleString('pt-BR')}</b>${r.ign.length === 1 ? 'ignorada' : 'ignoradas'}</div></div>
+        <p style="margin:0">Arquivo <b>${esc(arquivo)}</b>. ${r.novosPac} ${r.novosPac === 1 ? 'paciente novo cadastrado' : 'pacientes novos cadastrados'}${r.encaixes ? `, ${r.encaixes} como encaixe` : ''}. ${esc(sync)}</p>
+        ${lista.length ? `<label class="field"><span class="label">Linhas ignoradas e o motivo</span><textarea id="impLista" rows="${Math.min(8, lista.length + 1)}" readonly>${esc(lista.slice(0, 2000).join('\n'))}</textarea></label>` : ''}
+        <div class="modal-foot">${lista.length ? '<button type="button" class="btn" id="impCopiar">Copiar a lista</button>' : ''}
+          ${primeira ? '<button type="button" class="btn" id="impVer">Ver na agenda</button>' : ''}<button type="button" class="btn btn-primary" data-close-modal>Fechar</button></div>
+      </div>`, true);
+    if ($('#impCopiar')) $('#impCopiar').onclick = () => {
+      const t = $('#impLista'); t.select();
+      Promise.resolve(navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t.value) : Promise.reject())
+        .then(() => toast('Lista copiada.'), () => { try { document.execCommand('copy'); toast('Lista copiada.'); } catch (e) { toast('Selecione o texto e copie.'); } });
+    };
+    if ($('#impVer')) $('#impVer').onclick = () => { closeModal(true); state.date = primeira.date; state.dentistId = primeira.dentistId; render(); };
+    toast(`${r.entra.length} ${r.entra.length === 1 ? 'consulta importada' : 'consultas importadas'}.`);
+  }
+  const _baseMenuGroupsImp = baseMenuGroups;
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroupsImp.apply(this, arguments);
+    if (!can('agenda.editar') || !can('pacientes.editar')) return gs;
+    const item = { id: 'importar-agenda', icon: I.upload, label: 'Importar agenda…', sub: 'Consultas de outro sistema (Global, CSV ou Excel)', run: abrirImportacao };
+    const g = gs.find(x => x.title === 'Configurações');
+    if (g) { const i = g.items.findIndex(it => it.id === 'import'); g.items.splice(i >= 0 ? i + 1 : g.items.length, 0, item); }
+    else gs.push({ title: 'Configurações', items: [item] });
+    return gs;
+  };
+
+  // ---------- Importar e exportar pacientes (06/11) ----------
+  // Menu → Configurações: "Importar pacientes…" e "Exportar pacientes". Só o administrador vê e usa.
+  // Lê os mesmos arquivos do "Importar agenda" (CSV, Excel .xlsx, .xls salvo como página/XML) com as mesmas
+  // funções de leitura, sem mudar nada nelas. Grava com save(), igual ao cadastro de paciente: funciona sem
+  // internet e vai para o servidor na sincronização.
+  const PIM_CAMPOS = [
+    { k: 'nome', label: 'Nome', req: true, re: /^(nome|nome completo|nome do paciente|paciente|cliente|nome paciente)$|\bnome\b/ },
+    { k: 'tel', label: 'Telefone', req: true, re: /(telefone|celular|fone|whats|contato|\btel\b)/ },
+    { k: 'nasc', label: 'Nascimento', re: /(nasc|aniversario|data de nascimento|dt\.? ?nasc)/ },
+    { k: 'cpf', label: 'CPF', re: /\bcpf\b/ },
+    { k: 'end', label: 'Endereço', re: /(endereco|logradouro|\brua\b|residencia)/ }
+  ];
+  let pim = null;   // importação de pacientes aberta: { arquivo, linhas, cab, map, modo }
+  const souAdm = () => role() === 'admin';
+  const pimCel = (l, i) => i >= 0 && l ? (l[i] == null ? '' : l[i]) : '';
+  function pimCabecalho(linhas) {
+    const l0 = (linhas[0] || []).map(x => norm(String(x == null ? '' : x)).trim());
+    const temNome = l0.some(x => PIM_CAMPOS.some(c => c.re.test(x)));
+    const temDado = l0.some(x => digits(x).length >= 8);
+    return temNome && !temDado;
+  }
+  function pimAdivinhar() {
+    const map = {}, usadas = new Set();
+    PIM_CAMPOS.forEach(c => { map[c.k] = -1; });
+    if (pim.cab) {
+      const cab = (pim.linhas[0] || []).map(x => norm(String(x == null ? '' : x)).trim());
+      PIM_CAMPOS.forEach(c => {   // primeiro o nome exato, depois o que contém a palavra
+        const i = cab.findIndex((x, j) => !usadas.has(j) && x && c.re.test(x) && !(c.k === 'nome' && /(dentista|profissional|mae|pai|responsavel|indicad)/.test(x)));
+        if (i >= 0) { map[c.k] = i; usadas.add(i); }
+      });
+      return map;
+    }
+    // Sem cabeçalho: olha o conteúdo das primeiras linhas
+    const corpo = pim.linhas.slice(0, 40), cols = Math.max(0, ...corpo.map(l => l.length));
+    const nota = (i, teste) => corpo.filter(l => teste(String(pimCel(l, i)))).length;
+    const melhor = teste => { let b = -1, n = 0; for (let i = 0; i < cols; i++) { if (usadas.has(i)) continue; const x = nota(i, teste); if (x > n) { n = x; b = i; } } if (b >= 0 && n >= corpo.length * 0.4) usadas.add(b); else b = -1; return b; };
+    map.cpf = melhor(v => digits(v).length === 11 && /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/.test(v));
+    map.tel = melhor(v => digits(v).length >= 10 && digits(v).length <= 13);
+    map.nasc = melhor(v => !!impData(v));
+    map.nome = melhor(v => /[A-Za-zÀ-ÿ]{2,}\s+[A-Za-zÀ-ÿ]{2,}/.test(v) && !/\d/.test(v));
+    map.end = melhor(v => /[A-Za-zÀ-ÿ]{3,}/.test(v) && /(\brua\b|\bav\b|avenida|travessa|alameda|estrada|\d)/i.test(v));
+    return map;
+  }
+  function pimNascimento(v) {
+    if (v === '' || v == null) return '';
+    let d = impData(v);
+    const m = /(?:^|\D)(\d{1,2})[/.-](\d{1,2})[/.-](\d{2})(?!\d)/.exec(cleanSpaces(v));
+    if (m) d = impDia(1900 + Number(m[3]) + (2000 + Number(m[3]) <= new Date().getFullYear() ? 100 : 0), +m[2], +m[1]);   // 15/03/85 = 1985
+    return d && d <= todayStr() ? d : '';
+  }
+  // Confere o arquivo todo. aplicar = true grava de verdade.
+  function pimProcessar(aplicar) {
+    const M = pim.map, corpo = pim.cab ? pim.linhas.slice(1) : pim.linhas, base = pim.cab ? 2 : 1;
+    const r = { criar: [], atualizar: [], existem: 0, ign: [], falta: PIM_CAMPOS.filter(c => c.req && !(M[c.k] >= 0)).map(c => c.label), cpfRuim: 0 };
+    if (r.falta.length) return r;
+    const porNomeTel = new Map(), porCpf = new Map();
+    const indexar = p => { porNomeTel.set(norm(p.name) + '|' + digits(p.phone), p); const c = digits(p.cpf); if (c.length === 11 && !porCpf.has(c)) porCpf.set(c, p); };
+    db.patients.forEach(indexar);
+    const doArquivo = new Set(), agora = new Date().toISOString();
+    corpo.forEach((lin, i) => {
+      if (impVazia(lin)) return;
+      const linha = base + i;
+      const ign = motivo => r.ign.push({ linha, motivo, txt: isPrivate() ? cleanSpaces(pimCel(lin, M.nome)) : lin.filter(x => String(x == null ? '' : x).trim() !== '').slice(0, 4).join(' · ') });
+      const nome = impNome(pimCel(lin, M.nome));
+      if (!/[A-Za-zÀ-ÿ]{2}/.test(nome)) return ign('sem nome');
+      const tel = impTelefone(pimCel(lin, M.tel));
+      if (digits(tel).length < 10) return ign('sem telefone (ou sem DDD)');
+      const chave = norm(nome) + '|' + digits(tel);
+      if (doArquivo.has(chave)) return ign('repetido no arquivo (mesmo nome e telefone)');
+      doArquivo.add(chave);
+      const nasc = M.nasc >= 0 ? pimNascimento(pimCel(lin, M.nasc)) : '';
+      let cpf = M.cpf >= 0 ? digits(pimCel(lin, M.cpf)) : '';
+      if (cpf && cpf.length !== 11) { cpf = ''; r.cpfRuim++; }
+      const end = M.end >= 0 ? cleanSpaces(pimCel(lin, M.end)).slice(0, 200) : '';
+      const ja = porNomeTel.get(chave);
+      if (ja) {
+        r.existem++;
+        if (pim.modo !== 'atualizar') return ign('já está no cadastro (não mexido)');
+        const muda = {};
+        if (!ja.birth && nasc) muda.birth = nasc;
+        if (!digits(ja.cpf) && cpf && !porCpf.has(cpf)) muda.cpf = fmtCpf(cpf);
+        if (!cleanSpaces(ja.address) && end) muda.address = end;
+        if (!Object.keys(muda).length) return ign('já está no cadastro (nada a completar)');
+        r.atualizar.push({ p: ja, muda });
+        if (aplicar) Object.assign(ja, muda);
+        if (muda.cpf) porCpf.set(cpf, ja);
+        return;
+      }
+      if (cpf && porCpf.has(cpf)) return ign(`CPF já cadastrado em ${porCpf.get(cpf).name}`);
+      const p = { id: uid(), name: nome, phone: fmtPhone(tel), birth: nasc, cpf: cpf ? fmtCpf(cpf) : '', rg: '', address: end, createdAt: agora };
+      r.criar.push(p);
+      if (aplicar) db.patients.push(p);
+      indexar(p);
+    });
+    return r;
+  }
+  function abrirImportarPacientes() {
+    if (!souAdm()) { toast('Só o administrador importa pacientes.'); return; }
+    pim = null;
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Importar pacientes</h2></div>${closeX}</div>
+      <div class="stack">
+        <p style="margin:0">Traga o cadastro de pacientes de uma planilha. Você confere antes de importar, e ninguém entra repetido: quem já tem o mesmo nome e telefone no cadastro não é criado de novo.</p>
+        <dl class="facts"><dt>Arquivos</dt><dd>CSV (separado por ponto e vírgula, vírgula ou tab) ou Excel (.xlsx). O .xls antigo precisa ser salvo antes como .xlsx ou CSV</dd>
+          <dt>Colunas</dt><dd>Nome e Telefone (obrigatórias). Nascimento, CPF e Endereço, se tiver</dd></dl>
+        <div class="error" id="pimErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="button" class="btn btn-primary" id="pimEscolher">${I.upload} Escolher arquivo</button></div>
+      </div>`, true);
+    $('#pimEscolher').onclick = () => {
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = '.csv,.txt,.tsv,.xlsx,.xls,.xml,.htm,.html,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+      inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) pimAbrirArquivo(f); };
+      inp.click();
+    };
+  }
+  async function pimAbrirArquivo(f) {
+    const erro = msg => { const e = $('#pimErr'); if (e) { e.textContent = msg; e.hidden = false; } else toast(msg); };
+    let linhas;
+    try { linhas = await impLerArquivo(f); }
+    catch (e) {
+      const m = e && e.message && !/^(zip|xlsx|vazio)/.test(e.message) ? e.message : `Não consegui ler “${f.name}”. Salve como CSV ou Excel e tente de novo.`;
+      return erro(m.replace('Exporte só a agenda (por exemplo, de hoje em diante).', 'Divida o arquivo em partes.').replace(/a agenda/g, 'o cadastro de pacientes'));
+    }
+    linhas = (linhas || []).filter(l => Array.isArray(l) && !impVazia(l));
+    if (!linhas.length) return erro(`“${f.name}” está vazio ou não tem uma tabela.`);
+    if (linhas.length > IMP_MAX_LINHAS + 1) return erro(`O arquivo tem mais de ${IMP_MAX_LINHAS.toLocaleString('pt-BR')} linhas. Divida em partes e importe uma de cada vez.`);
+    pim = { arquivo: f.name, linhas, cab: false, map: {}, modo: 'novos' };
+    pim.cab = pimCabecalho(linhas);
+    pim.map = pimAdivinhar();
+    pimTela();
+  }
+  function pimTela() {
+    const cols = Math.min(40, Math.max(...pim.linhas.slice(0, 50).map(l => l.length)));
+    const nomeCol = i => { const t = pim.cab ? cleanSpaces(pimCel(pim.linhas[0], i)) : ''; return `Coluna ${i + 1}${t ? ': ' + t : ''}`; };
+    const corpo = pim.cab ? pim.linhas.slice(1) : pim.linhas;
+    const mostra = v => typeof v === 'number' && v >= 20000 && v <= 90000 && impData(v) ? fmtDMY(impData(v)) : String(v == null ? '' : v);
+    const opcoes = sel => `<option value="-1">— não tem —</option>` + [...Array(cols).keys()].map(i => `<option value="${i}"${i === sel ? ' selected' : ''}>${esc(nomeCol(i))}</option>`).join('');
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Importar pacientes</div><h2>${esc(pim.arquivo)}</h2></div>${closeX}</div>
+      <div class="stack">
+        <p class="hint" style="margin:0">${corpo.length.toLocaleString('pt-BR')} ${corpo.length === 1 ? 'linha' : 'linhas'} · prévia das primeiras:</p>
+        <div class="imp-prev"><table><thead><tr>${[...Array(cols).keys()].map(i => `<th>${esc(nomeCol(i))}</th>`).join('')}</tr></thead>
+          <tbody>${corpo.slice(0, 6).map(l => `<tr>${[...Array(cols).keys()].map(i => `<td>${esc(mostra(pimCel(l, i)))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        <label class="fitrow"><input type="checkbox" id="pimCab"${pim.cab ? ' checked' : ''}><span>A primeira linha tem os nomes das colunas</span></label>
+        <h3 class="imp-tit">Qual coluna é cada informação</h3>
+        <div class="imp-campos">${PIM_CAMPOS.map(c => `<label class="field"><span class="label">${esc(c.label)}${c.req ? ' <span class="req">*</span>' : ''}</span><select data-pim="${c.k}">${opcoes(pim.map[c.k])}</select></label>`).join('')}</div>
+        <h3 class="imp-tit">Quem já está no cadastro (mesmo nome e telefone)</h3>
+        <div class="stack" style="gap:8px">
+          <label class="fitrow"><input type="radio" name="pimModo" value="novos"${pim.modo !== 'atualizar' ? ' checked' : ''}><span><b>Só criar novos</b><br><small class="hint">Quem já existe fica como está.</small></span></label>
+          <label class="fitrow"><input type="radio" name="pimModo" value="atualizar"${pim.modo === 'atualizar' ? ' checked' : ''}><span><b>Criar e atualizar</b><br><small class="hint">Quem já existe ganha o nascimento, o CPF e o endereço da planilha, só onde o cadastro está em branco.</small></span></label>
+        </div>
+        <div id="pimRes" class="imp-res" aria-live="polite"></div>
+        <div class="modal-foot"><button type="button" class="btn" id="pimOutro">Outro arquivo</button><button type="button" class="btn btn-primary" id="pimIr" disabled>Importar</button></div>
+      </div>`, true);
+    $('#pimCab').onchange = e => { pim.cab = e.target.checked; pim.map = pimAdivinhar(); pimTela(); };
+    $$('[data-pim]').forEach(s => { s.onchange = () => { pim.map[s.dataset.pim] = Number(s.value); pimConferir(); }; });
+    $$('[name="pimModo"]').forEach(x => { x.onchange = () => { pim.modo = x.value; pimConferir(); }; });
+    $('#pimOutro').onclick = abrirImportarPacientes;
+    $('#pimIr').onclick = pimImportar;
+    pimConferir();
+  }
+  function pimConferir() {
+    const box = $('#pimRes'), bt = $('#pimIr');
+    if (!box || !pim) return;
+    const r = pimProcessar(false);
+    if (r.falta.length) {
+      box.innerHTML = `<p style="margin:0">Escolha a coluna de: <b>${esc(r.falta.join(', '))}</b>.</p>`;
+      bt.disabled = true; bt.textContent = 'Importar';
+      return;
+    }
+    const grupos = {};
+    r.ign.forEach(x => { grupos[x.motivo.replace(/^CPF já cadastrado em .*/, 'CPF já cadastrado em outro paciente')] = (grupos[x.motivo.replace(/^CPF já cadastrado em .*/, 'CPF já cadastrado em outro paciente')] || 0) + 1; });
+    const semNomeTel = r.ign.filter(x => /^sem (nome|telefone)/.test(x.motivo)).length;
+    const nc = r.criar.length, na = r.atualizar.length, n = nc + na;
+    const fmt = x => x.toLocaleString('pt-BR');
+    box.innerHTML = `<div class="imp-num"><div class="imp-ok"><b>${fmt(nc)}</b>${nc === 1 ? 'vai ser criado' : 'vão ser criados'}</div>
+        ${pim.modo === 'atualizar' ? `<div class="imp-ok"><b>${fmt(na)}</b>${na === 1 ? 'vai ser atualizado' : 'vão ser atualizados'}</div>` : ''}
+        <div class="imp-ign"><b>${fmt(r.existem)}</b>${r.existem === 1 ? 'já existe' : 'já existem'}${pim.modo === 'atualizar' ? '' : r.existem === 1 ? ' (ignorado)' : ' (ignorados)'}</div>
+        <div class="imp-ign"><b>${fmt(semNomeTel)}</b>sem nome ou telefone (ignorados)</div></div>
+      ${Object.keys(grupos).length ? `<ul class="imp-motivos">${Object.entries(grupos).sort((a, b) => b[1] - a[1]).map(([m, q]) => `<li>${fmt(q)} · ${esc(m)}</li>`).join('')}</ul>` : ''}
+      ${r.cpfRuim ? `<p class="hint" style="margin:0 0 6px">${fmt(r.cpfRuim)} ${r.cpfRuim === 1 ? 'CPF não tem' : 'CPFs não têm'} 11 números e ${r.cpfRuim === 1 ? 'fica' : 'ficam'} em branco.</p>` : ''}
+      ${nc ? `<div class="imp-prev"><table><thead><tr><th>Nome</th><th>Telefone</th><th>Nascimento</th><th>CPF</th><th>Endereço</th></tr></thead><tbody>
+        ${r.criar.slice(0, 8).map(p => `<tr><td>${esc(p.name)}</td><td>${esc(phoneOut(p.phone))}</td><td>${fmtDMY(p.birth)}</td><td>${isPrivate() && p.cpf ? '•••' : esc(p.cpf)}</td><td>${isPrivate() && p.address ? '•••' : esc(p.address)}</td></tr>`).join('')}
+        </tbody></table></div>` : ''}`;
+    bt.disabled = !n;
+    bt.textContent = !n ? 'Importar' : nc && na ? `Criar ${fmt(nc)} e atualizar ${fmt(na)}` : nc ? `Importar ${fmt(nc)} ${nc === 1 ? 'paciente' : 'pacientes'}` : `Atualizar ${fmt(na)} ${na === 1 ? 'paciente' : 'pacientes'}`;
+  }
+  function pimImportar() {
+    if (!pim || storageProblem || !souAdm()) return;
+    $('#pimIr').disabled = true;
+    const r = pimProcessar(true);
+    if (r.falta.length || !(r.criar.length + r.atualizar.length)) return pimConferir();
+    save();
+    const sync = !online() ? 'Eles ficaram salvos neste aparelho.'
+      : estaOffline() ? 'Sem internet agora: eles ficaram salvos neste aparelho e vão para o servidor sozinhos quando a internet voltar.'
+      : 'Eles vão para o servidor na sincronização automática e aparecem nos outros aparelhos.';
+    const lista = r.ign.map(x => `Linha ${x.linha}: ${x.motivo}${x.txt ? ' — ' + x.txt : ''}`);
+    const arquivo = pim.arquivo, fmt = x => x.toLocaleString('pt-BR');
+    pim = null;
+    render();
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Importar pacientes</div><h2>Importação concluída</h2></div>${closeX}</div>
+      <div class="stack">
+        <div class="imp-num"><div class="imp-ok"><b>${fmt(r.criar.length)}</b>${r.criar.length === 1 ? 'criado' : 'criados'}</div>
+          <div class="imp-ok"><b>${fmt(r.atualizar.length)}</b>${r.atualizar.length === 1 ? 'atualizado' : 'atualizados'}</div>
+          <div class="imp-ign"><b>${fmt(r.ign.length)}</b>${r.ign.length === 1 ? 'ignorado' : 'ignorados'}</div></div>
+        <p style="margin:0">Arquivo <b>${esc(arquivo)}</b>. ${esc(sync)}</p>
+        ${lista.length ? `<label class="field"><span class="label">Linhas ignoradas e o motivo</span><textarea id="pimLista" rows="${Math.min(8, lista.length + 1)}" readonly style="width:100%;font-size:13px">${esc(lista.slice(0, 3000).join('\n'))}</textarea></label>` : ''}
+        <div class="modal-foot">${lista.length ? '<button type="button" class="btn" id="pimCopiar">Copiar a lista</button>' : ''}
+          <button type="button" class="btn" id="pimVer">Ver pacientes</button><button type="button" class="btn btn-primary" data-close-modal>Fechar</button></div>
+      </div>`, true);
+    if ($('#pimCopiar')) $('#pimCopiar').onclick = () => {
+      const t = $('#pimLista'); t.select();
+      Promise.resolve(navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t.value) : Promise.reject())
+        .then(() => toast('Lista copiada.'), () => { try { document.execCommand('copy'); toast('Lista copiada.'); } catch (e) { toast('Selecione o texto e copie.'); } });
+    };
+    $('#pimVer').onclick = () => { closeModal(true); openPatientsModal(); };
+    toast(`${fmt(r.criar.length)} ${r.criar.length === 1 ? 'paciente criado' : 'pacientes criados'}${r.atualizar.length ? `, ${fmt(r.atualizar.length)} ${r.atualizar.length === 1 ? 'atualizado' : 'atualizados'}` : ''}.`);
+  }
+  // Exportar: todos os pacientes (também os sem telefone), CSV com ; e acentos certos no Excel
+  function exportarPacientes() {
+    if (!souAdm()) { toast('Só o administrador exporta pacientes.'); return; }
+    const campo = v => { const s = String(v == null ? '' : v).replace(/\r?\n/g, ' '); const formula = /^[=+@]|^-[^\d\s(]/.test(s);   // não deixa o Excel ler como fórmula
+      return /[;"]/.test(s) || formula ? `"${(formula ? "'" : '') + s.replace(/"/g, '""')}"` : s; };
+    const linhas = [['Nome', 'Telefone', 'Nascimento', 'CPF', 'Endereço']].concat(db.patients.slice().sort(byName)
+      .map(p => [p.name, fmtPhone(p.phone), fmtDMY(p.birth), p.cpf ? fmtCpf(p.cpf) : '', cleanSpaces(p.address)]));
+    const texto = '﻿' + linhas.map(l => l.map(campo).join(';')).join('\r\n') + '\r\n';
+    const nomeArq = `dente-sempre-pacientes-${todayStr()}.csv`, n = db.patients.length;
+    const pronto = () => toast(`${n.toLocaleString('pt-BR')} ${n === 1 ? 'paciente exportado' : 'pacientes exportados'} (${nomeArq}).`);
+    const FS = nativePlugin('Filesystem'), SH = nativePlugin('Share');
+    if (FS && SH) {   // celular: salva e abre o "Compartilhar", como o backup
+      Promise.resolve(FS.writeFile({ path: nomeArq, data: texto, directory: 'CACHE', encoding: 'utf8' }))
+        .then(r => SH.share({ title: 'Pacientes do Dente Sempre', text: nomeArq, files: [r.uri] }))
+        .then(pronto)
+        .catch(e => { if (!/cancel/i.test(String(e && e.message))) toast('Não consegui salvar o arquivo no celular.'); });
+      return;
+    }
+    const blob = new Blob([texto], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = nomeArq;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+    pronto();
+  }
+  const _baseMenuGroupsPac = baseMenuGroups;
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroupsPac.apply(this, arguments);
+    if (!souAdm()) return gs;
+    const n = db.patients.length;
+    const itens = [
+      { id: 'importar-pacientes', icon: I.upload, label: 'Importar pacientes…', sub: 'Cadastro de uma planilha (CSV ou Excel)', run: abrirImportarPacientes },
+      { id: 'exportar-pacientes', icon: I.download, label: 'Exportar pacientes', sub: `Planilha com ${n.toLocaleString('pt-BR')} ${n === 1 ? 'paciente' : 'pacientes'} (abre no Excel)`, run: exportarPacientes }
+    ];
+    const g = gs.find(x => x.title === 'Configurações');
+    if (g) {
+      let i = g.items.findIndex(it => it.id === 'importar-agenda');
+      if (i < 0) i = g.items.findIndex(it => it.id === 'import');
+      g.items.splice(i >= 0 ? i + 1 : g.items.length, 0, ...itens);
+    } else gs.push({ title: 'Configurações', items: itens });
     return gs;
   };
 

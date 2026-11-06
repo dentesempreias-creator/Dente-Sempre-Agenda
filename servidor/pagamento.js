@@ -23,6 +23,8 @@
 //    PRECO_BASICO          preço por mês do Básico, ex.: 99,90
 //    PRECO_PROFISSIONAL    preço por mês do Profissional, ex.: 199,90
 //    PAGAMENTO_MESES       opções de período, ex.: 1,3,6,12 (padrão)
+//    PRECO_BASICO_PROMO    preço do 1º mês na primeira assinatura, ex.: 49,90 (vazio = sem promoção)
+//    PRECO_PROFISSIONAL_PROMO  idem, para o Profissional
 // =====================================================================
 const crypto = require('node:crypto');
 
@@ -329,6 +331,44 @@ function criarPagamento(ctx) {
       : db.prepare('SELECT * FROM pag_pedidos ORDER BY criadoEm DESC LIMIT ?').all(limite || 200);
   }
   const situacaoConfig = () => ({ token: !!MP_TOKEN, segredo: !!MP_SEGREDO, endereco: ENDERECO, precos: Object.fromEntries(planosPagos().map(p => [p, precoMes(p)])), meses: MESES });
+
+  // ---------- Preço promocional do primeiro mês (31/10) ----------
+  // PRECO_BASICO_PROMO e PRECO_PROFISSIONAL_PROMO: preço do 1º mês na PRIMEIRA assinatura da clínica
+  // (clínica que ainda não tem nenhum pagamento aprovado). Os outros meses do período seguem o preço normal:
+  // 3 meses = promoção + 2 × preço normal. Vazio (ou não menor que o preço normal) = sem promoção, tudo como antes.
+  // Só acrescenta: a página e a criação do pagamento originais são chamadas sem mudança.
+  const promoMes = plano => {
+    const p = centavosDe(process.env['PRECO_' + String(plano).toUpperCase() + '_PROMO']), n = precoMes(plano);
+    return p && n && p < n ? p : null;
+  };
+  const jaAssinou = clinicaId => !!s().prepare("SELECT 1 FROM pag_pedidos WHERE clinicaId = ? AND situacao IN ('pago', 'devolvido') LIMIT 1").get(clinicaId);
+  const _criarPreferenciaPromo = criarPreferencia;
+  criarPreferencia = async function (pedido, clinica, base) {
+    const promo = promoMes(pedido.plano);
+    if (promo && !jaAssinou(clinica.id)) {
+      pedido.centavos = pedido.centavos - precoMes(pedido.plano) + promo;   // o 1º mês sai pelo preço promocional
+      s().prepare('UPDATE pag_pedidos SET centavos = ? WHERE id = ?').run(pedido.centavos, pedido.id);   // a confirmação confere este valor
+    }
+    return _criarPreferenciaPromo(pedido, clinica, base);
+  };
+  const _paginaAssinarPromo = paginaAssinar;
+  paginaAssinar = function () {
+    let h = _paginaAssinarPromo.apply(this, arguments);
+    const comPromo = planosPagos().filter(p => precoMes(p) && promoMes(p));
+    if (!configurado() || !comPromo.length) return h;
+    h = h.replace('</style>', '  .promo{display:table;margin:6px 0 2px;background:#e4f3e9;color:#1c6a3c;border:1px solid #b6e0c5;border-radius:6px;padding:2px 9px;font-weight:700;font-size:15px}\n</style>');
+    comPromo.forEach(p => {
+      const alvo = `<span class="preco">${reais(precoMes(p))} por mês</span>`;
+      const i = h.indexOf(`name="plano" value="${p}"`), j = i < 0 ? -1 : h.indexOf(alvo, i);
+      if (j < 0) return;
+      h = h.slice(0, j + alvo.length) + `<span class="promo">Primeiro mês: ${reais(promoMes(p))}</span>` + h.slice(j + alvo.length);
+    });
+    const ex = comPromo[0], m = MESES.find(x => x > 1);
+    const nota = `<p class="nota" style="margin:6px 0 0">Na primeira assinatura da clínica, o primeiro mês sai pelo preço promocional (${comPromo.map(p => `${esc(planos.nomeDoPlano(p))}: ${reais(promoMes(p))}`).join(' · ')}). Os outros meses seguem o preço normal${m ? `: ${esc(planos.nomeDoPlano(ex))} por ${mesesTxt(m)} = ${reais(promoMes(ex))} + ${m - 1} × ${reais(precoMes(ex))} = ${reais(promoMes(ex) + (m - 1) * precoMes(ex))}` : ''}. A tabela mostra os preços normais.</p>`;
+    const fimTabela = h.indexOf('</table></div>');
+    if (fimTabela >= 0) h = h.slice(0, fimTabela + 14) + nota + h.slice(fimTabela + 14);
+    return h;
+  };
 
   return { atender, conferirPagamento, listarPedidos, situacaoConfig, configurado };
 }

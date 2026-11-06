@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenda Odontológica Dente Sempre</title>
+<meta name="description" content="A agenda da Clínica Odontológica Dente Sempre, para computador e celular. Sincroniza entre os aparelhos, funciona sem internet e confirma pacientes pelo WhatsApp. Teste grátis por 14 dias.">
+<meta name="theme-color" content="#1b4f9f">
+<meta property="og:title" content="Agenda Odontológica Dente Sempre">
+<meta property="og:description" content="A agenda da Clínica Odontológica Dente Sempre. Computador e celular, sincroniza e funciona sem internet. Teste grátis por 14 dias.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="img/agenda-computador.jpg">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul:#1b4f9f; --azul-2:#1e5bb8; --azul-esc:#143c7a; --azul-claro:#e8f0fb;
+    --ciano:#0f8fa6; --ciano-claro:#e1f3f6;
+    --verde:#2b8a52; --verde-claro:#e4f3e9; --whats:#1f9d55;
+    --tinta:#18212f; --suave:#5a6577; --linha:#dfe5ec; --fundo:#f5f7fa; --branco:#fff;
+    --raio:14px; --sombra:0 18px 50px rgba(20,40,80,.14);
+    --larg:1160px;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--tinta);background:var(--branco);line-height:1.55;font-size:17px;overflow-x:hidden}
+  img{max-width:100%;height:auto;display:block}
+  a{color:var(--azul-2)}
+  .cx{max-width:var(--larg);margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.15;margin:0;letter-spacing:-.02em}
+  h2{font-size:clamp(28px,3.6vw,40px);font-weight:800}
+  .olho{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ciano);margin-bottom:10px}
+  .sub{color:var(--suave);font-size:18px;max-width:640px;margin:12px 0 0}
+  .faixa{height:4px;background:linear-gradient(90deg,var(--azul) 0 40%,var(--ciano) 40% 70%,var(--verde) 70% 100%)}
+
+  /* Topo */
+  .topo{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--linha)}
+  .topo .cx{display:flex;align-items:center;gap:20px;height:68px}
+  .marca{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;color:var(--tinta);text-decoration:none;letter-spacing:-.02em}
+  .marca img{width:36px;height:36px}
+  .menu{display:flex;gap:26px;margin-left:auto}
+  .menu a{color:var(--tinta);text-decoration:none;font-weight:600;font-size:15px}
+  .menu a:hover{color:var(--azul-2)}
+
+  /* Botões */
+  .bt{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:12px;font-weight:700;font-size:16px;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s;font-family:inherit}
+  .bt:hover{transform:translateY(-1px)}
+  .bt svg{flex:none}
+  .bt-azul{background:var(--azul-2);color:#fff;box-shadow:0 6px 18px rgba(30,91,184,.28)}
+  .bt-azul:hover{background:var(--azul)}
+  .bt-verde{background:var(--whats);color:#fff;box-shadow:0 6px 18px rgba(31,157,85,.28)}
+  .bt-verde:hover{background:#188548}
+  .bt-borda{background:#fff;color:var(--azul-2);border-color:#c9d8ef}
+  .bt-borda:hover{border-color:var(--azul-2)}
+  .bt-peq{min-height:42px;padding:0 16px;font-size:15px}
+
+  /* Início */
+  .inicio{background:radial-gradient(1200px 500px at 85% -10%,#dcebff 0,rgba(220,235,255,0) 60%),radial-gradient(800px 400px at -10% 30%,#e0f5f7 0,rgba(224,245,247,0) 60%),var(--branco);padding:64px 0 40px}
+  .inicio .cx{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center}
+  .inicio h1{font-size:clamp(36px,4.3vw,52px);font-weight:800;letter-spacing:-.035em}
+  .inicio h1 span{color:var(--azul-2)}
+  .frase{font-size:clamp(20px,2.2vw,24px);color:var(--tinta);font-weight:600;margin:14px 0 0}
+  .inicio .sub{margin-top:10px}
+  .selos{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0 0;padding:0;list-style:none}
+  .selos li{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--linha);border-radius:999px;padding:8px 14px 8px 10px;font-weight:600;font-size:15px}
+  .selos i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;flex:none}
+  .selos .s1 i{background:var(--azul-2)} .selos .s2 i{background:var(--ciano)} .selos .s3 i{background:var(--verde)}
+  .baixar-rapido{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+  .baixar-rapido .bt{min-height:58px;padding:0 20px;font-size:17px}
+  .baixar-rapido small{display:block;font-weight:500;font-size:12px;opacity:.85;line-height:1.1}
+  .baixar-rapido .bt span{text-align:left;line-height:1.15}
+  .outros{margin-top:12px;font-size:14px;color:var(--suave)}
+  .outros a{font-weight:600}
+
+  .vitrine{position:relative;padding:0 40px 40px 0}
+  .tela-pc{border-radius:12px;overflow:hidden;box-shadow:var(--sombra);border:1px solid #cfd8e4;background:#fff}
+  .tela-pc .barra{height:30px;background:#eef2f7;display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid #dde4ed}
+  .tela-pc .barra i{width:10px;height:10px;border-radius:50%;background:#cfd7e2}
+  .tela-cel{position:absolute;right:0;bottom:0;width:30%;max-width:210px;border-radius:28px;border:7px solid #18212f;overflow:hidden;box-shadow:0 20px 40px rgba(20,40,80,.3);background:#18212f}
+  .tela-cel img{border-radius:20px}
+
+  /* Seções */
+  section{padding:84px 0}
+  .cinza{background:var(--fundo)}
+  .cab{max-width:720px;margin-bottom:40px}
+  .centro{text-align:center;margin-left:auto;margin-right:auto}
+  .centro .sub{margin-left:auto;margin-right:auto}
+
+  /* Funções */
+  .grade{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .card{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:22px}
+  .card h3{font-size:18px;margin:14px 0 6px}
+  .card p{margin:0;color:var(--suave);font-size:15.5px}
+  .ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center}
+  .ico.az{background:var(--azul-claro);color:var(--azul-2)}
+  .ico.ci{background:var(--ciano-claro);color:var(--ciano)}
+  .ico.ve{background:var(--verde-claro);color:var(--verde)}
+
+  /* Junto: computador, celular, offline */
+  .junto{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+  .junto .card{display:flex;gap:16px;align-items:flex-start}
+  .junto .card h3{margin-top:0}
+
+  /* Passos */
+  .passos{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:p;list-style:none;padding:0;margin:0}
+  .passos li{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:24px;position:relative}
+  .passos li::before{counter-increment:p;content:counter(p);width:38px;height:38px;border-radius:50%;background:var(--azul-2);color:#fff;font-weight:800;display:grid;place-items:center;margin-bottom:14px}
+  .passos h3{font-size:18px;margin-bottom:6px}
+  .passos p{margin:0;color:var(--suave);font-size:15.5px}
+
+  /* Download */
+  .downloads{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .dl{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:24px;display:flex;flex-direction:column;gap:6px}
+  .dl.destaque{border:2px solid var(--azul-2);box-shadow:0 10px 30px rgba(30,91,184,.12)}
+  .dl .so{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:var(--azul-claro);color:var(--azul-2);margin-bottom:8px}
+  .dl h3{font-size:21px}
+  .dl p{margin:0 0 14px;color:var(--suave);font-size:15px}
+  .dl .bt{margin-top:auto;width:100%}
+  .breve{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;background:#eef1f5;color:var(--suave);font-weight:700;margin-top:auto;width:100%}
+  .nota{margin:22px 0 0;color:var(--suave);font-size:15px}
+
+  /* Planos */
+  .planos{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+  .plano{background:#fff;border:1px solid var(--linha);border-radius:18px;padding:30px 26px;display:flex;flex-direction:column;position:relative}
+  .plano.top{border:2px solid var(--azul-2);box-shadow:var(--sombra)}
+  .etiqueta{position:absolute;top:-13px;left:26px;background:var(--azul-2);color:#fff;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:999px}
+  .plano h3{font-size:22px}
+  .plano .para{color:var(--suave);font-size:15px;margin:6px 0 18px;min-height:46px}
+  .preco{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0}
+  .preco small{font-size:15px;font-weight:600;color:var(--suave)}
+  .limites{list-style:none;padding:0;margin:20px 0 26px;display:grid;gap:12px}
+  .limites li{display:flex;gap:12px;align-items:center;font-size:16px}
+  .limites b{font-size:20px;min-width:30px;text-align:center;color:var(--azul-2)}
+  .plano .bt{margin-top:auto;width:100%}
+  .plano .bt + .bt{margin-top:10px}
+  .promo{display:inline-block;align-self:flex-start;margin:10px 0 0;background:var(--verde-claro);color:var(--verde);font-weight:700;font-size:15px;border-radius:8px;padding:4px 10px}
+  .cond{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:5px;font-size:14.5px;color:var(--suave)}
+  .cond li{display:flex;gap:8px;align-items:baseline}
+  .cond li::before{content:"✓";color:var(--verde);font-weight:800;flex:none}
+  .cond b{color:var(--tinta)}
+  .pix{margin:26px auto 0;max-width:900px;background:#fff;border:1px solid var(--linha);border-radius:16px;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+  .pix b{font-size:18px}
+  .pix p{margin:4px 0 0;color:var(--suave);font-size:15.5px}
+  .pix .bt{flex:none}
+  .suporte-rod a{font-weight:700;text-decoration:none}
+  .legal a{font-weight:600;text-decoration:none}
+  .legal a:hover{text-decoration:underline}
+  .tudo{margin:26px auto 0;max-width:820px;text-align:center;color:var(--suave);font-size:15.5px}
+
+  /* Perguntas */
+  .perguntas{max-width:820px;margin:0 auto}
+  details{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:0 20px;margin-bottom:10px}
+  summary{cursor:pointer;font-weight:700;padding:18px 0;list-style:none;display:flex;justify-content:space-between;gap:16px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-size:22px;line-height:1;color:var(--azul-2);font-weight:600}
+  details[open] summary::after{content:"–"}
+  details p{margin:0 0 18px;color:var(--suave)}
+
+  /* Contato */
+  .contato{background:linear-gradient(135deg,var(--azul) 0%,var(--azul-2) 55%,var(--ciano) 100%);color:#fff;border-radius:22px;padding:48px;display:flex;align-items:center;justify-content:space-between;gap:30px}
+  .contato h2{color:#fff}
+  .contato p{margin:10px 0 0;opacity:.92;font-size:18px;max-width:560px}
+  .contato .bt-verde{min-height:58px;font-size:18px;padding:0 28px;flex:none}
+
+  footer{padding:36px 0 40px;color:var(--suave);font-size:14px;border-top:1px solid var(--linha)}
+  footer .cx{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
+  footer .marca{font-size:17px}
+  footer .marca img{width:28px;height:28px}
+
+  /* A clínica */
+  .clinica{display:grid;grid-template-columns:1fr 1.1fr;gap:22px;align-items:stretch}
+  .cl-card{background:#fff;border:1px solid var(--linha);border-radius:18px;padding:30px}
+  .cl-card h3{font-size:24px}
+  .cl-card .cl-sub{color:var(--suave);margin:6px 0 0}
+  .cl-linha{display:flex;gap:14px;align-items:flex-start;margin-top:22px}
+  .cl-linha .ico{flex:none}
+  .cl-linha b{display:block}
+  .cl-linha a{font-weight:600;font-size:15px}
+  .redes{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .redes .bt{flex:1 1 auto}
+  .mapa{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--linha);background:#e9eef4;min-height:340px}
+  .mapa iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+  .mapa-txt{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;padding:20px;color:var(--suave);font-weight:600}
+  .mapa-txt svg{color:var(--azul-2)}
+  .mapa-txt{text-decoration:none}
+  .bt-branco{background:#fff;color:var(--azul-2)}
+  .bt-branco:hover{background:#eef4fc}
+  .rodape-cl{display:flex;flex-direction:column;gap:4px}
+  .rodape-redes{display:flex;gap:8px}
+  .rodape-redes a{width:38px;height:38px;border-radius:10px;border:1px solid var(--linha);display:grid;place-items:center;color:var(--azul-2)}
+  .rodape-redes a:hover{border-color:var(--azul-2)}
+  .marca small{display:block;font-size:12px;font-weight:600;color:var(--suave);letter-spacing:0;line-height:1.1}
+  .marca span{line-height:1.1}
+
+  /* Botão flutuante do WhatsApp */
+  .flutua{position:fixed;right:18px;bottom:18px;z-index:30;width:58px;height:58px;border-radius:50%;background:var(--whats);color:#fff;display:grid;place-items:center;box-shadow:0 10px 26px rgba(0,0,0,.25)}
+  .flutua:hover{background:#188548}
+
+  /* Aviso de link ainda não configurado */
+  .aviso{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#18212f;color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;font-size:15px;z-index:40;max-width:calc(100% - 32px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+
+  @media (max-width:1020px){
+    .inicio .cx{grid-template-columns:1fr;gap:40px}
+    .grade{grid-template-columns:repeat(2,1fr)}
+    .downloads{grid-template-columns:repeat(2,1fr)}
+    .junto{grid-template-columns:1fr}
+    .clinica{grid-template-columns:1fr}
+  }
+  @media (max-width:820px){
+    .menu{display:none}
+    .topo .bt{margin-left:auto}
+    .planos{grid-template-columns:1fr;max-width:460px;margin:0 auto}
+    .passos{grid-template-columns:1fr}
+    .contato{flex-direction:column;align-items:flex-start;padding:34px 26px}
+    .pix{flex-direction:column;align-items:stretch;text-align:center}
+    .pix .bt{white-space:normal;min-height:54px;padding:8px 18px}
+  }
+  @media (max-width:560px){
+    body{font-size:16px}
+    section{padding:60px 0}
+    .inicio{padding:36px 0 24px}
+    .grade,.downloads{grid-template-columns:1fr}
+    .baixar-rapido .bt{flex:1 1 100%}
+    .baixar-rapido [data-download="android"]{order:-1}
+    .vitrine{padding:0 22px 30px 0}
+    .tela-cel{width:34%;border-width:5px;border-radius:20px}
+    .tela-cel img{border-radius:14px}
+    .tela-pc .barra{height:20px}
+    .tela-pc .barra i{width:7px;height:7px}
+    .topo .bt span{display:none}
+    .topo .bt{width:44px;min-height:44px;padding:0;border-radius:50%}
+    .contato .bt-verde{width:100%}
+    .flutua{width:54px;height:54px}
+    .cl-card{padding:24px 20px}
+    .marca small{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="cx">
+    <a class="marca" href="#"><img src="img/logo.svg" alt="" width="36" height="36"><span>Agenda Dente Sempre<small>Clínica Odontológica Dente Sempre</small></span></a>
+    <nav class="menu" aria-label="Seções">
+      <a href="#funcoes">Funções</a>
+      <a href="#baixar">Baixar</a>
+      <a href="#planos">Planos</a>
+      <a href="#perguntas">Dúvidas</a>
+      <a href="#clinica">A clínica</a>
+    </nav>
+    <a class="bt bt-verde bt-peq" data-whats href="#contato" aria-label="Falar no WhatsApp">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
+      <span>WhatsApp</span>
+    </a>
+  </div>
+  <div class="faixa"></div>
+</header>
+
+<main>
+  <!-- Início -->
+  <section class="inicio" aria-labelledby="titulo">
+    <div class="cx">
+      <div>
+        <span class="olho">Clínica Odontológica Dente Sempre</span>
+        <h1 id="titulo">Agenda Odontológica <span>Dente Sempre</span></h1>
+        <p class="frase">A agenda da Clínica Odontológica Dente Sempre.</p>
+        <p class="sub">Criada na rotina da clínica, em Guarulhos: horários, encaixes, chegadas, faltas e confirmação pelo WhatsApp, num lugar só, para a recepção e para os dentistas.</p>
+        <ul class="selos">
+          <li class="s1"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="15" height="11" rx="1.5"/><path d="M6 19h7"/><rect x="17" y="9" width="5" height="11" rx="1"/></svg></i>Computador e celular</li>
+          <li class="s2"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg></i>Sincroniza</li>
+          <li class="s3"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></i>Funciona sem internet</li>
+        </ul>
+        <div class="baixar-rapido">
+          <a class="bt bt-azul" data-download="windows" href="#baixar">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5l7.5-1v7H3zM11.5 4.3L21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+            <span>Baixar para Windows<small>Windows 10 e 11</small></span>
+          </a>
+          <a class="bt bt-borda" data-download="android" href="#baixar">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 9.5l1.7-3a.4.4 0 0 0-.7-.4l-1.7 3a10.4 10.4 0 0 0-9.8 0l-1.7-3a.4.4 0 1 0-.7.4l1.7 3A9.7 9.7 0 0 0 2 17h20a9.7 9.7 0 0 0-4.4-7.5zM7.5 14.2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm9 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
+            <span>Baixar para Android<small>Celular e tablet</small></span>
+          </a>
+        </div>
+        <p class="outros">Mac e Linux: <a href="#baixar">veja aqui</a>. Teste grátis por 14 dias.</p>
+      </div>
+      <div class="vitrine">
+        <div class="tela-pc">
+          <div class="barra" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="img/agenda-computador.jpg" width="1600" height="956" alt="Agenda Dente Sempre no computador, com as consultas do dia de uma dentista">
+        </div>
+        <div class="tela-cel">
+          <img src="img/agenda-celular.jpg" width="780" height="1688" alt="A mesma agenda no celular" loading="lazy">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Funções -->
+  <section class="cinza" id="funcoes" aria-labelledby="t-funcoes">
+    <div class="cx">
+      <div class="cab">
+        <span class="olho">Funções</span>
+        <h2 id="t-funcoes">O que a clínica precisa no dia a dia</h2>
+        <p class="sub">Feita para a recepção trabalhar rápido e o dentista ver a própria agenda, sem complicação.</p>
+      </div>
+      <div class="grade">
+        <article class="card">
+          <div class="ico az"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+          <h3>Agenda por dentista</h3>
+          <p>Expediente e almoço de cada dentista, encaixe e emergência, bloqueio de horário e calendário do mês.</p>
+        </article>
+        <article class="card">
+          <div class="ico ve"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+          <h3>Chegou, atrasou ou faltou</h3>
+          <p>Um toque marca Veio ou Não veio. O atraso é contado sozinho, e nenhum paciente fica sem registro no fim do dia.</p>
+        </article>
+        <article class="card">
+          <div class="ico ci"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/><path d="M8.5 12l2.5 2.5L16 9.5"/></svg></div>
+          <h3>Confirmação pelo WhatsApp</h3>
+          <p>Mensagens prontas, uma por paciente, e um link para o paciente confirmar ou pedir para remarcar.</p>
+        </article>
+        <article class="card">
+          <div class="ico az"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+          <h3>Área do paciente</h3>
+          <p>O paciente entra com o telefone, vê as próprias consultas e confirma, remarca ou cancela pelas regras da clínica.</p>
+        </article>
+        <article class="card">
+          <div class="ico ci"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
+          <h3>Pacientes e histórico</h3>
+          <p>Ficha completa, histórico de consultas e faltas, aniversariantes do mês e busca de consultas por nome ou período.</p>
+        </article>
+        <article class="card">
+          <div class="ico ve"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3c-2.5 0-4 2-4 4.5 0 2 .8 3.5 1.5 5 .7 1.6.8 3.3 1.2 5.2.3 1.6.8 3.3 2 3.3 1.5 0 1.6-2.5 2-4.2.3-1.3.9-2.3 2.3-2.3s2 1 2.3 2.3c.4 1.7.5 4.2 2 4.2 1.2 0 1.7-1.7 2-3.3.4-1.9.5-3.6 1.2-5.2.7-1.5 1.5-3 1.5-5C21 5 19.5 3 17 3c-1.8 0-3 1-5 1S8.8 3 7 3z"/></svg></div>
+          <h3>Controle de próteses</h3>
+          <p>Módulo opcional: laboratório, data de envio e de retorno, aviso de atraso e cobrança do protético pelo WhatsApp.</p>
+        </article>
+        <article class="card">
+          <div class="ico az"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+          <h3>Usuários e permissões</h3>
+          <p>Administrador, recepção e dentista, cada um com o que pode ver e fazer. O modo "recepção ocupada" esconde os dados do paciente da tela.</p>
+        </article>
+        <article class="card">
+          <div class="ico ci"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+          <h3>Backup</h3>
+          <p>Cópia de segurança em um arquivo a qualquer hora, com lembrete quando o último backup ficou antigo.</p>
+        </article>
+      </div>
+
+      <div class="junto">
+        <div class="card">
+          <div class="ico az"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="15" height="11" rx="1.5"/><path d="M6 19h7"/><rect x="17" y="9" width="5" height="11" rx="1"/></svg></div>
+          <div><h3>Computador e celular</h3><p>Programa para Windows e aplicativo para Android, com a mesma agenda. No celular, as telas são feitas para o dedo.</p></div>
+        </div>
+        <div class="card">
+          <div class="ico ci"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg></div>
+          <div><h3>Sincroniza</h3><p>O que a recepção marca no computador aparece no celular do dentista, e o contrário também.</p></div>
+        </div>
+        <div class="card">
+          <div class="ico ve"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0"/><path d="M3 3l18 18"/></svg></div>
+          <div><h3>Funciona sem internet</h3><p>A internet caiu? A agenda continua funcionando. Quando ela volta, tudo é enviado sozinho.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Como começar -->
+  <section aria-labelledby="t-passos">
+    <div class="cx">
+      <div class="cab centro">
+        <span class="olho">Como começar</span>
+        <h2 id="t-passos">Em três passos</h2>
+      </div>
+      <ol class="passos">
+        <li><h3>Fale com a clínica</h3><p>Chame no WhatsApp ou no Instagram. Você recebe o código da clínica e a chave do teste grátis de 14 dias.</p></li>
+        <li><h3>Baixe e instale</h3><p>Instale no computador da recepção e, se quiser, no celular dos dentistas.</p></li>
+        <li><h3>Ative e use</h3><p>Entre com o código e a chave. Cadastre os dentistas e a agenda já está pronta para usar.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Baixar -->
+  <section class="cinza" id="baixar" aria-labelledby="t-baixar">
+    <div class="cx">
+      <div class="cab">
+        <span class="olho">Baixar</span>
+        <h2 id="t-baixar">Escolha onde vai usar</h2>
+        <p class="sub">É a mesma Agenda Dente Sempre em todos. Instale em quantos aparelhos o seu plano permitir.</p>
+      </div>
+      <div class="downloads">
+        <div class="dl destaque">
+          <div class="so"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5l7.5-1v7H3zM11.5 4.3L21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg></div>
+          <h3>Windows</h3>
+          <p>Windows 10 e 11. Instalador .exe.</p>
+          <a class="bt bt-azul" data-download="windows" href="#baixar">Baixar para Windows</a>
+        </div>
+        <div class="dl destaque">
+          <div class="so"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 9.5l1.7-3a.4.4 0 0 0-.7-.4l-1.7 3a10.4 10.4 0 0 0-9.8 0l-1.7-3a.4.4 0 1 0-.7.4l1.7 3A9.7 9.7 0 0 0 2 17h20a9.7 9.7 0 0 0-4.4-7.5zM7.5 14.2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm9 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg></div>
+          <h3>Android</h3>
+          <p>Android 7 ou mais novo. Celular e tablet.</p>
+          <a class="bt bt-azul" data-download="android" href="#baixar">Baixar para Android</a>
+        </div>
+        <div class="dl">
+          <div class="so"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 12.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2-1.1 2.8-2.3.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.7zM14.2 5.6c.6-.8 1.1-1.8 1-2.9-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.7-1.3z"/></svg></div>
+          <h3>Mac</h3>
+          <p>macOS (Apple e Intel).</p>
+          <a class="bt bt-borda" data-download="mac" href="#baixar" hidden>Baixar para Mac</a>
+          <span class="breve" data-breve="mac">Em breve</span>
+        </div>
+        <div class="dl">
+          <div class="so"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+          <h3>Linux</h3>
+          <p>Ubuntu, Debian e outros.</p>
+          <a class="bt bt-borda" data-download="linux" href="#baixar" hidden>Baixar para Linux</a>
+          <span class="breve" data-breve="linux">Em breve</span>
+        </div>
+      </div>
+      <p class="nota">No Android, se o celular perguntar, permita instalar o aplicativo baixado pelo navegador. iPhone: em breve.</p>
+    </div>
+  </section>
+
+  <!-- Planos -->
+  <section id="planos" aria-labelledby="t-planos">
+    <div class="cx">
+      <div class="cab centro">
+        <span class="olho">Planos</span>
+        <h2 id="t-planos">Do consultório à clínica</h2>
+        <p class="sub">Comece pelo teste grátis. Depois, assine o plano pelo tamanho da sua equipe. Assinatura mensal, sem fidelidade: cancele quando quiser.</p>
+      </div>
+      <div class="planos">
+        <article class="plano">
+          <h3>Teste grátis</h3>
+          <p class="para">Para conhecer com calma, sem compromisso.</p>
+          <p class="preco">Grátis <small>por 14 dias</small></p>
+          <ul class="limites">
+            <li><b>2</b> aparelhos</li>
+            <li><b>2</b> dentistas</li>
+            <li><b>4</b> usuários</li>
+          </ul>
+          <a class="bt bt-borda" data-whats data-plano="Teste grátis" href="#contato">Começar o teste</a>
+        </article>
+        <article class="plano top">
+          <span class="etiqueta">Recomendado</span>
+          <h3>Básico</h3>
+          <p class="para">Consultório com um ou dois dentistas.</p>
+          <!-- Preço do Básico: o mesmo de PRECO_BASICO e PRECO_BASICO_PROMO no servidor -->
+          <p class="preco">R$ 99,90 <small>por mês</small></p>
+          <p class="promo">Primeiro mês: R$ 49,90</p>
+          <ul class="cond">
+            <li>Assinatura mensal</li>
+            <li><span>A partir do segundo mês: <b>R$ 99,90</b></span></li>
+            <li>Você pode cancelar quando quiser</li>
+            <li>Cobrança automática todo mês no cartão (ou Pix com o suporte)</li>
+          </ul>
+          <ul class="limites">
+            <li><b>3</b> aparelhos</li>
+            <li><b>2</b> dentistas</li>
+            <li><b>6</b> usuários</li>
+          </ul>
+          <a class="bt bt-azul" data-assinar="basico" href="#planos" hidden>Assinar o Básico</a>
+          <a class="bt bt-azul" data-whats data-plano="Básico" href="#contato">Quero o Básico</a>
+        </article>
+        <article class="plano">
+          <h3>Profissional</h3>
+          <p class="para">Clínica com vários dentistas e recepção.</p>
+          <!-- Preço do Profissional: o mesmo de PRECO_PROFISSIONAL e PRECO_PROFISSIONAL_PROMO no servidor -->
+          <p class="preco">R$ 199,90 <small>por mês</small></p>
+          <p class="promo">Primeiro mês: R$ 99,90</p>
+          <ul class="cond">
+            <li>Assinatura mensal</li>
+            <li><span>A partir do segundo mês: <b>R$ 199,90</b></span></li>
+            <li>Você pode cancelar quando quiser</li>
+            <li>Cobrança automática todo mês no cartão (ou Pix com o suporte)</li>
+          </ul>
+          <ul class="limites">
+            <li><b>10</b> aparelhos</li>
+            <li><b>8</b> dentistas</li>
+            <li><b>20</b> usuários</li>
+          </ul>
+          <a class="bt bt-azul" data-assinar="profissional" href="#planos" hidden>Assinar o Profissional</a>
+          <a class="bt bt-borda" data-whats data-plano="Profissional" href="#contato">Quero o Profissional</a>
+        </article>
+      </div>
+      <div class="pix">
+        <div><b>Prefere pagar por Pix?</b><p>Fale com o suporte pelo WhatsApp. O suporte envia os dados do Pix e libera o plano depois do pagamento.</p></div>
+        <a class="bt bt-verde" data-suporte data-msg="Olá! Quero assinar um plano da Agenda Dente Sempre e pagar via Pix." href="#contato"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>Falar com o suporte para pagar via Pix</a>
+      </div>
+      <p class="tudo">Primeiro mês com desconto na primeira assinatura da clínica. Todos os planos têm todas as funções. <b>Aparelhos</b> são os computadores e celulares ativados ao mesmo tempo. <b>Usuários</b> são as pessoas que entram no programa: administrador, recepção e dentistas.</p>
+    </div>
+  </section>
+
+  <!-- Dúvidas -->
+  <section class="cinza" id="perguntas" aria-labelledby="t-perguntas">
+    <div class="cx">
+      <div class="cab centro">
+        <span class="olho">Dúvidas</span>
+        <h2 id="t-perguntas">Perguntas frequentes</h2>
+      </div>
+      <div class="perguntas">
+        <details><summary>Precisa de internet para usar?</summary><p>Não para o dia a dia. A agenda, os pacientes e as chegadas e faltas funcionam sem internet. A internet é usada para sincronizar os aparelhos e para enviar mensagens pelo WhatsApp. Quando ela volta, o que foi feito é enviado sozinho.</p></details>
+        <details><summary>Posso usar em mais de um computador e no celular?</summary><p>Sim. Cada plano tem um número de aparelhos, e todos mostram a mesma agenda, sincronizada.</p></details>
+        <details><summary>Como faço o teste grátis?</summary><p>Fale com a clínica pelo WhatsApp ou pelo Instagram. Você recebe o código da clínica e a chave para ativar. O teste vale por 14 dias, com todas as funções.</p></details>
+        <details><summary>Onde ficam os dados da clínica?</summary><p>No aparelho e no servidor da Agenda Dente Sempre, onde cada clínica tem o seu próprio banco de dados, com cópias de segurança. Você também pode exportar um backup quando quiser.</p></details>
+        <details><summary>O dentista vê a agenda dos outros?</summary><p>Não. O dentista vê só a própria agenda. A recepção e o administrador veem todas, e o administrador decide o que cada pessoa pode fazer.</p></details>
+        <details><summary>Quanto custa?</summary><p>O Básico custa R$ 99,90 por mês e o Profissional, R$ 199,90 por mês. Na primeira assinatura da clínica, o primeiro mês sai por R$ 49,90 no Básico e R$ 99,90 no Profissional. Antes de assinar, dá para testar grátis por 14 dias.</p></details>
+        <details><summary>Como funciona a assinatura?</summary><p>É mensal, pelo Mercado Pago. Clique em <b>Assinar</b> no plano, entre com o código da clínica e o usuário administrador e autorize a cobrança automática no cartão. A cada mês pago, o plano é renovado sozinho, sem precisar fazer nada.</p></details>
+        <details><summary>Posso cancelar quando quiser?</summary><p>Sim, sem fidelidade. Na página de assinatura, clique em <b>Ver ou cancelar a assinatura</b>. Depois de cancelar, não há novas cobranças e os dias já pagos continuam valendo.</p></details>
+        <details><summary>Posso pagar por Pix?</summary><p>Sim. Clique em <b>Falar com o suporte para pagar via Pix</b>. O suporte envia os dados do Pix pelo WhatsApp e libera o plano depois do pagamento.</p></details>
+        <details><summary>Posso trocar de plano?</summary><p>Sim. Cancele a assinatura atual e assine o outro plano. Os dias já pagos continuam valendo. Se tiver dúvida, o suporte ajuda.</p></details>
+        <details><summary>Para quem vale o desconto do primeiro mês?</summary><p>Para a primeira assinatura de cada clínica. Do segundo mês em diante, vale o preço normal do plano.</p></details>
+        <details><summary>Como falo com o suporte?</summary><p>Pelo WhatsApp do suporte, que está no fim desta página, ou pelo Instagram @dentesempre.</p></details>
+        <details><summary>Tem para Mac e iPhone?</summary><p>Estão chegando. Hoje a Agenda Dente Sempre funciona no Windows e no Android.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- A clínica -->
+  <section class="cinza" id="clinica" aria-labelledby="t-clinica">
+    <div class="cx">
+      <div class="cab">
+        <span class="olho">A clínica</span>
+        <h2 id="t-clinica">Clínica Odontológica Dente Sempre</h2>
+        <p class="sub">A agenda nasceu aqui. Venha conhecer a clínica ou siga a gente nas redes.</p>
+      </div>
+      <div class="clinica">
+        <div class="cl-card">
+          <h3>Dente Sempre</h3>
+          <p class="cl-sub">Clínica Odontológica em Guarulhos</p>
+          <div class="cl-linha">
+            <div class="ico az"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+            <div><b>Endereço</b><span>Avenida Emílio Ribas, 1880 - Gopouva, Guarulhos</span><br><a href="https://www.google.com/maps/search/?api=1&amp;query=Avenida%20Em%C3%ADlio%20Ribas%2C%201880%2C%20Guarulhos%20-%20SP" target="_blank" rel="noopener">Ver no mapa</a></div>
+          </div>
+          <div class="cl-linha">
+            <div class="ico ci"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
+            <div><b>Site da clínica</b><a href="https://dentesempre.com.br/" target="_blank" rel="noopener">dentesempre.com.br</a></div>
+          </div>
+          <div class="redes">
+            <a class="bt bt-borda" href="https://www.instagram.com/dentesempre/" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg>Instagram @dentesempre</a>
+            <a class="bt bt-borda" href="https://www.facebook.com/odontologiaOliverGuarulhos/?locale=pt_BR" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 22v-8h2.7l.4-3.2h-3.1V8.8c0-.9.3-1.6 1.6-1.6h1.7V4.4c-.3 0-1.3-.1-2.5-.1-2.5 0-4.1 1.5-4.1 4.2v2.3H7.4V14h2.8v8z"/></svg>Facebook</a>
+            <a class="bt bt-azul" href="https://dentesempre.com.br/" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Site da clínica</a>
+          </div>
+        </div>
+        <div class="mapa">
+          <a class="mapa-txt" href="https://www.google.com/maps/search/?api=1&amp;query=Avenida%20Em%C3%ADlio%20Ribas%2C%201880%2C%20Guarulhos%20-%20SP" target="_blank" rel="noopener"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>Avenida Emílio Ribas, 1880 · Guarulhos<span style="color:var(--azul-2)">Abrir no Google Maps</span></a>
+          <iframe src="https://www.google.com/maps?q=Avenida%20Em%C3%ADlio%20Ribas%2C%201880%2C%20Guarulhos%20-%20SP&amp;output=embed" title="Mapa: Avenida Emílio Ribas, 1880 - Gopouva, Guarulhos" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contato -->
+  <section id="contato" aria-labelledby="t-contato">
+    <div class="cx">
+      <div class="contato">
+        <div>
+          <h2 id="t-contato">Vamos organizar a sua agenda?</h2>
+          <p>Tire suas dúvidas, peça o teste grátis ou escolha o seu plano. A Clínica Odontológica Dente Sempre responde pelo WhatsApp ou pelo Instagram.</p>
+        </div>
+        <a class="bt bt-verde" data-whats href="#contato">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
+          Falar no WhatsApp
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="cx">
+    <div class="rodape-cl">
+      <a class="marca" href="#"><img src="img/logo.svg" alt="" width="28" height="28">Agenda Odontológica Dente Sempre</a>
+      <span>A agenda da Clínica Odontológica Dente Sempre · Avenida Emílio Ribas, 1880 - Gopouva, Guarulhos</span>
+      <span class="suporte-rod">Suporte: <a data-suporte data-rodape data-msg="Olá! Preciso de ajuda com a Agenda Dente Sempre." href="#contato">WhatsApp</a></span>
+      <span>© <span id="ano">2026</span> Clínica Odontológica Dente Sempre</span>
+      <span class="legal"><a href="termos.html">Termos de Uso</a> · <a href="privacidade.html">Política de Privacidade</a></span>
+    </div>
+    <div class="rodape-redes">
+      <a href="https://www.instagram.com/dentesempre/" target="_blank" rel="noopener" aria-label="Instagram @dentesempre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg></a>
+      <a href="https://www.facebook.com/odontologiaOliverGuarulhos/?locale=pt_BR" target="_blank" rel="noopener" aria-label="Facebook"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 22v-8h2.7l.4-3.2h-3.1V8.8c0-.9.3-1.6 1.6-1.6h1.7V4.4c-.3 0-1.3-.1-2.5-.1-2.5 0-4.1 1.5-4.1 4.2v2.3H7.4V14h2.8v8z"/></svg></a>
+      <a href="https://dentesempre.com.br/" target="_blank" rel="noopener" aria-label="Site da clínica"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></a>
+    </div>
+  </div>
+</footer>
+
+<a class="flutua" data-whats href="#contato" aria-label="Falar no WhatsApp">
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
+</a>
+
+<script>
+  // =================================================================
+  //  CONFIGURAÇÃO DO SITE: troque só o que está aqui.
+  // =================================================================
+  var CONFIG = {
+    // WhatsApp da clínica: 55 + DDD + número, só números. Ex.: '5511987654321'
+    // Enquanto ficar '5500000000000', os botões de contato abrem o Instagram da clínica.
+    whatsapp: '5500000000000',
+    mensagem: 'Olá! Quero conhecer a Agenda Dente Sempre.',
+    instagram: 'https://www.instagram.com/dentesempre/',
+
+    // WhatsApp do SUPORTE (botão "Falar com o suporte para pagar via Pix" e rodapé): 55 + DDD + número.
+    // Vazio = usa o WhatsApp de cima. Sem nenhum dos dois, esses botões abrem o Instagram.
+    suporte: '',
+
+    // Página de assinatura do servidor (Mercado Pago).
+    // Com o endereço, os planos Básico e Profissional ganham o botão "Assinar". Vazio = sem o botão.
+    assinar: 'https://api.agendadentesempre.com.br/assinar',
+
+    // Links de download. Deixe '' (vazio) para mostrar "Em breve".
+    downloads: {
+      windows: 'https://SEU-LINK/Dente-Sempre-Instalador-1.0.0.exe',
+      android: 'https://SEU-LINK/Dente-Sempre.apk',
+      mac: '',
+      linux: ''
+    }
+  };
+  // =================================================================
+
+  (function () {
+    var temp = function (url) { return !url || url.indexOf('SEU-LINK') !== -1; };
+    var semNumero = !/^\d{12,13}$/.test(CONFIG.whatsapp) || /^550+$/.test(CONFIG.whatsapp);
+    var aviso = null, t = null;
+    function avisar(txt) {
+      if (!aviso) { aviso = document.createElement('div'); aviso.className = 'aviso'; aviso.setAttribute('role', 'status'); document.body.appendChild(aviso); }
+      aviso.textContent = txt; aviso.hidden = false;
+      clearTimeout(t); t = setTimeout(function () { aviso.hidden = true; }, 3500);
+    }
+
+    // Assinar (pagamento pelo Mercado Pago, no servidor)
+    var assinar = String(CONFIG.assinar || '').replace(/\/+$/, '');
+    document.querySelectorAll('[data-assinar]').forEach(function (a) {
+      if (!/^https:\/\//.test(assinar)) return;
+      a.href = assinar + '?plano=' + encodeURIComponent(a.getAttribute('data-assinar'));
+      a.hidden = false;
+      var ao = a.nextElementSibling;   // com o "Assinar", o botão de falar com a clínica fica em segundo plano
+      if (ao && ao.hasAttribute('data-whats')) { ao.classList.remove('bt-azul'); ao.classList.add('bt-borda'); ao.textContent = 'Tirar dúvidas'; ao.setAttribute('data-sem-icone', ''); }
+    });
+
+    // Downloads
+    document.querySelectorAll('[data-download]').forEach(function (a) {
+      var so = a.getAttribute('data-download'), url = CONFIG.downloads[so] || '';
+      var breve = document.querySelector('[data-breve="' + so + '"]');
+      if (breve) { a.hidden = !url; breve.hidden = !!url; }
+      if (url && !temp(url)) { a.href = url; a.setAttribute('download', ''); return; }
+      a.addEventListener('click', function (e) {
+        if (!url) return;
+        e.preventDefault();
+        avisar('O link de download ainda vai ser colocado. Fale com a clínica para receber o programa.');
+      });
+    });
+
+    // WhatsApp (com o nome do plano na mensagem, quando o botão é de um plano)
+    document.querySelectorAll('[data-whats]').forEach(function (a) {
+      var plano = a.getAttribute('data-plano');
+      var msg = plano ? 'Olá! Tenho interesse no plano ' + plano + ' da Agenda Dente Sempre.' : CONFIG.mensagem;
+      if (semNumero) {
+        // Sem o número do WhatsApp: o contato vai para o Instagram da clínica
+        a.href = CONFIG.instagram; a.target = '_blank'; a.rel = 'noopener';
+        var svg = a.querySelector('svg');
+        if (svg) svg.outerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg>'.replace(/width="20" height="20"/, 'width="' + svg.getAttribute('width') + '" height="' + svg.getAttribute('height') + '"');
+        a.childNodes.forEach(function (n) { if (n.nodeType === 3) n.textContent = n.textContent.replace('WhatsApp', 'Instagram'); });
+        var sp = a.querySelector('span'); if (sp && sp.textContent === 'WhatsApp') sp.textContent = 'Instagram';
+        if (a.getAttribute('aria-label')) a.setAttribute('aria-label', 'Falar com a clínica no Instagram');
+        if (a.classList.contains('bt-verde')) { a.classList.remove('bt-verde'); a.classList.add(a.closest('.contato') ? 'bt-branco' : 'bt-azul'); }
+        if (a.classList.contains('flutua')) a.style.background = 'var(--azul-2)';
+        return;
+      }
+      a.href = 'https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg);
+      a.target = '_blank'; a.rel = 'noopener';
+    });
+
+    // Suporte: pagar via Pix e rodapé
+    var sup = String(CONFIG.suporte || '').replace(/\D/g, '');
+    if (sup.length === 10 || sup.length === 11) sup = '55' + sup;
+    if (!/^\d{12,13}$/.test(sup) || /^550+$/.test(sup)) sup = semNumero ? '' : CONFIG.whatsapp;
+    var bonito = function (n) { var r = n.slice(4); return '(' + n.slice(2, 4) + ') ' + r.slice(0, -4) + '-' + r.slice(-4); };
+    document.querySelectorAll('[data-suporte]').forEach(function (a) {
+      a.target = '_blank'; a.rel = 'noopener';
+      if (!sup) {
+        a.href = CONFIG.instagram;
+        if (a.hasAttribute('data-rodape')) a.textContent = 'Instagram @dentesempre';
+        return;
+      }
+      a.href = 'https://wa.me/' + sup + '?text=' + encodeURIComponent(a.getAttribute('data-msg') || CONFIG.mensagem);
+      if (a.hasAttribute('data-rodape')) a.textContent = 'WhatsApp ' + bonito(sup);
+    });
+
+    document.getElementById('ano').textContent = new Date().getFullYear();
+  })();
+</script>
+</body>
+</html>

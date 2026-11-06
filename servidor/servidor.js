@@ -42,6 +42,7 @@ const { criarLinkDoPaciente } = require('./paciente.js');
 const { criarAreaDoPaciente } = require('./area.js');
 const { criarPagamento } = require('./pagamento.js');
 const { criarPainel } = require('./painel.js');
+const { criarAssinatura } = require('./assinatura.js');
 
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';                          // atrás do Caddy/Nginx: 127.0.0.1
@@ -645,6 +646,8 @@ let areaP = null;
 const areaPaciente = () => areaP || (areaP = criarAreaDoPaciente({ sistema, bancoDaClinica, clinicaPorId, emTransacao, getMeta, setMeta, planos, agora, recusa }));
 let pagP = null;
 const pagamento = () => pagP || (pagP = criarPagamento({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, emTransacao, planos, agora, lerUsuario, senhaConfere }));
+let assP = null;   // assinatura recorrente (Mercado Pago Assinaturas)
+const assinatura = () => assP || (assP = criarAssinatura({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, emTransacao, planos, agora, lerUsuario, senhaConfere, pagamento }));
 let painelP = null;
 const painelAdm = () => painelP || (painelP = criarPainel({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
   novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento }));
@@ -684,6 +687,7 @@ function criarServidor(opcoesTls) {
     // Painel de administração (só para o dono do Dente Sempre, com senha) e pagamento pelo Mercado Pago
     const pedidoSeguro = !!(req.socket.encrypted || (CONFIAR_PROXY && req.headers['x-forwarded-proto'] === 'https'));
     if (url.pathname === '/painel' || url.pathname.startsWith('/painel/')) return painelAdm().atender(req, res, url, ipDoPedido(req), pedidoSeguro);
+    if (url.pathname === '/assinar' || url.pathname.startsWith('/assinar/') || url.pathname === '/api/pagamento/aviso') return assinatura().atender(req, res, url, ipDoPedido(req), pedidoSeguro);
     if (url.pathname === '/assinar' || url.pathname.startsWith('/assinar/') || url.pathname === '/api/pagamento/aviso') return pagamento().atender(req, res, url, ipDoPedido(req), pedidoSeguro);
     // [PAINEL] reservado para o painel de administração das clínicas (ainda não existe)
     if (url.pathname.startsWith('/api/painel/')) return json(res, 501, { ok: false, codigo: 'painel', erro: 'O painel de administração das clínicas ainda não está disponível.' });

@@ -539,8 +539,63 @@ Duas páginas novas no servidor. Elas só funcionam depois de configuradas: sem 
 
 | Página | Quem usa | Para quê |
 |---|---|---|
-| `https://api.seudominio.com.br/assinar` | o **administrador da clínica** | escolher o plano (Básico ou Profissional) e o período, e pagar no Mercado Pago (Pix, cartão ou boleto) |
+| `https://api.seudominio.com.br/assinar` | o **administrador da clínica** | escolher o plano (Básico ou Profissional) e fazer a **assinatura mensal** no Mercado Pago, com cobrança automática todo mês. Também mostra e **cancela** a assinatura |
 | `https://api.seudominio.com.br/painel` | **só você** (dono do Dente Sempre), com senha | ver e cuidar de todas as clínicas |
+
+### Assinatura mensal (cobrança automática)
+
+Desde 31/10 a página `/assinar` faz uma **assinatura recorrente** (Mercado Pago Assinaturas) no lugar do pagamento único. O código fica em `servidor/assinatura.js`.
+
+O que o administrador vê já na escolha do plano, em cada plano:
+- **Assinatura mensal**
+- **Primeiro mês: R$ XX** (com o desconto, quando há `PRECO_..._PROMO` e é a primeira assinatura da clínica)
+- **A partir do segundo mês: R$ YY**
+- **Você pode cancelar quando quiser**
+- **Cobrança automática todo mês (cartão de crédito)**, ou **(cartão ou Pix)** com `ASSINATURA_PIX=1` (veja abaixo)
+
+Como funciona:
+1. O administrador escolhe o plano, digita o código da clínica, o usuário e a senha de administrador e o **e-mail da conta do Mercado Pago** que vai pagar. Recepção e dentista não conseguem.
+2. O servidor cria a assinatura no Mercado Pago (mensal, em reais) e leva a pessoa para a página do Mercado Pago, onde ela autoriza a cobrança.
+3. **A cada mês**, quando o Mercado Pago aprova a cobrança, ele avisa o servidor. O servidor pergunta ao próprio Mercado Pago se a cobrança está aprovada, em reais e no valor certo, e chama `aoConfirmarPagamento` com 1 mês. O plano e a validade mudam sozinhos, e os aparelhos recebem na próxima sincronização.
+4. **Desconto do primeiro mês:** a assinatura começa com o valor promocional. Depois da primeira cobrança aprovada, o servidor muda o valor da assinatura no Mercado Pago para o preço normal. Se o Mercado Pago não aceitar na hora, ele tenta de novo no próximo aviso.
+5. **Cancelar:** em `/assinar` → **Já assina? Ver ou cancelar a assinatura**. O administrador entra, vê a situação, o valor, os meses pagos e as cobranças, marca "Quero cancelar" e confirma. O servidor cancela no Mercado Pago, e não há novas cobranças. **Os dias já pagos continuam valendo.** Você também pode cancelar pelo painel do próprio Mercado Pago (Seu negócio → Assinaturas); o servidor fica sabendo pelo aviso.
+6. **Trocar de plano:** cancele a assinatura atual e assine de novo. Os dias já pagos continuam valendo, e o mês novo começa a contar depois deles.
+
+Cuidados que já estão no código:
+- Cada cobrança vale **uma vez só**, mesmo que o aviso chegue repetido ou por dois caminhos.
+- Cobrança com valor diferente do combinado não muda o plano (fica anotada no servidor).
+- A clínica não consegue ter duas assinaturas ativas ao mesmo tempo.
+- Se o cartão for recusado várias vezes, o Mercado Pago **pausa** a assinatura. A página mostra "Pausada" e o plano vence na data de sempre.
+- Cobrança devolvida ou contestada aparece como "Devolvido" no painel, e o plano não volta sozinho.
+- As cobranças aparecem no painel em **Pagamentos** e na ficha da clínica, como antes (o painel não mudou).
+- Pagamentos avulsos feitos antes desta mudança continuam sendo conferidos normalmente.
+- Para voltar ao pagamento avulso antigo, ponha `ASSINATURA_RECORRENTE=0` e religue.
+
+#### Pix na assinatura
+
+O Mercado Pago cobra a assinatura pelo **cartão de crédito** (e, em algumas contas, pelo saldo do Mercado Pago). A cobrança automática por **Pix (Pix Automático)** nas assinaturas depende de o Mercado Pago **liberar na sua conta**: pergunte ao suporte do Mercado Pago se o Pix Automático está disponível para as suas assinaturas. Quando estiver, coloque `ASSINATURA_PIX=1` em `/etc/dente-sempre.env` e religue. A página passa a dizer "Cobrança automática todo mês (cartão ou Pix)". Sem isso, ela diz "(cartão de crédito)", para não prometer ao cliente algo que a página do Mercado Pago não vai oferecer.
+
+#### Botão "Falar com o suporte para pagar via Pix"
+
+Para quem prefere pagar por Pix direto com você, a página `/assinar` pode mostrar um botão verde **"Falar com o suporte para pagar via Pix"**, logo abaixo de "Assinar e ir para o pagamento".
+
+Para ligar, coloque o número do WhatsApp do suporte em `/etc/dente-sempre.env` e religue:
+```
+SUPORTE_WHATSAPP=11912345678
+```
+```bash
+systemctl restart dente-sempre
+```
+- Pode escrever com DDD, com ou sem o 55 do Brasil, e com ou sem espaços, parênteses e traço: `(11) 91234-5678`, `11912345678` e `5511912345678` dão no mesmo.
+- O botão abre o WhatsApp com a mensagem pronta: *"Olá! Quero assinar o plano Profissional da Agenda Dente Sempre. Código da clínica: sorriso."* O plano é o que estiver marcado na página e o código é o que estiver escrito no campo. Sem código escrito, a mensagem vai só com o plano.
+- Não precisa digitar senha para usar o botão. A senha e o e-mail **não** vão na mensagem.
+- Se o Mercado Pago ainda não estiver configurado, o botão aparece embaixo do aviso "A assinatura pela internet ainda não está disponível".
+- Variável vazia (ou número inválido): o botão não aparece e a página fica exatamente como antes.
+- Quando a clínica pagar pelo Pix, mude o plano e a validade dela no painel (ficha da clínica → mudar plano e validade).
+
+#### O e-mail do pagador
+
+O Mercado Pago exige o e-mail da conta de quem vai pagar. Se a pessoa entrar no Mercado Pago com outro e-mail, ele pode recusar a autorização. Por isso a página pede o e-mail e avisa: "Use o mesmo e-mail com que você vai entrar no Mercado Pago na próxima tela".
 
 ### Configurar o Mercado Pago (uma vez)
 
@@ -548,7 +603,7 @@ Duas páginas novas no servidor. Elas só funcionam depois de configuradas: sem 
 2. Na aplicação, abra **Credenciais de produção** e copie o **Access Token** (começa com `APP_USR-`). Ele é secreto: não mande por WhatsApp nem coloque no site.
 3. Ainda na aplicação, abra **Webhooks → Configurar notificações**:
    - Modo de produção, URL: `https://api.seudominio.com.br/api/pagamento/aviso`
-   - Evento: marque **Pagamentos**.
+   - Eventos: marque **Pagamentos**, **Planos e assinaturas** e **Pagamentos recorrentes** (os dois últimos são os da assinatura mensal; Pagamentos continua para os pedidos avulsos antigos).
    - Salve e copie a **Assinatura secreta** que aparece.
 4. No VPS, edite o arquivo de configuração (o `instalar-vps.sh` já cria ele):
    ```bash
@@ -563,11 +618,14 @@ Duas páginas novas no servidor. Elas só funcionam depois de configuradas: sem 
    ```
    Os preços são **por mês**. Os valores acima são só exemplo: use os seus.
 5. Religue: `systemctl restart dente-sempre`.
-6. Teste: abra `https://api.seudominio.com.br/assinar`. Devem aparecer os planos com os seus preços. Faça uma compra pequena de verdade (por exemplo, criando uma clínica de teste e pagando 1 mês com Pix) e veja no painel se o plano mudou.
+6. Teste: abra `https://api.seudominio.com.br/assinar`. Devem aparecer os planos com os seus preços. Faça uma assinatura de verdade com um valor pequeno (por exemplo, criando uma clínica de teste), veja no painel se o plano mudou e depois cancele em **Ver ou cancelar a assinatura**.
 
 > Em Fly.io, Railway ou Render, coloque as mesmas variáveis na configuração do serviço (Secrets/Variables), junto com `ENDERECO_PUBLICO=https://seu-endereco`.
 
-### Como o pagamento funciona
+### Pagamento avulso (como era antes de 31/10)
+
+Esta parte só vale com `ASSINATURA_RECORRENTE=0`, ou para os pedidos avulsos feitos antes da assinatura mensal. O servidor continua conferindo esses pedidos.
+
 
 1. O administrador da clínica abre a página de assinatura. Ele pode chegar por três caminhos:
    - no programa, em **Menu → Configurações → Assinar ou renovar o plano** (aparece só para o administrador, quando há servidor);
@@ -623,7 +681,27 @@ Os comandos `dente-sempre ...` da seção 11 continuam funcionando do mesmo jeit
 | `MP_WEBHOOK_SEGREDO` | assinatura secreta dos webhooks | — (recomendado) |
 | `ENDERECO_PUBLICO` | endereço do servidor na internet, ex.: `https://api.seudominio.com.br` | o endereço do pedido |
 | `PRECO_BASICO` / `PRECO_PROFISSIONAL` | preço por mês, ex.: `99,90` | — (o plano sem preço não aparece) |
-| `PAGAMENTO_MESES` | períodos oferecidos | `1,3,6,12` |
+| `PAGAMENTO_MESES` | períodos oferecidos (só no pagamento avulso antigo) | `1,3,6,12` |
+| `PRECO_BASICO_PROMO` / `PRECO_PROFISSIONAL_PROMO` | preço do primeiro mês na primeira assinatura, ex.: `49,90` | — (sem promoção) |
+| `ASSINATURA_PIX` | `1` = a página diz "cartão ou Pix" (só depois que o Mercado Pago liberar o Pix Automático) | — (diz "cartão de crédito") |
+| `ASSINATURA_RECORRENTE` | `0` = volta ao pagamento avulso antigo | `1` (assinatura mensal) |
+| `SUPORTE_WHATSAPP` | WhatsApp do suporte para o botão "Falar com o suporte para pagar via Pix", ex.: `11912345678` | — (sem o botão) |
+
+### Desconto do primeiro mês
+
+Para dar um preço promocional no primeiro mês, coloque em `/etc/dente-sempre.env` e religue (`systemctl restart dente-sempre`):
+
+```
+PRECO_BASICO_PROMO=49,90
+PRECO_PROFISSIONAL_PROMO=99,90
+```
+
+- A página `/assinar` mostra **"Primeiro mês: R$ 49,90"** e **"A partir do segundo mês: R$ 99,90"** em cada plano.
+- Vale na **primeira assinatura** da clínica, ou seja, enquanto ela não tem nenhum pagamento aprovado. Na renovação, o preço é o normal.
+- Só o primeiro mês tem o desconto. Na assinatura mensal, a partir do segundo mês o Mercado Pago cobra o preço normal (o servidor ajusta o valor sozinho).
+- O Mercado Pago recebe o valor já com o desconto, e a confirmação confere esse valor. O painel mostra o valor cobrado em cada pedido.
+- Variável vazia, com texto inválido ou com valor igual ou maior que o preço normal: sem promoção. A página e a cobrança ficam exatamente como antes.
+- Pode ligar a promoção num plano só (por exemplo, só o Básico).
 
 ### Botão "Assinar" no site
 
@@ -631,7 +709,53 @@ No `site/index.html`, preencha `assinar: 'https://api.seudominio.com.br/assinar'
 
 ---
 
-## 13. O que ficou pronto e o que falta para vender
+## 13. Importar agenda de outro sistema
+
+Em **Menu → Configurações → Importar agenda…** (administrador e recepção; o dentista não vê).
+
+### Que arquivos aceita
+
+| Arquivo | Observação |
+|---|---|
+| CSV ou TXT | separado por ponto e vírgula, vírgula, tab ou barra; acentos do Windows ou UTF-8 |
+| Excel `.xlsx` | lê a primeira folha; datas e horas do Excel são entendidas |
+| `.xls` salvo como página ou XML | é o que muitos sistemas brasileiros exportam com o nome `.xls` |
+| `.zip` | backup com planilhas dentro: usa a planilha da agenda (nome com "agenda", "agendamento" ou "consulta", ou a maior) |
+
+**Global e outros sistemas:** exporte a agenda, ou o relatório de agendamentos, para Excel ou CSV e escolha esse arquivo. O arquivo do banco de dados do sistema (`.fdb`, `.gdb`, `.bak`, `.mdb`, `.sql`...) não dá para ler direto. O programa avisa e pede a planilha. O `.xls` do formato antigo do Excel também não: o programa pede para salvar como CSV ou `.xlsx`.
+
+### Passo a passo
+
+1. Escolha o arquivo. Aparece uma **prévia** das primeiras linhas.
+2. O programa marca sozinho qual coluna é cada informação. Ele olha o nome da coluna (Paciente, Telefone, Data, Hora, Dentista ou Profissional, Procedimento) e, se não tiver nome, o conteúdo. Confira e mude o que precisar:
+   - **obrigatórios:** nome do paciente, data e hora (data e hora podem estar na mesma coluna);
+   - **opcionais:** telefone, dentista, procedimento, duração e situação.
+3. Ligue cada dentista do arquivo a um dentista do Dente Sempre. Nomes iguais, com ou sem "Dr." e "Dra.", já vêm ligados. Se o arquivo não tem a coluna do dentista, escolha um dentista para todas as consultas.
+4. Antes de importar, a tela mostra **quantas vão entrar e quantas vão ser ignoradas**, com o motivo e as primeiras consultas como vão ficar.
+5. Clique em **Importar**. No fim aparecem quantas foram importadas e quantas ignoradas, com a lista das linhas ignoradas (dá para copiar).
+
+### Regras
+
+- **Sem duplicar:** se já existe consulta do mesmo paciente na mesma data e hora, a linha é pulada. Linhas repetidas no próprio arquivo também. Importar o mesmo arquivo duas vezes não muda nada.
+- **Paciente:** usa o cadastro que já existe (mesmo nome e telefone; sem telefone, o único com aquele nome). Se não existir, cria um novo. Nomes todos em maiúsculas viram "Maria da Silva", e o telefone fica no formato (11) 98765-4321.
+- **Hora:** aceita 14:30, 14h30, 9h, 2:30 PM e faixas como "10:00 às 10:40", que viram 40 minutos.
+- **Data:** aceita 31/10/2026, 31/10/26, 2026-10-31 e datas do Excel.
+- **Duração:** a da coluna, ou a da faixa de horário, ou a escolhida na tela (30 minutos se você não mudar).
+- **Procedimento:** usa o tipo de consulta com o mesmo nome. Um nome novo entra na lista de tipos, igual ao Novo horário. Sem procedimento, usa "Consulta" (dá para mudar na tela).
+- **Encaixe:** consulta fora do expediente, no almoço ou em cima de outra entra como encaixe, como a agenda já faz.
+- **Ignoradas:**
+  - horário bloqueado;
+  - hora antes das 06:00 ou depois das 23:00;
+  - situação "cancelada", "desmarcada" ou "excluída", quando a coluna de situação é escolhida;
+  - dentista ligado a "Não importar";
+  - data ou hora que não deu para entender.
+- **Dia que já passou:** a recepção só importa de hoje em diante. O administrador importa também o histórico. O histórico antigo não entra na tela de pendências; só as consultas sem status a partir do dia em que as Regras do dia começaram a valer neste aparelho.
+- **Sem internet:** funciona normalmente. As consultas e os pacientes ficam salvos no aparelho e vão para o servidor na próxima sincronização, como qualquer outra mudança.
+- Limite: 20 MB e 20 mil linhas por arquivo. Para uma agenda maior, importe em partes.
+
+---
+
+## 14. O que ficou pronto e o que falta para vender
 
 ### Pronto
 
@@ -649,6 +773,10 @@ No `site/index.html`, preencha `assinar: 'https://api.seudominio.com.br/assinar'
 - Área do paciente (`/area`): entra com telefone e código, vê só as próprias consultas, confirma, pede remarque ou cancela pelas regras da clínica e fala com a recepção pelo WhatsApp.
 - Regras do dia: dia passado só o administrador altera, e nenhuma consulta fica sem Veio / Não veio (tela de pendências ao abrir, aviso ao fechar o programa do computador e ao sair).
 - Busca de consultas por paciente, procedimento, período, situação e dentista. Respeita as permissões e funciona sem internet.
+- Importar agenda de outro sistema (Global, CSV, Excel): prévia, escolha das colunas, sem duplicar, funciona sem internet (seção 13).
+- Preço promocional do primeiro mês na página de assinatura (`PRECO_BASICO_PROMO` e `PRECO_PROFISSIONAL_PROMO`, seção 12).
+- Assinatura mensal com cobrança automática no Mercado Pago: primeiro mês com desconto, plano renovado a cada cobrança aprovada e cancelamento pela própria página (seção 12).
+- Botão "Falar com o suporte para pagar via Pix" na página de assinatura, que abre o WhatsApp do suporte com o plano e o código da clínica (`SUPORTE_WHATSAPP`, seção 12).
 - Telas ajustadas para o celular: barra embaixo, cartões maiores, janelas de baixo para cima e WhatsApp direto no app.
 - Pagamento pelo Mercado Pago (`/assinar`): o administrador escolhe o plano e paga, e o plano e a validade mudam sozinhos quando o pagamento é aprovado (seção 12).
 - Painel de administração (`/painel`, com senha): lista de clínicas, criar, suspender e reativar, aparelhos, chave nova, senha nova do administrador, mudar plano e ver pagamentos.
@@ -661,7 +789,7 @@ No `site/index.html`, preencha `assinar: 'https://api.seudominio.com.br/assinar'
 ### Falta para começar a vender
 
 1. **Contratar o servidor e o domínio** e rodar o `instalar-vps.sh`. Depois, gerar os apps com o endereço e a chave de verdade.
-2. **Configurar o Mercado Pago**: criar a aplicação, colocar o token, a assinatura secreta e os preços em `/etc/dente-sempre.env` e fazer uma compra pequena de verdade (seção 12). O pagamento foi testado aqui com um Mercado Pago simulado, porque este ambiente não acessa o Mercado Pago de verdade.
+2. **Configurar o Mercado Pago**: criar a aplicação, marcar os avisos de **Pagamentos**, **Planos e assinaturas** e **Pagamentos recorrentes**, colocar o token, a assinatura secreta e os preços em `/etc/dente-sempre.env` e fazer uma assinatura pequena de verdade (seção 12). Para oferecer Pix na assinatura, pedir ao Mercado Pago a liberação do Pix Automático e ligar `ASSINATURA_PIX=1`. O pagamento foi testado aqui com um Mercado Pago simulado, porque este ambiente não acessa o Mercado Pago de verdade.
 3. **Definir os preços** do Básico e do Profissional.
 4. **Assinatura digital dos instaladores**:
    - Windows: certificado de assinatura de código, ≈ US$ 100 a 400 por ano. Sem ele, o Windows mostra "Editor desconhecido".
