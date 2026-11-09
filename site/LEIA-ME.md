@@ -66,6 +66,38 @@ Os dois textos ficam em páginas próprias, `termos.html` e `privacidade.html`, 
 
 Para mudar um texto depois, abra `termos.html` ou `privacidade.html` num editor de texto e troque as frases entre `<article class="texto">` e `</article>`. Cada parágrafo fica entre `<p>` e `</p>`, e cada título entre `<h2>` e `</h2>`. Lembre de mudar a data da **Última atualização**. Se preferir, mande o `.md` novo para o Claude gerar as páginas de novo.
 
+### Atualizações: versões dos aplicativos
+
+A seção **Atualizações** (no menu do alto e logo abaixo dos downloads) mostra a versão mais nova de cada aplicativo, com a data, o botão de download e a lista **O que mudou em cada versão**. Os dados ficam no `index.html`, logo depois do `CONFIG`, nesta lista:
+
+```js
+var VERSOES = [
+  {
+    versao: '1.0.0',                 // a tag da release no GitHub, sem o "v" (tag v1.0.0 → '1.0.0')
+    data: '2026-11-09',              // ou '09/11/2026'
+    resumo: 'Primeira versão da Agenda Dente Sempre: ...',   // ou uma lista: ['Coisa nova', 'Correção']
+    arquivos: {
+      windows: 'Dente-Sempre-Instalador-1.0.0.exe',          // nome do arquivo anexado na release
+      android: 'Dente-Sempre.apk'
+    }
+  }
+];
+```
+
+**Quando sair uma versão nova:**
+
+1. No GitHub (https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases), crie a release com a tag, por exemplo `v1.0.1`, e anexe os arquivos.
+2. No `index.html`, copie um bloco `{ ... }` inteiro da lista `VERSOES` e cole **no começo** da lista, com uma vírgula depois do `}`.
+3. Troque `versao`, `data`, `resumo` e os nomes em `arquivos`. Coloque só os aplicativos que saíram nessa versão: o site mostra, para cada aplicativo, a versão mais nova que tem arquivo dele.
+4. Publique o site de novo (seção 2).
+
+- O link de download é montado sozinho: `.../releases/download/v1.0.1/NOME-DO-ARQUIVO`. O nome precisa ser igual ao que aparece na release do GitHub. O GitHub troca espaço por ponto, então `Dente Sempre.apk` vira `Dente.Sempre.apk`. Também dá para colar o link completo no lugar do nome.
+- Mac e Linux aparecem sozinhos quando uma versão tiver `mac:` ou `linux:` em `arquivos`.
+- A ordem é pela data: a mais nova fica em cima com a etiqueta **Mais recente**. Aparecem as 6 últimas; o link **Ver todas as versões no GitHub** leva ao resto.
+- Se a tag não for `v` + número, coloque `tag: 'nome-da-tag'` no bloco.
+- A versão `1.0.0` que vem na lista é um exemplo: confira se a release `v1.0.0` existe no GitHub com esses nomes de arquivo antes de publicar.
+- Os botões da seção **Baixar** continuam vindo do `CONFIG.downloads`. Quando trocar de versão, atualize os dois.
+
 ## 2. Publicar
 
 ### Opção A: Netlify (mais fácil, sem instalar nada)

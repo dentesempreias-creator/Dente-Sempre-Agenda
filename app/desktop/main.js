@@ -164,12 +164,52 @@ function abrirFora(endereco) {
   let url;
   try { url = new URL(endereco); } catch (e) { return; }
   if (url.protocol === 'https:' || url.protocol === 'http:') {
+    if (abrirNoWhatsAppInstalado(url)) return;   // WhatsApp: primeiro o aplicativo instalado
     if (MODO_TESTE) { abertosFora.push(url.href); return; }
     shell.openExternal(url.href).catch(() => {});
   }
   // qualquer outro tipo de link (file:, javascript:, etc.) é ignorado
 }
 const abertosFora = [];
+
+// ---------- WhatsApp no computador: primeiro o aplicativo instalado ----------
+// Os botões de WhatsApp (confirmação, mensagem para grupo, aniversário etc.) mandam um link do
+// WhatsApp Web (ou wa.me). Aqui o programa pergunta ao sistema se tem um aplicativo que abre
+// links "whatsapp://" (o WhatsApp do site ou da Microsoft Store). Se tiver, a conversa abre nele,
+// com o mesmo número e o mesmo texto. Se não tiver (ou ele não abrir), vai pelo navegador, como antes.
+function linkDoWhatsApp(url) {
+  const host = url.hostname.toLowerCase();
+  let fone = '', texto = '';
+  if ((host === 'web.whatsapp.com' || host === 'api.whatsapp.com') && url.pathname.replace(/\/+$/, '') === '/send') {
+    fone = url.searchParams.get('phone') || '';
+    texto = url.searchParams.get('text') || '';
+  } else if (host === 'wa.me' || host === 'www.wa.me') {
+    fone = url.pathname.replace(/^\/+|\/+$/g, '');
+    texto = url.searchParams.get('text') || '';
+  } else {
+    return '';
+  }
+  fone = fone.replace(/^\+/, '');
+  if (!/^\d{8,15}$/.test(fone)) return '';
+  return 'whatsapp://send?phone=' + fone + (texto ? '&text=' + encodeURIComponent(texto) : '');
+}
+function temWhatsAppInstalado() {
+  try {
+    return String(app.getApplicationNameForProtocol('whatsapp://') || '').trim() !== '';
+  } catch (e) {
+    return false;
+  }
+}
+const abertosNoWhatsApp = [];   // só para o teste automático
+function abrirNoWhatsAppInstalado(url) {   // true = já abriu no aplicativo
+  const noApp = linkDoWhatsApp(url);
+  if (!noApp) return false;
+  const instalado = temWhatsAppInstalado();
+  if (MODO_TESTE) { abertosNoWhatsApp.push({ de: url.href, app: noApp, instalado }); return false; }
+  if (!instalado) return false;
+  shell.openExternal(noApp).catch(() => { shell.openExternal(url.href).catch(() => {}); });
+  return true;
+}
 
 function protegerConteudo(contents) {
   contents.on('will-navigate', (e, endereco) => {
@@ -347,6 +387,14 @@ async function rodarTeste() {
     await new Promise(ok => setTimeout(ok, 1500));
     r.downloads = downloadsTeste.map(d => ({ nome: d.nome, estado: d.estado, conteudo: fs.existsSync(d.destino) ? fs.readFileSync(d.destino, 'utf8') : null }));
     r.abertosNoNavegador = abertosFora.slice();
+    r.whatsAppNoApp = abertosNoWhatsApp.slice();
+    r.whatsAppLinks = [
+      'https://web.whatsapp.com/send?phone=5511999999999&text=Ol%C3%A1%2C%20Maria!%0AConsulta%20%26%20retorno',
+      'https://wa.me/5511999999999?text=oi',
+      'https://web.whatsapp.com/',
+      'https://wa.me/abc?text=oi',
+      'https://example.com/send?phone=5511999999999',
+    ].map((u) => linkDoWhatsApp(new URL(u)));
     const foto = path.join(os.tmpdir(), 'dente-sempre-teste.png');
     fs.writeFileSync(foto, (await wc.capturePage()).toPNG());
     r.fotoDaTela = foto;

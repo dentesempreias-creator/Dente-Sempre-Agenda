@@ -237,6 +237,43 @@
     .cl-card{padding:24px 20px}
     .marca small{display:none}
   }
+  /* Atualizações: versões dos aplicativos (lista VERSOES, no fim da página) */
+  #versoes{padding-top:0;scroll-margin-top:84px}
+  .vs-atalho{display:none;margin:14px 0 0;font-size:15px}
+  .vs-atalho a{font-weight:700}
+  .vs-ultimas{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+  .vs-app{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:20px 22px;display:flex;flex-direction:column;gap:4px}
+  .vs-app h3{font-size:19px}
+  .vs-app p{margin:0 0 12px;color:var(--suave);font-size:15px}
+  .vs-app .bt{margin-top:auto;width:100%}
+  .vs-tit{font-size:21px;margin:40px 0 16px}
+  .vs-lista{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+  .vs-item{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:20px 22px;display:grid;grid-template-columns:240px 1fr auto;gap:10px 24px;align-items:start}
+  .vs-num{font-weight:800;font-size:19px;letter-spacing:-.01em;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+  .vs-novo{display:inline-block;font-size:12px;font-weight:700;color:var(--verde);background:var(--verde-claro);border-radius:999px;padding:2px 9px;letter-spacing:0}
+  .vs-data{display:block;color:var(--suave);font-size:14px;font-weight:600;margin-top:2px}
+  .vs-resumo{margin:0;font-size:16px}
+  ul.vs-resumo{padding-left:20px}
+  .vs-resumo li+li{margin-top:4px}
+  .vs-github{display:inline-block;margin-top:8px;font-size:14px;font-weight:600}
+  .vs-bts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+  .vs-bts .bt svg,.vs-app .bt svg{width:18px;height:18px}
+  .vs-vazio{background:#fff;border:1px dashed var(--linha);border-radius:var(--raio);padding:20px 22px;color:var(--suave);margin:0}
+  /* entre 821 e 979 px o menu do alto não tem espaço para mais um link: lá o atalho fica embaixo dos downloads */
+  @media (min-width:821px) and (max-width:979px){
+    .menu .vs-menu{display:none}
+    .vs-atalho{display:block}
+  }
+  @media (max-width:820px){
+    .vs-atalho{display:block}
+    .vs-item{grid-template-columns:1fr}
+    .vs-bts{justify-content:flex-start}
+  }
+  @media (max-width:560px){
+    .vs-ultimas{grid-template-columns:1fr}
+    .vs-item{padding:18px}
+    .vs-bts .bt{flex:1 1 140px}
+  }
 </style>
 </head>
 <body>
@@ -247,6 +284,7 @@
     <nav class="menu" aria-label="Seções">
       <a href="#funcoes">Funções</a>
       <a href="#baixar">Baixar</a>
+      <a href="#versoes" class="vs-menu">Atualizações</a>
       <a href="#planos">Planos</a>
       <a href="#perguntas">Dúvidas</a>
       <a href="#clinica">A clínica</a>
@@ -417,9 +455,24 @@
         </div>
       </div>
       <p class="nota">No Android, se o celular perguntar, permita instalar o aplicativo baixado pelo navegador. iPhone: em breve.</p>
+      <p class="vs-atalho"><a href="#versoes">Ver as atualizações: o que mudou em cada versão</a></p>
     </div>
   </section>
 
+  <!-- Atualizações: versões dos aplicativos (os itens vêm da lista VERSOES, no fim da página) -->
+  <section class="cinza" id="versoes" aria-labelledby="t-versoes">
+    <div class="cx">
+      <div class="cab">
+        <span class="olho">Atualizações</span>
+        <h2 id="t-versoes">Versões dos aplicativos</h2>
+        <p class="sub">A versão mais nova de cada aplicativo, com a data e o que mudou. O download vem direto do GitHub.</p>
+      </div>
+      <div class="vs-ultimas" id="vsUltimas"></div>
+      <h3 class="vs-tit" id="vsTitLista">O que mudou em cada versão</h3>
+      <ol class="vs-lista" id="vsLista"></ol>
+      <p class="nota"><a data-releases href="https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases" target="_blank" rel="noopener">Ver todas as versões no GitHub</a></p>
+    </div>
+  </section>
   <!-- Planos -->
   <section id="planos" aria-labelledby="t-planos">
     <div class="cx">
@@ -608,8 +661,8 @@
 
     // Links de download. Deixe '' (vazio) para mostrar "Em breve".
     downloads: {
-      windows: 'https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases/download/v1.0.4/Dente-Sempre-Instalador-1.0.4.exe',
-      android: 'https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases/download/v1.0.4/app-debug.apk',
+      windows: 'https://SEU-LINK/Dente-Sempre-Instalador-1.0.0.exe',
+      android: 'https://SEU-LINK/Dente-Sempre.apk',
       mac: '',
       linux: ''
     }
@@ -686,6 +739,150 @@
     });
 
     document.getElementById('ano').textContent = new Date().getFullYear();
+  })();
+</script>
+<script>
+  // =================================================================
+  //  VERSÕES DOS APLICATIVOS (seção "Atualizações")
+  //  Quando sair uma versão nova, copie um bloco { ... } e cole NO COMEÇO da lista.
+  //    versao:   o número da versão. É a tag da release no GitHub sem o "v" (tag v1.0.1 → '1.0.1').
+  //    data:     a data da versão: '2026-11-09' ou '09/11/2026'.
+  //    resumo:   o que mudou. Uma frase, ou uma lista: ['Primeira coisa', 'Segunda coisa'].
+  //    arquivos: o nome de cada arquivo anexado na release do GitHub, por aplicativo.
+  //              Coloque só os aplicativos que saíram nessa versão (windows, android, mac, linux).
+  //              Também pode colar o link completo do arquivo.
+  //  O site monta sozinho o link de download:
+  //    https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases/download/v1.0.0/NOME-DO-ARQUIVO
+  // =================================================================
+  var VERSOES_GITHUB = 'https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases';
+  var VERSOES = [
+    {
+      versao: '1.0.0',
+      data: '2026-11-09',
+      resumo: 'Primeira versão da Agenda Dente Sempre: agenda por dentista, confirmação pelo WhatsApp, pacientes, tipos de consulta com duração padrão e a assistente.',
+      arquivos: {
+        windows: 'Dente-Sempre-Instalador-1.0.0.exe',
+        android: 'Dente-Sempre.apk'
+      }
+    }
+  ];
+  // =================================================================
+
+  (function () {
+    var lista = document.getElementById('vsLista'), ultimas = document.getElementById('vsUltimas');
+    if (!lista || !ultimas) return;
+    var NOMES = { windows: 'Windows', android: 'Android', mac: 'Mac', linux: 'Linux', iphone: 'iPhone' };
+    var ORDEM = ['windows', 'android', 'mac', 'linux', 'iphone'];
+    var MOSTRAR = 6;   // quantas versões aparecem; as outras ficam no link do GitHub
+    var base = String(VERSOES_GITHUB || '').replace(/\/+$/, '');
+    var ICONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+
+    function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+    function nomeApp(k) { return NOMES[k] || (k.charAt(0).toUpperCase() + k.slice(1)); }
+    function tag(v) { return v.tag || ('v' + String(v.versao).replace(/^v/i, '')); }
+    function numero(v) { return String(v.versao || '').replace(/^v/i, ''); }
+    // '2026-11-09' ou '09/11/2026' → { iso: '2026-11-09', br: '09/11/2026' }
+    function data(d) {
+      d = String(d || '').trim();
+      var m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/), a, me, di;
+      if (m) { a = m[1]; me = m[2]; di = m[3]; }
+      else if ((m = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) { di = m[1]; me = m[2]; a = m[3]; }
+      else return { iso: '', br: d };
+      me = ('0' + me).slice(-2); di = ('0' + di).slice(-2);
+      return { iso: a + '-' + me + '-' + di, br: di + '/' + me + '/' + a };
+    }
+    function compVersao(x, y) {   // 1.10.0 > 1.9.0
+      var a = numero(x).split(/[.-]/), b = numero(y).split(/[.-]/);
+      for (var i = 0; i < Math.max(a.length, b.length); i++) {
+        var p = parseInt(a[i], 10) || 0, q = parseInt(b[i], 10) || 0;
+        if (p !== q) return p - q;
+      }
+      return 0;
+    }
+    function link(v, k) {
+      var arq = String((v.arquivos || {})[k] || '').trim();
+      if (!arq) return '';
+      if (/^https:\/\//i.test(arq)) return arq;
+      return base + '/download/' + encodeURIComponent(tag(v)) + '/' + encodeURIComponent(arq);
+    }
+    function apps(v) {
+      var ks = Object.keys(v.arquivos || {}).filter(function (k) { return link(v, k); });
+      return ks.sort(function (x, y) { return (ORDEM.indexOf(x) + 1 || 99) - (ORDEM.indexOf(y) + 1 || 99); });
+    }
+    function botao(href, texto, rotulo, cls) {
+      var a = el('a', 'bt ' + cls);
+      a.href = href; a.setAttribute('aria-label', rotulo);
+      a.innerHTML = ICONE; a.appendChild(el('span', '', texto));
+      return a;
+    }
+
+    var vs = (Array.isArray(VERSOES) ? VERSOES : []).filter(function (v) { return v && numero(v); });
+    vs.sort(function (x, y) {
+      var dx = data(x.data).iso, dy = data(y.data).iso;
+      if (dx !== dy) return dx < dy ? 1 : -1;
+      return compVersao(y, x);
+    });
+
+    document.querySelectorAll('[data-releases]').forEach(function (a) { if (base) a.href = base; });
+
+    if (!vs.length) {
+      ultimas.hidden = true;
+      document.getElementById('vsTitLista').hidden = true;
+      var vazio = el('p', 'vs-vazio', 'Ainda não tem versão publicada aqui. Veja as versões no GitHub.');
+      lista.parentNode.insertBefore(vazio, lista);
+      lista.hidden = true;
+      return;
+    }
+
+    // A versão mais nova de cada aplicativo
+    var feitos = {};
+    vs.forEach(function (v) {
+      apps(v).forEach(function (k) { if (!feitos[k]) feitos[k] = v; });
+    });
+    ORDEM.concat(Object.keys(feitos).filter(function (k) { return ORDEM.indexOf(k) < 0; })).forEach(function (k) {
+      var v = feitos[k];
+      if (!v) return;
+      var c = el('div', 'vs-app');
+      c.appendChild(el('h3', '', nomeApp(k)));
+      c.appendChild(el('p', '', 'Versão ' + numero(v) + (data(v.data).br ? ' · ' + data(v.data).br : '')));
+      c.appendChild(botao(link(v, k), 'Baixar ' + numero(v), 'Baixar ' + nomeApp(k) + ', versão ' + numero(v), 'bt-azul bt-peq'));
+      ultimas.appendChild(c);
+    });
+
+    // O que mudou em cada versão (a mais nova primeiro)
+    vs.slice(0, MOSTRAR).forEach(function (v, i) {
+      var li = el('li', 'vs-item');
+      var cab = el('div');
+      var num = el('div', 'vs-num', 'Versão ' + numero(v));
+      if (i === 0) num.appendChild(el('span', 'vs-novo', 'Mais recente'));
+      cab.appendChild(num);
+      if (data(v.data).br) {
+        var t = el('time', 'vs-data', data(v.data).br);
+        if (data(v.data).iso) t.setAttribute('datetime', data(v.data).iso);
+        cab.appendChild(t);
+      }
+      li.appendChild(cab);
+
+      var meio = el('div'), r = v.resumo;
+      if (Array.isArray(r)) {
+        var ul = el('ul', 'vs-resumo');
+        r.forEach(function (x) { if (String(x).trim()) ul.appendChild(el('li', '', String(x))); });
+        meio.appendChild(ul);
+      } else {
+        meio.appendChild(el('p', 'vs-resumo', String(r || 'Melhorias e correções.')));
+      }
+      var gh = el('a', 'vs-github', 'Ver esta versão no GitHub');
+      gh.href = base + '/tag/' + encodeURIComponent(tag(v)); gh.target = '_blank'; gh.rel = 'noopener';
+      meio.appendChild(gh);
+      li.appendChild(meio);
+
+      var bts = el('div', 'vs-bts');
+      apps(v).forEach(function (k) {
+        bts.appendChild(botao(link(v, k), nomeApp(k), 'Baixar ' + nomeApp(k) + ', versão ' + numero(v), 'bt-borda bt-peq'));
+      });
+      li.appendChild(bts);
+      lista.appendChild(li);
+    });
   })();
 </script>
 </body>

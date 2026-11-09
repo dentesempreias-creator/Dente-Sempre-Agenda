@@ -60,16 +60,16 @@ npm run desktop:linux       # .AppImage e .deb       → app/desktop/dist/
 **Sem instalar nada (pelo GitHub):**
 
 1. Coloque o projeto num repositório do GitHub.
-2. Em **Settings → Secrets and variables → Actions**, crie `DS_SERVIDOR` e `DS_CHAVE_PUBLICA`.
-3. Rode **Actions → Gerar aplicativos**.
+2. Preencha `app/config.json` com o endereço do servidor e a chave pública (`dente-sempre chave-publica`) e envie para o GitHub. Não precisa de secrets.
+3. Rode **Actions → Gerar aplicativos** (ou crie uma etiqueta `v1.2.0`).
 
-Saem o instalador do Windows, o do Mac, o do Linux e o APK do Android. Detalhes e assinatura digital: `app/LEIA-ME-APPS.md`.
+Saem o instalador do Windows (.exe) e o APK de teste do Android, sem assinatura. Mac, Linux e o Android assinado são gerados no computador. Detalhes e assinatura digital: `app/LEIA-ME-APPS.md`.
 
 ## 3. Como gerar o aplicativo de celular
 
 **Android:**
 
-- **Pelo GitHub (recomendado):** a mesma execução de **Actions → Gerar aplicativos** gera o `app-debug.apk`, para teste. Se você cadastrar a chave de assinatura (`ANDROID_KEYSTORE_BASE64` e as senhas), também gera o APK e o `.aab` assinados, prontos para a Google Play.
+- **Pelo GitHub (recomendado):** a mesma execução de **Actions → Gerar aplicativos** gera o `app-debug.apk`, para teste. O APK e o `.aab` assinados, para a Google Play, são gerados no computador (abaixo).
 - **No seu computador:** instale o **Android Studio** (ele traz o kit do Android e o Java). Depois, na pasta `app/`:
   ```bash
   npm run celular:android             # APK de teste → app/celular/android/app/build/outputs/apk/debug/
@@ -841,8 +841,78 @@ Em **Menu → Configurações**, só para o administrador:
 
 **Menu → Configurações → Começar do zero**, ou o botão **Configurações** no alto. Só o administrador vê.
 - Apaga consultas, pacientes e dentistas, e o que depende deles: bloqueios, almoços do dia, respostas dos pacientes e próteses.
-- Continuam: usuários e senhas, nome e cores da clínica, tipos de consulta, anotações e protéticos.
+- Continuam: usuários e senhas, nome e cores da clínica, tipos de consulta (com a duração padrão), anotações e protéticos.
 - Pede confirmação forte: mostra "Isso apaga tudo. Tem certeza?" e só libera o botão depois de escrever **APAGAR**.
 - Por padrão salva um backup antes de apagar. Esse backup pode ser restaurado depois em Restaurar backup.
 - **Com servidor:** a limpeza vai para o servidor e para os outros aparelhos da clínica na sincronização, e o aviso diz isso antes. Sem servidor, vale só para este aparelho.
 - Depois, o programa volta para a tela de começar (cadastrar o primeiro dentista).
+
+---
+
+## 16. Tipos de consulta, campo de tipo e assistente
+
+### Tipos de consulta
+
+**Menu → Configurações → Tipos de consulta**, logo abaixo de "Cores e ícones dos tipos". Também no botão **Configurações**, no alto → **Tipos de consulta…**. O administrador e a recepção usam; o dentista não vê.
+
+- **Ver a lista**: nome, duração padrão e em quantas consultas cada tipo está. Com mais de 8 tipos aparece uma busca.
+- **Adicionar**: nome e, se quiser, os minutos. Não deixa repetir um nome que já existe (maiúscula e acento não contam).
+- **Mudar o nome**: escreva na linha e clique em **Salvar** (ou Enter). As consultas desse tipo, a cor e o ícone mudam junto.
+- **Excluir**: só se o tipo não estiver em nenhuma consulta. Se estiver, o aviso diz em quantas e sugere mudar o nome.
+- **Duração padrão** (1 a 720 minutos, ou em branco): no Novo horário, escolher o tipo já preenche o tempo. Se a pessoa já escreveu o tempo, ele não muda. Editar uma consulta antiga também não muda o tempo dela.
+- Os tipos de antes continuam iguais. Um tipo novo escrito no Novo horário ou trazido pelo Importar agenda entra na lista, como antes.
+- **Sincronização:** a duração vai para o servidor e os outros aparelhos junto com as Configurações da clínica (registro `typeDurations:config`). Um aparelho com versão antiga ignora esse registro e continua funcionando.
+
+### Campo do tipo no Novo horário
+
+Os botões com todos os tipos saíram. No lugar, o campo **Tipo de consulta** ocupa uma linha:
+- Clicar (ou tocar, no celular) abre a lista com todos os tipos, a cor e a duração padrão.
+- Digitar filtra a lista. Setas para cima e para baixo escolhem, Enter confirma, Esc fecha só a lista.
+- Se o tipo não existe, aparece **Usar "…" (tipo novo)**. Ao salvar o horário, ele entra na lista de tipos.
+
+### Assistente da agenda
+
+A assistente agora sabe onde fica cada função do programa e entende os pedidos novos. Como antes, ela não salva nada sozinha: abre a tela já preenchida e a pessoa confere e clica.
+
+- **Onde fica / como faço**: "onde fica importar pacientes?", "como mando o acesso da área do paciente?", "como desfaço?". Responde com o caminho do menu, o que a função faz, quem pode usar e um botão para abrir. Escrever só o nome da função ("sincronização") também responde.
+- **Abrir**: "abra a sincronização", "abra os tipos de consulta".
+- **Tipos de consulta**: "quais são os tipos de consulta?", "adicione o tipo Clareamento com 60 minutos", "mude o nome do tipo Limpeza para Profilaxia", "duração padrão do Canal 90 minutos", "quanto tempo dura a limpeza?", "exclua o tipo Retorno" (avisa se estiver em uso).
+- **Agendar** usa a duração padrão do tipo quando o pedido não diz o tempo.
+- **Próteses**: "próteses em atraso", "próteses em andamento" (avisa se o módulo estiver desligado).
+- **Pendências do dia**, **buscar consultas de canal**, **desfazer** / **refazer** (mostra o que vai voltar e um botão).
+- Os pedidos de antes continuam iguais, e ela continua recusando o que não é da agenda (valores, pagamento, CPF, endereço, prontuário…).
+
+**Regra para as próximas versões:** toda função nova do programa também entra na assistente. No código, é a lista `ASSIST_TOPICOS` (nome, caminho no menu, o que faz, quem pode e como abrir) e os exemplos da `aiHelp`.
+
+---
+
+## 17. Tela do celular: área do sistema e barra de cima
+
+O app de celular desenha a tela de ponta a ponta (Capacitor 8, `SystemBars` com `insetsHandling: "css"`). Por isso o programa precisa deixar livre a área da hora, da data e da câmera.
+
+- **Em cima:** a página começa abaixo da hora do telefone, e uma faixa da cor da clínica fica atrás da hora. Rolando a agenda, nada passa por cima da hora. O Menu, o Novo horário, as janelas e as telas de entrada também começam abaixo dela.
+- **Embaixo:** a barra de botões, o botão Novo horário, os rodapés das janelas e o menu Mais ficam acima da barra de gestos (ou dos botões) do telefone.
+- **Deitado:** nada fica embaixo da câmera de lado.
+- As medidas vêm do telefone (`env(safe-area-inset-*)` ou `--safe-area-inset-*`, que o Capacitor coloca). No computador e no navegador elas valem 0, e a tela do computador ficou igual.
+- **Barra de cima no celular:** lupa, sincronização e usuário com a mesma altura (44 px, bom para o dedo), numa linha só. O nome "Dente Sempre" não quebra em duas linhas. Em telas de até 349 px, a sincronização mostra só a bolinha colorida (verde, amarela ou vermelha); tocando nela abre a Sincronização. O aviso "Modo recepção ocupada" corta com "…" se não couber.
+- **Tamanho da fonte do Android:** o app não aumenta mais o texto quando a fonte do sistema está grande (`MainActivity.java`, `setTextZoom(100)`). Com a fonte grande, o "Sincronizado" ficava maior que o botão. O app já usa letras e botões grandes no celular.
+- Testado em 320, 360, 412 (Realme 11) e 430 px de largura, com a área do sistema simulada.
+
+
+## 18. WhatsApp no computador e versões no site
+
+**WhatsApp no programa do computador (Windows, e também Mac e Linux).** Todos os botões de WhatsApp (Confirmar pacientes, Mensagem para grupo, Aniversariantes, WhatsApp… da consulta, link de pagamento e acesso à área do paciente) agora abrem assim no computador:
+
+1. O programa pergunta ao sistema se tem um aplicativo que abre links `whatsapp://` (o WhatsApp baixado do site ou o da Microsoft Store).
+2. Se tiver, a conversa abre nele, com o mesmo número e a mesma mensagem.
+3. Se não tiver, ou se ele não abrir, abre o WhatsApp Web no navegador, como antes.
+
+- No celular nada mudou: continua abrindo o app do WhatsApp.
+- Usando a agenda direto num navegador (sem o programa instalado), continua abrindo o WhatsApp Web.
+- O código fica em `app/desktop/main.js` (`linkDoWhatsApp`, `temWhatsAppInstalado`, `abrirNoWhatsAppInstalado`). A página não mudou nada nessa parte: ela continua mandando o mesmo link, e é o programa do computador que decide onde abrir.
+- O teste `npm test` (pasta `app/desktop/`) confere o link `whatsapp://` com o número e o texto certos e a consulta ao sistema.
+- Para valer no Windows, gere o instalador de novo (GitHub Actions ou `npm run desktop:windows`).
+
+**Versões no site.** O site ganhou a seção **Atualizações** (veja o `LEIA-ME.md` do site). A lista de versões fica no `index.html` do site, na lista `VERSOES`, e os downloads apontam para https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases.
+
+**Assistente.** Ela responde "o WhatsApp abre no aplicativo do computador?" (explica o caminho acima) e "qual a versão nova do aplicativo?" (aponta a seção Atualizações do site, mostra a versão instalada no computador e tem o botão **Ver as versões no GitHub**).

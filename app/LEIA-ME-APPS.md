@@ -62,10 +62,12 @@ Só para teste na rede local, com servidor sem cadeado: `node preparar.js --perm
 
 ## 4. Gerar pelo GitHub (sem instalar nada)
 
-1. No GitHub do projeto: **Settings > Secrets and variables > Actions**.
-2. Crie `DS_SERVIDOR` (o endereço `https://...`) e `DS_CHAVE_PUBLICA` (a chave). Pode ser em "Secrets" ou em "Variables".
-3. Vá em **Actions > Gerar aplicativos > Run workflow**. Ou crie uma versão: `git tag v1.2.0` e `git push --tags`. O número da etiqueta vira a versão do aplicativo.
-4. Quando terminar, os arquivos ficam em **Artifacts**, no fim da página da execução: `dente-sempre-windows`, `-mac`, `-linux`, `-android-teste` e, se houver chave, `-android-assinado`.
+1. Preencha `app/config.json` com o endereço do servidor (`"servidor": "https://..."`) e a chave pública (`"chavePublica"`, a que o comando `dente-sempre chave-publica` mostra no servidor). Envie o arquivo para o GitHub. Não precisa criar secrets.
+2. Vá em **Actions > Gerar aplicativos > Run workflow**. Ou crie uma etiqueta: `git tag v1.2.0` e `git push --tags`.
+3. O primeiro passo confere o `config.json`. Se o servidor estiver vazio, com o endereço de exemplo ou sem `https://`, ou se a chave estiver vazia, ele para e diz o que falta.
+4. Quando terminar, os arquivos ficam em **Artifacts**, no fim da página da execução: `dente-sempre-windows` (instalador .exe) e `dente-sempre-android` (APK de teste).
+
+O GitHub gera só o Windows e o APK de teste do Android, sem assinatura. O Mac, o Linux e o APK/AAB assinado para a Google Play são gerados no seu computador (seção 3 e seção 5).
 
 ## 5. Assinatura digital
 
@@ -84,20 +86,17 @@ keytool -genkeypair -v -keystore dente-sempre.jks -alias dente-sempre -keyalg RS
   keyAlias=dente-sempre
   keyPassword=senha-da-chave
   ```
-- **No GitHub**: crie os secrets `ANDROID_KEYSTORE_BASE64` (o arquivo .jks em texto), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`. Para transformar o .jks em texto:
-  - Linux: `base64 -w0 dente-sempre.jks`
-  - Mac: `base64 -i dente-sempre.jks`
-  - Windows (PowerShell): `[Convert]::ToBase64String([IO.File]::ReadAllBytes("dente-sempre.jks"))`
+- **No GitHub**: o workflow atual não assina. Gere o APK e o AAB assinados no seu computador com `npm run celular:android-assinado`.
 
 O APK de teste (debug) usa uma chave de teste. O número do aparelho que o Android dá ao aplicativo muda com a chave: um celular que usou o APK de teste vai precisar de ativação nova no APK assinado.
 
 ### Windows (recomendado)
 
-Sem assinatura, o Windows mostra "O Windows protegeu o computador" (SmartScreen) e a pessoa precisa clicar em "Mais informações > Executar assim mesmo". Para assinar, compre um certificado de assinatura de código (hoje vem em token USB ou na nuvem, por exemplo Azure Trusted Signing). Com um arquivo .pfx, defina `CSC_LINK` (caminho ou base64 do .pfx) e `CSC_KEY_PASSWORD` antes de gerar. No GitHub, use os secrets `WINDOWS_CSC_LINK` e `WINDOWS_CSC_KEY_PASSWORD`.
+Sem assinatura, o Windows mostra "O Windows protegeu o computador" (SmartScreen) e a pessoa precisa clicar em "Mais informações > Executar assim mesmo". Para assinar, compre um certificado de assinatura de código (hoje vem em token USB ou na nuvem, por exemplo Azure Trusted Signing). Com um arquivo .pfx, defina `CSC_LINK` (caminho ou base64 do .pfx) e `CSC_KEY_PASSWORD` antes de gerar. O workflow do GitHub gera o instalador sem assinatura.
 
 ### Mac (recomendado)
 
-Sem assinatura, na primeira vez é preciso clicar com o botão direito no app e escolher **Abrir**. Para assinar e notarizar: conta Apple Developer, certificado "Developer ID Application" (`CSC_LINK` e `CSC_KEY_PASSWORD`) e `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` e `APPLE_TEAM_ID`. No GitHub, use `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` e `APPLE_TEAM_ID`.
+Sem assinatura, na primeira vez é preciso clicar com o botão direito no app e escolher **Abrir**. Para assinar e notarizar: conta Apple Developer, certificado "Developer ID Application" (`CSC_LINK` e `CSC_KEY_PASSWORD`) e `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` e `APPLE_TEAM_ID`. O Mac é gerado num Mac (`npm run desktop:mac`); o workflow do GitHub não gera Mac.
 
 ### iPhone
 

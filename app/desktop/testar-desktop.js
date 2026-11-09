@@ -51,6 +51,10 @@ filho.on('close', () => {
     ['não sai da pasta www/ (../)', r.travaPasta === 404 && r.travaPasta2 === 404],
     ['bloqueia conexão com outro site', r.bloqueiaOutroSite === 'bloqueado'],
     ['link do WhatsApp abre no navegador', (r.abertosNoNavegador || []).some((u) => u.startsWith('https://wa.me/'))],
+    ['WhatsApp: confere primeiro se o aplicativo está instalado', (r.whatsAppNoApp || []).some((x) => x.app === 'whatsapp://send?phone=5511999999999&text=oi' && typeof x.instalado === 'boolean')],
+    ['WhatsApp: link do aplicativo com o mesmo número e texto', JSON.stringify(r.whatsAppLinks) === JSON.stringify([
+      'whatsapp://send?phone=5511999999999&text=Ol%C3%A1%2C%20Maria!%0AConsulta%20%26%20retorno',
+      'whatsapp://send?phone=5511999999999&text=oi', '', '', ''])],
     ['não abre janela extra', r.janelaExtra === 'null' && r.janelaArquivo === 'null'],
     ['não navega para outro site', r.continuaNoApp === 'app://dente-sempre/index.html'],
     ['download do backup (Blob) funciona', (r.downloads || []).some((d) => d.estado === 'completed' && d.conteudo === '{"teste":true}')],

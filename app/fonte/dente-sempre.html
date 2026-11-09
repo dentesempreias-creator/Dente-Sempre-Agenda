@@ -918,6 +918,92 @@
     .imp-dent select{margin-bottom:6px}
   }
 </style>
+<style id="hud-celular">
+  /* ---------- Celular: área do sistema (hora, data, câmera) e barra de cima (09/11) ----------
+     O app de celular desenha de ponta a ponta. As medidas da área do sistema vêm do Android/iPhone
+     (env(safe-area-inset-*) ou --safe-area-inset-*, que o Capacitor coloca). No computador e no
+     navegador elas valem 0, então nada muda lá. */
+  :root{
+    --sat:max(env(safe-area-inset-top,0px),var(--safe-area-inset-top,0px));
+    --sab:max(env(safe-area-inset-bottom,0px),var(--safe-area-inset-bottom,0px));
+    --sal:max(env(safe-area-inset-left,0px),var(--safe-area-inset-left,0px));
+    --sar:max(env(safe-area-inset-right,0px),var(--safe-area-inset-right,0px));
+  }
+  /* A página começa abaixo da hora do telefone */
+  body{padding-top:var(--sat)}
+  /* Faixa da cor da clínica atrás da hora do telefone: nada rola nem aparece por cima dela */
+  body::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--sat);background:var(--titlebar);z-index:2147483000;pointer-events:none}
+  .drawer,.basemenu{top:var(--sat)}
+  .firstuse,.lockscreen{padding-top:calc(16px + var(--sat));padding-bottom:calc(16px + var(--sab))}
+  /* Celular deitado: nada passa por baixo da câmera de lado (borda transparente, a cor de fundo continua) */
+  .titlebar,.commandbar,.workspace,.statusbar,.offline-bar{border-left:var(--sal) solid transparent;border-right:var(--sar) solid transparent}
+  .drawer{padding-right:var(--sar)}
+  @media (min-width:601px){ body{padding-bottom:var(--sab)} }
+  .basemenu{padding-left:var(--sal)}
+
+  @media (max-width:600px){
+    /* Barra de cima: tudo do mesmo tamanho (44 px, bom para o dedo), numa linha, sem sair da caixa */
+    .titlebar{height:52px;padding:0 6px 0 12px;gap:8px}
+    .tb-brand{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto;overflow:hidden}
+    .tb-icon{flex:none}
+    .tb-name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px;line-height:1.2}
+    .tb-badge{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    body.privacy .tb-brand{flex:none}
+    .tb-right{flex:none;gap:6px;margin-left:auto}
+    .tb-search,.tb-user{width:44px;min-width:44px;height:44px;padding:0;justify-content:center;flex:none}
+    .tb-search svg,.tb-user svg{width:20px;height:20px}
+    .tb-sync{height:44px;min-width:44px;max-width:136px;padding:0 10px;gap:6px;flex:none;overflow:hidden;justify-content:center;line-height:1}
+    .tb-sync .sync-dot{width:10px;height:10px}
+    body:not(.privacy) .tb-sync #syncTxt{font-size:12px;line-height:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+    .tb-logo{height:30px;max-width:96px;flex:none}
+    .tb-logo img{max-width:84px}
+    body.logo-replace #clinicName{display:block;min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* Faixa "Sem internet" presa logo abaixo da hora do telefone */
+    .offline-bar{top:var(--sat)}
+    /* Janelas e menus que sobem de baixo não chegam na hora do telefone */
+    .modal,.modal.wide{max-height:min(92vh,calc(100vh - var(--sat) - 8px))}
+    .ctxmenu{max-height:min(78vh,calc(100vh - var(--sat) - 12px))}
+    body.modal-open .toast{top:calc(10px + var(--sat))}
+
+    /* Embaixo: barra de gestos ou botões do telefone */
+    .commandbar{padding-bottom:calc(4px + var(--sab))}
+    .fab{bottom:calc(76px + var(--sab))}
+    .workspace{padding-bottom:calc(150px + var(--sab))}
+    .toast{bottom:calc(142px + var(--sab))}
+    .drawer-foot{padding-bottom:calc(10px + var(--sab))}
+    .bm-foot{padding-bottom:calc(8px + var(--sab))}
+    .ctxmenu{padding-bottom:12px;border-bottom:var(--sab) solid #fff}
+    .ctxmenu .menu-item > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+    .modal-foot{padding-bottom:calc(12px + var(--sab))}
+    .modal > :last-child:not(.modal-foot){margin-bottom:calc(18px + var(--sab))}
+
+    /* Barra de comandos de baixo: ícones e textos do mesmo tamanho e centralizados */
+    .commandbar .cmd{height:56px;gap:3px;font-size:12px;line-height:1.1;white-space:nowrap;overflow:hidden;align-items:center}
+    .commandbar .cmd svg{width:22px;height:22px}
+    .fab{max-width:calc(100vw - 24px - var(--sal) - var(--sar));white-space:nowrap}
+  }
+  /* Celular comum (até 400px): um pouco menos de espaço entre os botões para o nome caber */
+  @media (max-width:400px){
+    .titlebar{gap:6px}
+    .tb-right{gap:4px}
+    .titlebar{padding-left:10px}
+    .tb-brand{gap:6px}
+    .tb-name{font-size:15px}
+    .tb-sync{padding:0 6px;gap:4px}
+    .tb-right{gap:3px}
+    .tb-icon{width:24px;height:24px}
+  }
+  /* Celular estreito (até 349px): a sincronização mostra só a bolinha da cor (o nome fica ao tocar) */
+  @media (max-width:349px){
+    body:not(.privacy) .tb-sync #syncTxt{display:none}
+    .tb-sync{width:44px;padding:0}
+    .titlebar{padding-left:10px;gap:6px}
+    .tb-right{gap:4px}
+    .commandbar .cmd{font-size:11px}
+    .fab{height:50px;padding:0 16px;font-size:16px}
+  }
+</style>
 </head>
 <body>
 
@@ -7846,6 +7932,625 @@
       if (g) g.items.push(item); else gs.push({ title: 'Configurações', items: [item] });
     }
     return gs;
+  };
+
+  // ---------- Tipos de consulta, campo de tipo com busca e assistente (09/11) ----------
+  // 1) Menu → Configurações → Tipos de consulta: lista, adicionar, mudar o nome, excluir (se não estiver em uso)
+  //    e duração padrão (minutos). A duração fica em db.typeDurations { tipo: minutos } e vai na sincronização
+  //    como "typeDurations:config" (área Configurações). Os tipos continuam em db.types, do mesmo jeito.
+  // 2) Novo horário: o campo do tipo vira uma lista com busca (os botões de todos os tipos ficam escondidos).
+  //    Ainda dá para escrever um tipo novo. Escolher um tipo com duração padrão preenche o tempo, se estiver vazio.
+  // 3) Assistente: responde onde fica cada função no menu e entende os tipos de consulta, próteses, busca,
+  //    pendências do dia, desfazer e o resto. Como antes, ela não salva nada sozinha: abre a tela já preenchida.
+  //    Regra: toda função nova do programa também entra aqui na assistente (ASSIST_TOPICOS e aiHelp).
+
+  const tdMapa = () => {
+    if (!db.typeDurations || typeof db.typeDurations !== 'object' || Array.isArray(db.typeDurations)) db.typeDurations = {};
+    return db.typeDurations;
+  };
+  const tdGet = t => { const m = Number(tdMapa()[t]); return Number.isInteger(m) && m > 0 ? m : 0; };
+  const tdUso = t => db.appointments.filter(a => a.typeName === t && a.status !== 'deleted').length;
+  const podeTipos = () => can('config') || can('agenda.editar');   // administrador e recepção
+  ACT_PERM.tiposconsulta = 'agenda.editar';
+
+  // Sincronização da duração padrão (aparelhos com versão antiga ignoram esta parte)
+  SYNC_AREAS.find(a => a.id === 'configuracoes').parts.push('typeDurations');
+  PART_AREA.typeDurations = 'configuracoes';
+  const _syncRecordsV7 = syncRecords;
+  syncRecords = function (d) {
+    const out = _syncRecordsV7.apply(this, arguments);
+    const m = d && d.typeDurations;
+    if (m && typeof m === 'object' && Object.keys(m).length) out['typeDurations:config'] = m;
+    return out;
+  };
+  const _applyRemoteV7 = applyRemote;
+  applyRemote = function (c) {
+    if (c && typeof c.key === 'string' && c.key.indexOf('typeDurations:') === 0) {
+      const v = c.op === 'apagar' ? null : c.data;
+      db.typeDurations = v && typeof v === 'object' && !Array.isArray(v) ? JSON.parse(JSON.stringify(v)) : {};
+      return;
+    }
+    return _applyRemoteV7.apply(this, arguments);
+  };
+
+  (function () {
+    const st = document.createElement('style');
+    st.textContent = `
+  .tc-intro{margin:0 0 10px}
+  .tc-add{display:grid;grid-template-columns:1fr 92px auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);background:#f7f8fa;border-radius:var(--r)}
+  .tc-add .field .label{font-size:13px}
+  .tc-busca{margin-top:10px}
+  .tc-list{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:min(52vh,440px);overflow:auto}
+  .tc-row{display:grid;grid-template-columns:20px minmax(140px,1fr) 104px minmax(92px,auto) auto auto;gap:8px;align-items:center;border:1px solid var(--line);padding:6px 8px;border-radius:var(--r)}
+  .tc-row.dirty{border-color:var(--accent);background:var(--accent-hover)}
+  .tc-row.alvo{box-shadow:0 0 0 2px var(--accent)}
+  .tc-min{display:flex;align-items:center;gap:6px}
+  .tc-min input{width:70px;min-width:0}
+  .tc-min span,.tc-uso{color:var(--muted);font-size:13px;white-space:nowrap}
+  .tc-row .btn-small[disabled]{opacity:.45;cursor:default}
+  .tc-row .tc-excluir.alvo{border-color:var(--bad,#c0392b);color:var(--bad,#c0392b)}
+  .tc-vazio{padding:10px;color:var(--muted);font-size:14px}
+  #typeChips{display:none!important}
+  .tcb-wrap{position:relative;display:block}
+  #fType{padding-right:34px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7584' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 11px center}
+  .tcb-pop{position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:40;background:#fff;border:1px solid var(--line-strong);border-radius:var(--r);box-shadow:0 10px 28px rgba(16,24,40,.18);max-height:252px;overflow:auto;padding:4px}
+  .tcb-opt{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 10px;border:0;background:none;border-radius:4px;font-size:15px;color:var(--ink);cursor:pointer;min-height:0}
+  .tcb-opt.on{background:var(--accent-hover)}
+  .tcb-opt.cur{font-weight:600}
+  .tcb-opt small{margin-left:auto;color:var(--muted);font-weight:400;font-size:13px;white-space:nowrap}
+  .tcb-opt.novo{color:var(--accent-dark);border-top:1px solid var(--line);border-radius:0 0 4px 4px}
+  .tcb-vazio{padding:8px 10px;color:var(--muted);font-size:14px}
+  @media (max-width:600px){
+    .tc-add{grid-template-columns:1fr 84px}
+    .tc-add .btn{grid-column:1 / -1}
+    .tc-row{grid-template-columns:20px 1fr auto auto;row-gap:6px}
+    .tc-row .tc-nome{grid-column:2 / span 2}
+    .tc-row .tc-min{grid-column:4}
+    .tc-row .tc-min input{width:64px}
+    .tc-row .tc-uso{grid-column:2}
+    .tc-row .tc-salvar{grid-column:3}
+    .tc-row .tc-excluir{grid-column:4}
+    .tcb-opt{padding:11px 12px;font-size:16px}
+    .tcb-pop{max-height:min(264px,42vh)}
+  }`;
+    document.head.appendChild(st);
+  })();
+
+  // ----- 1) Tela Tipos de consulta -----
+  // pre (opcional, usado pela assistente): { add: { nome, min } } · { edit: { tipo, nome, min } } · { del: tipo }
+  function abrirTiposConsulta(pre) {
+    if (!podeTipos()) { toast('Seu usuário não tem permissão para isso.'); return; }
+    closeMenu(); closeBaseMenu();
+    let busca = '';
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Tipos de consulta</h2></div>${closeX}</div>
+      <p class="hint tc-intro">Os tipos aparecem no Novo horário. A duração padrão preenche o tempo sozinha quando o tipo é escolhido, e dá para mudar na hora. Só dá para excluir um tipo que não está em nenhuma consulta.</p>
+      <form class="tc-add" id="tcAdd" autocomplete="off">
+        <label class="field"><span class="label">Novo tipo</span><input id="tcNovoNome" maxlength="60" placeholder="Ex.: Clareamento"></label>
+        <label class="field"><span class="label">Minutos</span><input id="tcNovoMin" type="number" min="1" max="720" step="1" inputmode="numeric" placeholder="—"></label>
+        <button type="submit" class="btn btn-primary" id="tcAddBtn">${I.plus}Adicionar</button>
+      </form>
+      <div class="tc-busca"${db.types.length > 8 ? '' : ' hidden'}><input id="tcBusca" type="search" autocomplete="off" placeholder="Buscar tipo" aria-label="Buscar tipo"></div>
+      <div class="tc-list" id="tcList"></div>
+      <div class="modal-foot">${can('config') ? '<button type="button" class="btn" id="tcCores">Cores e ícones…</button>' : ''}<button type="button" class="btn btn-primary" data-close-modal>Pronto</button></div>`, true);
+
+    const lerMin = (v, vazio) => {
+      v = String(v || '').trim();
+      if (!v) return vazio;
+      const n = Number(v);
+      return Number.isInteger(n) && n >= 1 && n <= 720 ? n : null;
+    };
+    const desenhar = () => {
+      const f = norm(busca);
+      const lista = db.types.map((t, i) => ({ t, i })).filter(x => !f || norm(x.t).includes(f));
+      $('#tcList').innerHTML = lista.length ? lista.map(({ t, i }) => {
+        const uso = tdUso(t), m = tdGet(t);
+        return `<div class="tc-row" data-tci="${i}">
+          <span>${typeBadge(t, true) || ''}</span>
+          <input class="tc-nome" maxlength="60" value="${esc(t)}" aria-label="Nome do tipo ${esc(t)}">
+          <label class="tc-min"><input class="tc-dur" type="number" min="1" max="720" step="1" inputmode="numeric" value="${m || ''}" placeholder="—" aria-label="Duração padrão de ${esc(t)} em minutos"><span>min</span></label>
+          <span class="tc-uso">${uso ? `${uso} ${uso === 1 ? 'consulta' : 'consultas'}` : 'Sem uso'}</span>
+          <button type="button" class="btn btn-small tc-salvar" disabled>Salvar</button>
+          <button type="button" class="btn btn-small tc-excluir" title="${uso ? 'Em uso: não dá para excluir' : 'Excluir este tipo'}">Excluir</button>
+        </div>`;
+      }).join('') : `<div class="tc-vazio">${db.types.length ? 'Nenhum tipo com esse nome.' : 'Nenhum tipo cadastrado. Adicione acima.'}</div>`;
+      $$('.tc-row', $('#tcList')).forEach(row => {
+        const t = db.types[Number(row.dataset.tci)];
+        const nome = $('.tc-nome', row), dur = $('.tc-dur', row), bt = $('.tc-salvar', row);
+        const sujo = () => {
+          const d = cleanSpaces(nome.value) !== t || String(dur.value).trim() !== String(tdGet(t) || '');
+          row.classList.toggle('dirty', d); bt.disabled = !d; if (d) bt.classList.add('btn-primary'); else bt.classList.remove('btn-primary');
+        };
+        nome.oninput = sujo; dur.oninput = sujo;
+        const enter = e => { if (e.key === 'Enter') { e.preventDefault(); if (!bt.disabled) bt.click(); } };
+        nome.onkeydown = enter; dur.onkeydown = enter;
+        bt.onclick = () => salvar(t, nome.value, dur.value);
+        $('.tc-excluir', row).onclick = () => excluir(t);
+      });
+    };
+    const salvar = (t, novoNome, durTxt) => {
+      if (!podeTipos()) return toast('Seu usuário não tem permissão para isso.');
+      const i = db.types.indexOf(t);
+      if (i < 0) return desenhar();
+      const n = cleanSpaces(novoNome);
+      if (!n) return toast('Escreva o nome do tipo.');
+      if (db.types.some((x, j) => j !== i && norm(x) === norm(n))) return toast(`Já existe o tipo “${db.types.find((x, j) => j !== i && norm(x) === norm(n))}”.`);
+      const m = lerMin(durTxt, 0);
+      if (m === null) return toast('Duração: escreva os minutos (de 1 a 720), ou deixe em branco.');
+      const mapa = tdMapa();
+      if (n !== t) {
+        db.types[i] = n;
+        db.appointments.forEach(a => { if (a.typeName === t) a.typeName = n; });
+        if (db.typeStyles[t]) { db.typeStyles[n] = db.typeStyles[t]; delete db.typeStyles[t]; }
+        delete mapa[t];
+      }
+      if (m) mapa[n] = m; else delete mapa[n];
+      save(); render();
+      desenhar();
+      toast(n !== t ? `Tipo “${t}” agora se chama “${n}”.` : 'Tipo salvo.');
+    };
+    const excluir = t => {
+      if (!podeTipos()) return toast('Seu usuário não tem permissão para isso.');
+      const uso = tdUso(t);
+      if (uso) return toast(`“${t}” está em ${uso} ${uso === 1 ? 'consulta' : 'consultas'}. Não dá para excluir. Você pode mudar o nome.`);
+      const i = db.types.indexOf(t);
+      if (i < 0) return desenhar();
+      db.types.splice(i, 1);
+      delete db.typeStyles[t];
+      delete tdMapa()[t];
+      save(); render();
+      desenhar();
+      toast(`Tipo “${t}” excluído.`);
+    };
+    $('#tcAdd').onsubmit = e => {
+      e.preventDefault();
+      if (!podeTipos()) return toast('Seu usuário não tem permissão para isso.');
+      const n = cleanSpaces($('#tcNovoNome').value);
+      if (!n) { toast('Escreva o nome do novo tipo.'); return $('#tcNovoNome').focus(); }
+      const ja = db.types.find(x => norm(x) === norm(n));
+      if (ja) return toast(`O tipo “${ja}” já existe.`);
+      const m = lerMin($('#tcNovoMin').value, 0);
+      if (m === null) return toast('Duração: escreva os minutos (de 1 a 720), ou deixe em branco.');
+      db.types.push(n);
+      if (m) tdMapa()[n] = m;
+      save(); render();
+      $('#tcNovoNome').value = ''; $('#tcNovoMin').value = '';
+      busca = ''; if ($('#tcBusca')) $('#tcBusca').value = '';
+      $('.tc-busca').hidden = db.types.length <= 8;
+      desenhar();
+      const ult = $('#tcList .tc-row:last-child'); if (ult) ult.scrollIntoView({ block: 'nearest' });
+      toast(`Tipo “${n}” adicionado.`);
+    };
+    $('#tcBusca').oninput = e => { busca = e.target.value; desenhar(); };
+    if ($('#tcCores')) $('#tcCores').onclick = () => { closeModal(true); openTypesModal(); };
+    desenhar();
+
+    // Pedido da assistente: deixa preenchido para a pessoa conferir e clicar
+    pre = pre || {};
+    const linha = t => { const i = db.types.indexOf(t); return i >= 0 ? $(`.tc-row[data-tci="${i}"]`) : null; };
+    if (pre.add) {
+      $('#tcNovoNome').value = pre.add.nome || '';
+      $('#tcNovoMin').value = pre.add.min ? String(pre.add.min) : '';
+      $('#tcAddBtn').focus();
+    } else if (pre.edit && linha(pre.edit.tipo)) {
+      const row = linha(pre.edit.tipo);
+      if (pre.edit.nome) $('.tc-nome', row).value = pre.edit.nome;
+      if (pre.edit.min) $('.tc-dur', row).value = String(pre.edit.min);
+      $('.tc-nome', row).dispatchEvent(new Event('input'));
+      row.classList.add('alvo'); row.scrollIntoView({ block: 'nearest' });
+      $('.tc-salvar', row).focus();
+    } else if (pre.del && linha(pre.del)) {
+      const row = linha(pre.del);
+      row.classList.add('alvo'); row.scrollIntoView({ block: 'nearest' });
+      $('.tc-excluir', row).classList.add('alvo'); $('.tc-excluir', row).focus();
+    } else if (!phoneMQ.matches) $('#tcNovoNome').focus();
+  }
+
+  // Menu completo: Configurações → Tipos de consulta (logo depois de "Cores e ícones dos tipos")
+  const _baseMenuGroupsV7 = baseMenuGroups;
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroupsV7.apply(this, arguments);
+    if (!allowedAct('tiposconsulta')) return gs;
+    const n = db.types.length;
+    const item = { id: 'tiposconsulta', icon: I.list, label: 'Tipos de consulta', sub: `${n} ${n === 1 ? 'tipo' : 'tipos'} · nome e duração padrão`, run: () => abrirTiposConsulta() };
+    let g = gs.find(x => x.title === 'Configurações');
+    if (!g) { g = { title: 'Configurações', items: [] }; gs.push(g); }
+    let i = g.items.findIndex(it => it.id === 'types');
+    if (i >= 0) i++; else { i = g.items.findIndex(it => it.id === 'export'); if (i < 0) i = g.items.length; }
+    g.items.splice(i, 0, item);
+    return gs;
+  };
+  // Botão Configurações (no alto): "Tipos de consulta…" logo depois de "Cores e ícones dos tipos…"
+  const _openMenuV7 = openMenu;
+  openMenu = function (titulo, itens) {
+    if (titulo === 'Configurações' && Array.isArray(itens) && !itens.some(it => it && it.act === 'tiposconsulta')) {
+      let i = itens.findIndex(it => it && it.act === 'types');
+      if (i >= 0) i++; else { i = itens.findIndex(it => it && it.act === 'customize'); i = i >= 0 ? i + 1 : -1; }
+      if (i >= 0) {
+        itens = itens.slice();
+        itens.splice(i, 0, { act: 'tiposconsulta', label: 'Tipos de consulta…', icon: I.list, run: () => abrirTiposConsulta() });
+        const args = Array.from(arguments); args[1] = itens;
+        return _openMenuV7.apply(this, args);
+      }
+    }
+    return _openMenuV7.apply(this, arguments);
+  };
+
+  // ----- 2) Novo horário: campo do tipo com lista e busca -----
+  let tcbAuto = null;   // o tempo que foi preenchido sozinho pela duração padrão
+  const tcbInp = $('#fType');
+  const tcbWrap = document.createElement('span');
+  tcbWrap.className = 'tcb-wrap';
+  tcbInp.parentNode.insertBefore(tcbWrap, tcbInp);
+  tcbWrap.appendChild(tcbInp);
+  const tcbPop = document.createElement('div');
+  tcbPop.className = 'tcb-pop'; tcbPop.id = 'fTypeList'; tcbPop.hidden = true;
+  tcbPop.setAttribute('role', 'listbox'); tcbPop.setAttribute('aria-label', 'Tipos de consulta');
+  tcbWrap.appendChild(tcbPop);
+  tcbInp.setAttribute('role', 'combobox');
+  tcbInp.setAttribute('aria-autocomplete', 'list');
+  tcbInp.setAttribute('aria-controls', 'fTypeList');
+  tcbInp.setAttribute('aria-expanded', 'false');
+  const tcbPlaceholder = () => { tcbInp.placeholder = phoneMQ.matches ? 'Escolha ou escreva um novo' : 'Clique para escolher ou escreva um novo'; };
+  tcbPlaceholder();
+  if (phoneMQ.addEventListener) phoneMQ.addEventListener('change', tcbPlaceholder);
+  let tcbOpts = [], tcbAtivo = -1, tcbFiltro = '';
+
+  function tcbDuracaoPadrao() {
+    const fd = $('#fDuration');
+    const t = db.types.find(x => norm(x) === norm(tcbInp.value));
+    const m = t ? tdGet(t) : 0;
+    const auto = tcbAuto !== null && fd.value === tcbAuto;
+    if (fd.value !== '' && !auto) return;   // a pessoa já escreveu o tempo: não muda
+    if (m) { fd.value = String(m); tcbAuto = fd.value; }
+    else if (auto) { fd.value = ''; tcbAuto = null; }
+    updateRange();
+  }
+  function tcbDesenhar() {
+    const f = norm(tcbFiltro);
+    const val = cleanSpaces(tcbInp.value);
+    const atual = norm(val);
+    let lista = db.types.filter(t => !f || norm(t).includes(f));
+    if (f) lista = lista.filter(t => norm(t).startsWith(f)).concat(lista.filter(t => !norm(t).startsWith(f)));
+    tcbOpts = lista.map(t => ({ t }));
+    if (val && !db.types.some(t => norm(t) === atual)) tcbOpts.push({ t: val, novo: true });
+    if (tcbAtivo >= tcbOpts.length) tcbAtivo = tcbOpts.length - 1;
+    tcbPop.innerHTML = (lista.length ? '' : `<div class="tcb-vazio">${db.types.length ? 'Nenhum tipo com esse nome.' : 'Nenhum tipo cadastrado.'}</div>`) +
+      tcbOpts.map((o, i) => o.novo
+        ? `<button type="button" class="tcb-opt novo${i === tcbAtivo ? ' on' : ''}" role="option" data-tcb="${i}">${I.plus}<span>Usar “${esc(o.t)}” (tipo novo)</span></button>`
+        : `<button type="button" class="tcb-opt${i === tcbAtivo ? ' on' : ''}${norm(o.t) === atual ? ' cur' : ''}" role="option" aria-selected="${norm(o.t) === atual}" data-tcb="${i}">${typeBadge(o.t) || '<i class="tbadge" style="visibility:hidden"></i>'}<span>${esc(o.t)}</span>${tdGet(o.t) ? `<small>${tdGet(o.t)} min</small>` : ''}</button>`).join('');
+    const on = $('.tcb-opt.on', tcbPop);
+    if (on) on.scrollIntoView({ block: 'nearest' });
+  }
+  function tcbAbrir(filtro) {
+    tcbFiltro = filtro;
+    tcbAtivo = norm(filtro) ? 0 : -1;
+    tcbPop.hidden = false;
+    tcbInp.setAttribute('aria-expanded', 'true');
+    tcbDesenhar();
+  }
+  function tcbFechar() {
+    if (tcbPop.hidden) return;
+    tcbPop.hidden = true;
+    tcbInp.setAttribute('aria-expanded', 'false');
+  }
+  function tcbEscolher(i) {
+    const o = tcbOpts[i];
+    if (!o) return;
+    tcbInp.value = o.t;
+    tcbFechar();
+    renderTypeChips();
+    if (phoneMQ.matches) tcbInp.blur();
+    else ($('#fTime').value ? $('#fDuration') : $('#fTime')).focus();
+  }
+  // Clicar abre a lista com todos os tipos (o escolhido fica marcado); escrever filtra
+  tcbInp.addEventListener('click', () => {
+    if (!tcbPop.hidden) return;
+    const v = cleanSpaces(tcbInp.value);
+    tcbAbrir(db.types.some(t => norm(t) === norm(v)) ? '' : v);
+  });
+  tcbInp.addEventListener('input', () => tcbAbrir(tcbInp.value));
+  tcbInp.addEventListener('keydown', e => {
+    const aberto = !tcbPop.hidden;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!aberto) { tcbAbrir(db.types.some(t => norm(t) === norm(tcbInp.value)) ? '' : tcbInp.value); if (tcbAtivo < 0) tcbAtivo = 0; tcbDesenhar(); return; }
+      const n = tcbOpts.length;
+      if (!n) return;
+      tcbAtivo = e.key === 'ArrowDown' ? (tcbAtivo + 1) % n : (tcbAtivo <= 0 ? n - 1 : tcbAtivo - 1);
+      tcbDesenhar();
+    } else if (e.key === 'Enter' && aberto) {
+      e.preventDefault();
+      if (tcbAtivo >= 0) tcbEscolher(tcbAtivo); else tcbFechar();
+    } else if (e.key === 'Escape' && aberto) {
+      e.preventDefault(); e.stopPropagation();
+      tcbFechar();
+    } else if (e.key === 'Tab') tcbFechar();
+  });
+  tcbPop.addEventListener('mousedown', e => e.preventDefault());   // não tira o foco do campo
+  tcbPop.addEventListener('click', e => {
+    const b = e.target.closest('[data-tcb]');
+    if (b) tcbEscolher(Number(b.dataset.tcb));
+  });
+  tcbInp.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== tcbInp) tcbFechar(); }, 120));
+  document.addEventListener('pointerdown', e => { if (!tcbPop.hidden && !tcbWrap.contains(e.target)) tcbFechar(); }, true);
+  $('#fDuration').addEventListener('input', () => { tcbAuto = null; });
+
+  const _renderTypeChipsV7 = renderTypeChips;
+  renderTypeChips = function () {
+    _renderTypeChipsV7.apply(this, arguments);
+    tcbDuracaoPadrao();
+  };
+  const _openApptDrawerV7 = openApptDrawer;
+  openApptDrawer = function () {
+    tcbAuto = null;
+    tcbFechar();
+    return _openApptDrawerV7.apply(this, arguments);
+  };
+
+  // ----- 3) Assistente: funções do programa, caminhos do menu e tipos de consulta -----
+  // Cada tópico: palavras (k), nome, caminho no menu, o que faz, como abrir e quem pode.
+  // own: o pedido direto ("abra…") continua com a regra antiga da assistente (ela já entende data e dentista).
+  const ASSIST_TOPICOS = [
+    { k: /\btipos? de (consulta|procedimento|atendimento)\b|\b(duracao|tempo) padrao\b/, nome: 'Tipos de consulta', cam: 'Menu → Configurações → Tipos de consulta (ou o botão Configurações, no alto → Tipos de consulta…)', faz: 'Ver a lista, adicionar, mudar o nome, excluir (só se não estiver em nenhuma consulta) e definir a duração padrão de cada tipo, em minutos. No Novo horário, o tipo com duração padrão já preenche o tempo.', abrir: () => abrirTiposConsulta(), pode: podeTipos, quem: 'o administrador e a recepção' },
+    { k: /\b(cor|cores|icone|icones)\b/, nome: 'Cores e ícones dos tipos', cam: 'Menu → Configurações → Cores e ícones dos tipos', faz: 'Escolher a cor e o ícone de cada tipo, que aparecem na grade.', abrir: openTypesModal, pode: () => can('config'), quem: 'o administrador' },
+    { k: /\b(novo horario|nova consulta|agendar|agendamento|marcar consulta|marcar horario|marcar paciente)\b/, nome: 'Novo horário', cam: 'Botão Novo horário na barra (atalho N), ou Menu → Agenda → Novo horário. Também dá para clicar num horário vazio da grade', faz: 'Marcar consulta: paciente, dentista, tipo (campo com busca: clique e digite para filtrar, ou escreva um tipo novo), data, hora e tempo.', abrir: () => openApptDrawer(), pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: /\b(encaixe|emergencia|urgencia)\b/, nome: 'Encaixe / emergência', cam: 'Botão Encaixe na barra, ou Menu → Agenda → Encaixe / emergência', faz: 'Marca junto com outro paciente, no almoço ou fora do expediente.', abrir: () => openApptDrawer({ fit: true }), pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: /\b(bloque\w*|reuniao|folga|curso)\b/, nome: 'Bloquear horário', cam: 'Botão Bloquear na barra, ou Menu → Agenda → Bloquear horário', faz: 'Fecha um horário na agenda do dentista (reunião, curso, folga).', abrir: () => openBlockModal(), pode: () => can('bloqueio'), quem: 'o administrador e a recepção' },
+    { k: /\b(busc\w*|procur\w*|pesquis\w*)\b/, nome: 'Buscar consultas', cam: 'Botão Buscar na barra (atalho B), ou Menu → Agenda → Buscar consultas', faz: 'Acha consultas por nome do paciente, telefone ou procedimento, com filtro de período, situação e dentista.', abrir: () => openSearchModal(), pode: () => !!currentUser(), quem: 'todos' },
+    { k: /\b(desfa\w*|refa\w*|ctrl ?z|ctrl ?y)\b/, nome: 'Desfazer e Refazer', cam: 'Ctrl+Z e Ctrl+Y, os botões ↶ ↷ na barra, ou Menu → Agenda → Desfazer / Refazer', faz: 'Volta ou refaz as últimas 30 ações (criar, editar e excluir consulta, Veio / Não veio, importar). Dia passado: só o administrador.', abrir: () => openBaseMenu(), pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: /\b(editar|edito|edita|alterar|altero) (a |uma )?(consulta|horario)\b/, nome: 'Editar consulta', cam: 'Botão direito na consulta (toque longo no celular) → Editar…', faz: 'Muda paciente, data, hora, dentista, tipo e tempo na mesma consulta. Dia passado: só o administrador.', pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: /\b(remarc\w*|remarq\w*)\b/, nome: 'Remarcar', cam: 'Botão direito na consulta (toque longo no celular) → Remarcar…', faz: 'Muda a data e a hora da consulta.', own: true, pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: /\b(veio|nao veio|chegou|falta|faltou|status)\b/, nome: 'Veio / Não veio', cam: 'Botão direito na consulta (toque longo no celular) → Veio ou Não veio', faz: 'Marca se o paciente veio ou faltou. Toda consulta precisa de um dos dois.', own: true, pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: /\b(pendencia\w*|regras? do dia|sem status|dia passado)\b/, nome: 'Pendências do dia (regras do dia)', cam: 'Menu → Recepção do dia → Pendências do dia', faz: 'Mostra as consultas sem Veio / Não veio. Regras: toda consulta precisa de status final, e um dia que já passou só o administrador altera.', abrir: () => openPendModal('menu'), pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: /\bconfirm\w*\b/, nome: 'Confirmar pacientes', cam: 'Botão Confirmar na barra, ou Menu → Recepção do dia → Confirmar pacientes', faz: 'Monta as mensagens de WhatsApp de confirmação, uma por vez.', own: true, abrir: () => openConfirmModal(state.date, ''), pode: () => can('confirmar'), quem: 'o administrador e a recepção' },
+    { k: /\b(lista do dia|imprimir|imprimo)\b/, nome: 'Lista do dia', cam: 'Botão Lista do dia na barra, ou Menu → Recepção do dia → Lista do dia', faz: 'Ver ou imprimir as consultas do dia.', own: true, abrir: () => openDayListModal(state.date, ''), pode: () => can('listas'), quem: 'o administrador e a recepção' },
+    { k: /\b(mensagem para (o )?grupo|mensagem em grupo|mensagens? para varios)\b/, nome: 'Mensagem para grupo', cam: 'Menu → Recepção do dia → Mensagem para grupo', faz: 'Mensagens para faltosos, consultas de amanhã e outros filtros.', abrir: openGroupMsgModal, pode: () => can('confirmar'), quem: 'o administrador e a recepção' },
+    { k: /\b(modo (recepcao )?ocupada|recepcao ocupada|esconder dados)\b/, nome: 'Modo recepção ocupada', cam: 'Botão Modo ocupada na barra, ou Menu → Recepção do dia → Modo recepção ocupada', faz: 'Esconde os dados pessoais e o telefone completo enquanto há gente olhando a tela.', abrir: togglePrivacy, pode: () => can('privacidade'), quem: 'o administrador e a recepção' },
+    { k: /\b(aniversari\w*)\b/, nome: 'Aniversariantes do mês', cam: 'Botão Aniversários na barra, ou Menu → Pacientes → Aniversariantes do mês', faz: 'Lista quem faz aniversário e abre a mensagem de parabéns.', own: true, abrir: () => openBirthdaysModal(), pode: () => can('listas'), quem: 'o administrador e a recepção' },
+    { k: /\b(area do paciente|acesso do paciente|link do paciente|portal)\b/, nome: 'Área do paciente', cam: 'Regras: Menu → Configurações → Área do paciente. Para mandar o acesso: Menu → Pacientes → abra o paciente → Enviar acesso à área do paciente', faz: 'O paciente vê as consultas e confirma, pede para remarcar ou cancela. Precisa do servidor (internet).', abrir: () => (online() && can('config') ? openAreaSettings() : openPatientsModal()), pode: () => can('pacientes.ver'), quem: 'o administrador e a recepção', so: () => online() ? '' : 'Este aparelho está sem servidor, então a área do paciente não aparece no menu.' },
+    { k: /\b(importar|importo|importa)\b.*\bpacientes?\b|\bpacientes?\b.*\bimport\w*/, nome: 'Importar pacientes', cam: 'Menu → Configurações → Importar pacientes…', faz: 'Traz o cadastro de uma planilha (CSV ou Excel) com Nome, Telefone, Nascimento e outros dados. Mostra um resumo antes.', abrir: () => abrirImportarPacientes(), pode: souAdmin, quem: 'o administrador' },
+    { k: /\b(exportar|exporto|exporta)\b.*\bpacientes?\b|\bpacientes?\b.*\bexport\w*/, nome: 'Exportar pacientes', cam: 'Menu → Configurações → Exportar pacientes', faz: 'Gera uma planilha com todos os pacientes, que abre no Excel.', abrir: () => exportarPacientes(), pode: souAdmin, quem: 'o administrador' },
+    { k: /\b(importar|importo|importa)\b.*\b(agenda|consultas|global|planilha)\b|\bimportar agenda\b/, nome: 'Importar agenda', cam: 'Menu → Configurações → Importar agenda…', faz: 'Traz consultas de outro sistema (como o Global) ou de uma planilha CSV ou Excel. Nada entra repetido.', abrir: () => abrirImportacao(), pode: () => can('agenda.editar') && can('pacientes.editar'), quem: 'o administrador e a recepção' },
+    { k: /\bpacientes?\b/, nome: 'Pacientes', cam: 'Botão Pacientes na barra, ou Menu → Pacientes → Pacientes', faz: 'Buscar, ver o histórico e editar os dados dos pacientes.', abrir: openPatientsModal, pode: () => can('pacientes.ver'), quem: 'o administrador e a recepção' },
+    { k: /\b(protetico\w*|laboratorio\w*)\b/, nome: 'Protéticos (laboratórios)', cam: 'Menu → Próteses → Protéticos (laboratórios)', faz: 'Cadastro dos protéticos com nome e WhatsApp.', abrir: () => openLabsModal(), pode: prVer, quem: 'o administrador e a recepção, com o módulo de próteses ligado', so: () => proteseAtiva() ? '' : 'O módulo de próteses está desligado. Para ligar: Menu → Configurações → Módulo de próteses (administrador).' },
+    { k: /\bmodulo\b/, nome: 'Módulo de próteses', cam: 'Menu → Configurações → Módulo de próteses', faz: 'Liga ou desliga o controle de próteses e protéticos.', abrir: openModulesModal, pode: () => can('config'), quem: 'o administrador' },
+    { k: /\bprotese\w*\b/, nome: 'Próteses', cam: 'Menu → Próteses → Próteses', faz: 'Controle das próteses: preparo, envio ao laboratório, retorno previsto, atraso e entrega.', abrir: openProsthesesModal, pode: prVer, quem: 'o administrador e a recepção, com o módulo de próteses ligado', so: () => proteseAtiva() ? '' : 'O módulo de próteses está desligado. Para ligar: Menu → Configurações → Módulo de próteses (administrador).' },
+    { k: /\b(dentistas?|expediente|almoco|horario de atendimento|horarios? dos dentistas)\b/, nome: 'Dentistas e horários', cam: 'Botão Dentistas na barra, ou Menu → Dentistas e horários', faz: 'Cadastro dos dentistas, expediente de cada dia e almoço.', abrir: () => openDentistsModal(), pode: () => can('dentistas.editar'), quem: 'o administrador' },
+    { k: /\b(personaliz\w*|logo|logotipo|nome da clinica)\b/, nome: 'Personalizar', cam: 'Menu → Configurações → Personalizar', faz: 'Cores, logo e nome da clínica.', abrir: openCustomizeModal, pode: () => can('config'), quem: 'o administrador' },
+    { k: /\b(restaur\w*)\b/, nome: 'Restaurar backup', cam: 'Menu → Configurações → Restaurar backup', faz: 'Volta os dados de um arquivo de backup.', abrir: startImport, pode: () => can('backup.restaurar'), quem: 'o administrador' },
+    { k: /\b(nuvem)\b/, nome: 'Backup na nuvem', cam: 'Menu → Configurações → Backup na nuvem', faz: 'Guarda o backup no servidor.', abrir: openCloudBackupModal, pode: () => can('backup.nuvem'), quem: 'o administrador' },
+    { k: /\b(backup|copia de seguranca)\b/, nome: 'Exportar backup', cam: 'Menu → Configurações → Exportar backup', faz: 'Salva um arquivo com todos os dados deste aparelho.', abrir: () => exportBackup(), pode: () => can('backup.exportar'), quem: 'o administrador e a recepção' },
+    { k: /\b(sincroniz\w*|sync|outros aparelhos|outro computador)\b/, nome: 'Sincronização', cam: 'Menu → Configurações → Sincronização', faz: 'Envia e recebe as alterações entre os aparelhos da clínica, pelo servidor.', abrir: openSyncModal, pode: () => can('sync'), quem: 'todos' },
+    { k: /\b(trocar (a )?(minha )?senha|mudar (a )?(minha )?senha|minha senha)\b/, nome: 'Trocar minha senha', cam: 'Botão Configurações, no alto → Trocar minha senha…', faz: 'Troca a senha de quem está usando.', abrir: openMyPasswordModal, pode: () => !!currentUser(), quem: 'todos' },
+    { k: /\b(usuario\w*|senhas?|login|permiss\w*|acesso)\b/, nome: 'Usuários e senhas', cam: 'Menu → Configurações → Usuários e senhas', faz: 'Quem entra no programa e o que cada um pode fazer.', abrir: () => openUsersModal(), pode: () => can('usuarios'), quem: 'o administrador' },
+    { k: /\b(ativa\w*|chave)\b/, nome: 'Ativação', cam: 'Menu → Configurações → Ativação', faz: 'Situação da ativação deste aparelho.', abrir: openActivationModal, pode: () => !!currentUser(), quem: 'todos' },
+    { k: /\b(comecar do zero|zerar|apagar tudo|limpar tudo)\b/, nome: 'Começar do zero', cam: 'Menu → Configurações → Começar do zero', faz: 'Apaga consultas, pacientes e dentistas, depois de escrever APAGAR. Salva um backup antes. Com servidor, vale para todos os aparelhos.', abrir: () => abrirComecarDoZero(), pode: souAdmin, quem: 'o administrador' },
+    { k: /\b(anotac\w*|recado\w*|lembrete\w*)\b/, nome: 'Anotações', cam: 'Painel Anotações, ao lado da agenda', faz: 'Anotações do dia e da recepção.', pode: () => can('anotacoes'), quem: 'o administrador e a recepção' },
+    { k: /\b(sair|deslogar|encerrar sessao)\b/, nome: 'Sair', cam: 'Botão Configurações, no alto → Sair (encerrar sessão)…', faz: 'Encerra a sessão deste usuário.', abrir: openExitDialog, pode: () => !!currentUser(), quem: 'todos' },
+    { k: /\b(menu|todas as opcoes)\b/, nome: 'Menu', cam: 'Botão Menu, no canto da barra', faz: 'Todas as opções do programa, agrupadas.', abrir: openBaseMenu, pode: () => !!currentUser(), quem: 'todos' }
+  ];
+  const AI_RECUSA = /\b(financ|pagament|pagar|pago|paga|valor|preco|custa|custo|fatur|lucro|cobr|caixa|orcament|dinheiro|pix|boleto|cartao|prontuario|odontograma|anamnese|diagnostic|receita|remedio|medicament|convenio|tiss|estoque|salario|nota fiscal|imposto|marketing|cpf|rg\b|endereco)/;
+  const aiNormV7 = raw => norm(raw).replace(/[“”"!?,;()]+/g, ' ').replace(/\.(?!\d)/g, ' ').replace(/\s+/g, ' ').trim();
+  const aiTopico = t => ASSIST_TOPICOS.find(x => x.k.test(t)) || null;
+  function aiResponderTopico(tp, abrirJa) {
+    const pode = !tp.pode || tp.pode();
+    const aviso = tp.so ? tp.so() : '';
+    if (abrirJa && pode && tp.abrir && !aviso) {
+      tp.abrir();
+      return ans(`Abri <b>${esc(tp.nome)}</b>. Fica em: <b>${esc(tp.cam)}</b>${/[.…]$/.test(tp.cam) ? '' : '.'}`);
+    }
+    return ans(`<b>${esc(tp.nome)}</b>: ${esc(tp.cam)}${/[.…]$/.test(tp.cam) ? '' : '.'}
+      <div class="ai-note">${esc(tp.faz)}</div>
+      ${aviso ? `<div class="ai-note">${esc(aviso)}</div>` : ''}
+      ${!pode ? `<div class="ai-note">Seu usuário não tem acesso a isso. Quem pode: ${esc(tp.quem)}.</div>` : (tp.abrir && !aviso ? `<div class="ai-btns">${aiBtn('Abrir ' + tp.nome, tp.abrir, true)}</div>` : '')}`);
+  }
+
+  // Nome do tipo escrito no pedido (com acento, do jeito que a pessoa escreveu)
+  function aiNomeDoTexto(raw) {
+    const q = String(raw).match(/[“"']([^”"']+)[”"']/);
+    if (q) return cleanSpaces(q[1]);
+    const m = String(raw).match(/\btipo(?:\s+de\s+(?:consulta|procedimento|atendimento))?\s*:?\s+(.+)$/i);
+    if (!m) return '';
+    let s = m[1]
+      .replace(/\s*(?:,|\s)\s*(?:com|de|por|duração(?: padrão)?(?: de)?|tempo(?: padrão)?(?: de)?)?\s*\d{1,3}\s*(?:min\w*)?\s*[.!]?\s*$/i, '')
+      .replace(/^(?:chamad[oa]|com o nome(?: de)?|de nome|nome)\s+/i, '')
+      .replace(/[.!?]+$/, '');
+    s = cleanSpaces(s);
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  }
+  const aiTipoNoTexto = t => db.types.slice().sort((a, b) => b.length - a.length).find(x => new RegExp(`\\b${escRe(norm(x))}\\b`).test(t)) || null;
+  const aiMinutos = t => { const m = t.match(/\b(\d{1,3}) ?(?:min|mins|minuto|minutos)?\s*$/) || t.match(/\b(\d{1,3}) ?(?:min|mins|minuto|minutos)\b/); return m ? Number(m[1]) : 0; };
+
+  function aiTipos(t, raw) {
+    const temTipo = /\btipos?\b/.test(t);
+    const semPerm = () => unsure('Seu usuário não pode mudar os tipos de consulta. Quem pode: o administrador e a recepção (Menu → Configurações → Tipos de consulta).');
+    // Listar
+    if (/\btipos?\b/.test(t) && (/\b(quais|qual|liste|listar|lista|mostre|mostrar|mostra|ver|veja|todos|existem|tem)\b/.test(t) || /^tipos?( de consulta)?$/.test(t))
+      && !/\b(onde|como|cade|aonde)\b/.test(t) && !/\b(cri|adicion|cadastr|inclu|renome|exclu|apag|remov)\w*/.test(t)) {
+      if (!db.types.length) return ans('Ainda não há tipos de consulta cadastrados. Para adicionar: Menu → Configurações → Tipos de consulta.');
+      return ans(`${db.types.length} ${db.types.length === 1 ? 'tipo de consulta' : 'tipos de consulta'}:
+        <ul>${db.types.map(x => { const u = tdUso(x), m = tdGet(x); return `<li>${typeBadge(x)}<b>${esc(x)}</b><span class="muted">${m ? m + ' min' : 'sem duração padrão'} · ${u ? u + (u === 1 ? ' consulta' : ' consultas') : 'sem uso'}</span></li>`; }).join('')}</ul>
+        <div class="ai-note">Para mudar: Menu → Configurações → Tipos de consulta.</div>
+        ${podeTipos() ? `<div class="ai-btns">${aiBtn('Abrir Tipos de consulta', () => abrirTiposConsulta(), true)}</div>` : ''}`);
+    }
+    if (/\b(onde|como|cade|aonde)\b/.test(t)) return null;   // pergunta de caminho: responde pelo tópico
+    // Adicionar
+    if (temTipo && /\b(cri[ae]r?|crie|adicion\w*|cadastr\w*|inclu\w*|novo|nova)\b/.test(t)) {
+      if (!podeTipos()) return semPerm();
+      const nome = aiNomeDoTexto(raw);
+      const min = aiMinutos(t);
+      const ja = nome && db.types.find(x => norm(x) === norm(nome));
+      if (ja) return unsure(`O tipo <b>${esc(ja)}</b> já existe.${tdGet(ja) ? ` Duração padrão: ${tdGet(ja)} min.` : ''}`);
+      abrirTiposConsulta({ add: { nome, min: min >= 1 && min <= 720 ? min : 0 } });
+      return ans(`Abri <b>Tipos de consulta</b>${nome ? ` com o tipo novo <b>${esc(nome)}</b>${min ? ` (${min} min)` : ''} preenchido` : ''}.
+        ${nome ? '' : '<div class="ai-note">Escreva o nome do tipo novo.</div>'}<div class="ai-note">Confira e clique em Adicionar. Eu não salvo sozinha.</div>`);
+    }
+    // Mudar o nome
+    if (temTipo && /\b(renome\w*|mud\w* o nome|troc\w* o nome|alter\w* o nome)\b/.test(t)) {
+      if (!podeTipos()) return semPerm();
+      const m = String(raw).match(/\btipo(?:\s+de\s+(?:consulta|procedimento|atendimento))?\s+[“"']?(.+?)[”"']?\s+para\s+[“"']?(.+?)[”"']?\s*[.!]?$/i);
+      const velho = m ? db.types.find(x => norm(x) === norm(cleanSpaces(m[1]))) || aiTipoNoTexto(norm(m[1])) : aiTipoNoTexto(t);
+      if (!velho) return unsure('Não achei esse tipo de consulta. Escreva assim: “mude o nome do tipo Limpeza para Profilaxia”.');
+      const novo = m ? cleanSpaces(m[2]) : '';
+      abrirTiposConsulta({ edit: { tipo: velho, nome: novo ? novo.charAt(0).toUpperCase() + novo.slice(1) : '' } });
+      return ans(`Abri <b>Tipos de consulta</b> no tipo <b>${esc(velho)}</b>${novo ? ` com o nome novo <b>${esc(novo)}</b>` : ''}. ${tdUso(velho) ? `As ${tdUso(velho)} consultas desse tipo mudam junto.` : ''}
+        <div class="ai-note">Confira e clique em Salvar. Eu não salvo sozinha.</div>`);
+    }
+    // Excluir
+    if (temTipo && /\b(exclu\w*|apag\w*|remov\w*|delet\w*)\b/.test(t)) {
+      if (!podeTipos()) return semPerm();
+      const tp = aiTipoNoTexto(t);
+      if (!tp) return unsure('Não achei esse tipo de consulta. Escreva o nome do jeito que aparece na lista.');
+      const u = tdUso(tp);
+      if (u) return unsure(`<b>${esc(tp)}</b> está em ${u} ${u === 1 ? 'consulta' : 'consultas'}, então não dá para excluir. Dá para mudar o nome em Menu → Configurações → Tipos de consulta.`);
+      abrirTiposConsulta({ del: tp });
+      return ans(`Abri <b>Tipos de consulta</b> no tipo <b>${esc(tp)}</b>, que não está em nenhuma consulta.
+        <div class="ai-note">Para excluir, clique em Excluir. Eu não apago sozinha.</div>`);
+    }
+    // Duração padrão
+    if (/\b(duracao|tempo padrao|quanto tempo|quantos minutos|dura)\b/.test(t) && (temTipo || aiTipoNoTexto(t))) {
+      const tp = aiTipoNoTexto(t);
+      if (!tp) return unsure('Diga o tipo: por exemplo, “duração padrão da Limpeza 40 minutos”.');
+      const min = /\d/.test(t) ? aiMinutos(t) : 0;
+      if (!min) return ans(`<b>${esc(tp)}</b>: ${tdGet(tp) ? `duração padrão de <b>${tdGet(tp)} min</b>` : 'sem duração padrão'}.
+        ${podeTipos() ? `<div class="ai-btns">${aiBtn('Abrir Tipos de consulta', () => abrirTiposConsulta({ edit: { tipo: tp } }), true)}</div>` : ''}`);
+      if (!podeTipos()) return semPerm();
+      if (min > 720) return unsure('A duração vai de 1 a 720 minutos.');
+      abrirTiposConsulta({ edit: { tipo: tp, min } });
+      return ans(`Abri <b>Tipos de consulta</b> com <b>${esc(tp)}</b> em <b>${min} min</b>.
+        <div class="ai-note">Confira e clique em Salvar. Eu não salvo sozinha.</div>`);
+    }
+    return null;
+  }
+
+  function aiExtras(t) {
+    // Desfazer / refazer: mostra o que vai voltar e deixa a pessoa clicar
+    const desf = /^(desfa\w*|desfazer|volt\w* (a )?ultima( acao)?)\b/.test(t), refa = /^(refa\w*|refazer)\b/.test(t);
+    if (desf || refa) {
+      if (!can('agenda.editar')) return unsure('Seu usuário não usa Desfazer e Refazer.');
+      desfConfereDono();
+      const it = desf ? desfPilha[desfPilha.length - 1] : refPilha[refPilha.length - 1];
+      if (!it) return ans(desf ? 'Não há nada para desfazer.' : 'Não há nada para refazer.');
+      return ans(`${desf ? 'A última ação foi' : 'Dá para refazer'}: <b>${esc(it.nome)}</b>.
+        <div class="ai-btns">${aiBtn(desf ? 'Desfazer' : 'Refazer', desf ? desfazer : refazer, true)}</div>
+        <div class="ai-note">Atalho: ${desf ? 'Ctrl+Z' : 'Ctrl+Y'}. Também em Menu → Agenda → ${desf ? 'Desfazer' : 'Refazer'}.</div>`);
+    }
+    // Próteses: em atraso / em andamento
+    if (/\bprotese/.test(t) && /\b(atras\w*|andamento|abertas?|quais|quantas|lista|liste|mostre|pendentes?)\b/.test(t) && !/\b(onde|como|cade|aonde)\b/.test(t)) {
+      if (!proteseAtiva()) return unsure('O módulo de próteses está desligado. Para ligar: Menu → Configurações → Módulo de próteses (administrador).');
+      if (!prVer()) return unsure('Seu usuário não vê as próteses.');
+      const atras = /\batras/.test(t);
+      const lista = (atras ? prAtrasadas() : db.prostheses.filter(prAberta)).slice().sort((a, b) => String(a.dueDate || '9').localeCompare(String(b.dueDate || '9')));
+      const btn = `<div class="ai-btns">${aiBtn('Abrir próteses', openProsthesesModal, true)}</div>`;
+      if (!lista.length) return ans(`${atras ? 'Nenhuma prótese em atraso.' : 'Nenhuma prótese em andamento.'} ${btn}`);
+      return ans(`${lista.length} ${lista.length === 1 ? 'prótese' : 'próteses'} ${atras ? 'em atraso' : 'em andamento'}:
+        <ul>${lista.slice(0, 12).map(x => `<li><b>${esc(prPaciente(x))}</b><span>${esc(x.type || '')}</span>${prLabNome(x) ? `<span class="muted">${esc(prLabNome(x))}</span>` : ''}${x.dueDate ? `<span class="muted">retorno ${fmtDMY(x.dueDate)}</span>` : ''}<span class="pill">${esc(prInfo(x).label)}</span></li>`).join('')}</ul>${btn}
+        <div class="ai-note">Fica em Menu → Próteses → Próteses.</div>`);
+    }
+    // Pendências do dia (consultas sem Veio / Não veio)
+    if (/\b(pendencia\w*|sem status)\b/.test(t) && !/\b(onde|como|cade|aonde)\b/.test(t)) {
+      if (!can('agenda.editar')) return unsure('Seu usuário não usa as pendências do dia.');
+      const n = pendList(true).length;
+      openPendModal('menu');
+      return ans(`Abri as <b>Pendências do dia</b>: ${n ? `${n} ${n === 1 ? 'consulta' : 'consultas'} sem Veio / Não veio` : 'tudo em dia'}.
+        <div class="ai-note">Fica em Menu → Recepção do dia → Pendências do dia. Dia que já passou: só o administrador altera.</div>`);
+    }
+    // Buscar consultas: abre a busca já com o texto
+    const mb = t.match(/^(?:me )?(?:busc\w*|procur\w*|pesquis\w*|ache|achar|encontr\w*)\b(.*)$/);
+    if (mb && !/\btipos?\b/.test(t)) {
+      const q = mb[1].replace(/^\s*(?:as |os |uma |um )?(?:consultas?|horarios?|agendamentos?|atendimentos?)\b/, '').replace(/^\s*(?:de|do|da|dos|das|por|com|para|pelo|pela)\b/, '').replace(/^\s*(?:o|a|os|as)\s+/, '').trim();
+      searchState.q = q;
+      openSearchModal();
+      return ans(`Abri <b>Buscar consultas</b>${q ? ` com “${esc(q)}”` : ''}. Dá para filtrar por período, situação e dentista.
+        <div class="ai-note">Fica no botão Buscar (atalho B) ou em Menu → Agenda → Buscar consultas.</div>`);
+    }
+    return null;
+  }
+
+  const _aiHandleV7 = aiHandle;
+  aiHandle = function (raw) {
+    const t = aiNormV7(raw);
+    if (!t || AI_RECUSA.test(t)) return _aiHandleV7.apply(this, arguments);
+    const agendar = /\b(agend\w*|marqu\w*|marcar|reserv\w*|remarc\w*|remarq\w*)\b/.test(t) && !/^(?:e )?(onde|aonde|cade|como)\b/.test(t);
+    const r1 = (agendar ? null : aiTipos(t, raw)) || aiExtras(t);
+    if (r1) return r1;
+    const tp = aiTopico(t);
+    const pergunta = /^(?:e )?(onde|aonde|cade|como|qual menu|em que menu|que menu|o que faz|o que e|para que serve|pra que serve)\b/.test(t) ||
+      /\b(onde (fica|ficam|esta|estao|encontro|acho|vejo|faco|tem)|caminho (do|da|de|para|pra)|em que menu|qual menu|como (faco|eu|se|posso|consigo|abro|uso|mudo|coloco|cadastro|vejo|mando|envio|importo|exporto|ligo|desligo|crio|excluo|apago|troco|marco|desfaco|imprimo|confirmo|bloqueio|busco))\b/.test(t);
+    const abrir = /^(?:por favor )?(abr[aei]r?|abre|ir para|va para|vai para|entr[ae]r? em|me leve)\b/.test(t);
+    if (tp && pergunta) return aiResponderTopico(tp, false);
+    if (tp && abrir && !tp.own) return aiResponderTopico(tp, true);
+    const res = _aiHandleV7.apply(this, arguments);
+    // Agendar: o tipo com duração padrão já preencheu o tempo
+    if (res && res.html && /Abri o painel de Novo horário/.test(res.html) && /tempo \(minutos\)/.test(res.html) && tcbAuto !== null && $('#fDuration').value === tcbAuto) {
+      res.html = res.html
+        .replace('.\n', ` · ${esc(tcbAuto)} min (duração padrão do tipo).\n`)
+        .replace(/<div class="ai-note">Falta preencher: ([^<]*)\.<\/div>/, (x, l) => {
+          const resto = l.split(', ').filter(p => p !== 'tempo (minutos)');
+          return resto.length ? `<div class="ai-note">Falta preencher: ${resto.join(', ')}.</div>` : '';
+        });
+    }
+    if (res && res.kind === 'refuse' && tp) return aiResponderTopico(tp, false);
+    return res;
+  };
+
+  const _aiHelpV7 = aiHelp;
+  aiHelp = function () {
+    const r = _aiHelpV7.apply(this, arguments);
+    r.html = r.html.replace('</ul>', `<li>“quais são os tipos de consulta?”, “adicione o tipo Clareamento com 60 minutos”</li>
+        <li>“mude o nome do tipo Limpeza para Profilaxia”, “duração padrão do Canal 90 minutos”, “exclua o tipo Retorno”</li>
+        <li>“próteses em atraso”, “pendências do dia”, “buscar consultas de canal”, “desfazer”</li>
+        <li>“onde fica importar pacientes?”, “como mando o acesso da área do paciente?”, “abra a sincronização”</li>
+      </ul>`);
+    return r;
+  };
+
+  // ---------- Assistente: WhatsApp no computador e versões dos aplicativos ----------
+  // (WhatsApp: o programa do computador abre primeiro o WhatsApp instalado; versões: seção
+  //  "Atualizações" do site, com os downloads no GitHub Releases)
+  const VERSOES_GITHUB = 'https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases';
+  const AI_WA_PC = /\bwhats\w*\b.*\b(computador|pc|notebook|windows|navegador|web|desktop|instalad\w*|aplicativo|microsoft|store)\b|\b(computador|pc|notebook|windows|navegador|desktop|instalad\w*|microsoft|store)\b.*\bwhats\w*\b/;
+  const AI_VERSOES = /\b(versao|versoes)\b|\batualizac\w* (do|da|dos) (programa|aplicativo|aplicativos|app|apps|sistema|agenda)\b|\b(nova|novas|ultima|ultimas) atualizac\w*\b|^(?:e )?(?:tem )?atualizac\w*\b|\bo que mudou\b|\bnovidades\b|\b(baixar|download|instalar)\b.*\b(programa|aplicativo|app|instalador|apk)\b/;
+  const versaoDaqui = () => {
+    const v = APP.info && /^[\w.-]{1,20}$/.test(String(APP.info.versao || '')) ? String(APP.info.versao) : '';
+    return v ? `Este computador está com a versão ${v}.` : '';
+  };
+  ASSIST_TOPICOS.unshift(
+    { k: AI_WA_PC, nome: 'WhatsApp no computador', cam: 'Qualquer botão de WhatsApp: Confirmar pacientes, Mensagem para grupo, Aniversariantes e WhatsApp… da consulta',
+      faz: 'No programa do computador, a conversa abre primeiro no WhatsApp instalado (o do site do WhatsApp ou o da Microsoft Store). Se ele não estiver instalado, abre o WhatsApp Web no navegador. No celular, abre o app do WhatsApp. A mensagem vem pronta: quem envia é a recepção.',
+      own: true, pode: () => !!currentUser(), quem: 'todos' },
+    { k: AI_VERSOES, nome: 'Versões e atualizações', cam: 'No site da Agenda Dente Sempre, seção Atualizações (no menu do alto e embaixo dos downloads)',
+      faz: 'Mostra a versão mais nova de cada aplicativo (Windows, Android e os outros quando existirem), a data, o que mudou e o botão para baixar direto do GitHub.',
+      own: true, abrir: () => abrirExterno(VERSOES_GITHUB), pode: () => true, quem: 'todos' }
+  );
+  const _aiHandleWa = aiHandle;
+  aiHandle = function (raw) {
+    const t = aiNormV7(raw);
+    if (t && !AI_RECUSA.test(t)) {
+      if (AI_WA_PC.test(t)) {
+        const tp = ASSIST_TOPICOS.find(x => x.k === AI_WA_PC);
+        return ans(`<b>${esc(tp.nome)}</b>: ${esc(tp.faz)}
+          <div class="ai-note">Vale para ${esc(tp.cam)}.</div>
+          ${APP.desktop ? '' : '<div class="ai-note">Aqui não é o programa do computador: o WhatsApp abre do jeito de sempre.</div>'}`);
+      }
+      if (AI_VERSOES.test(t)) {
+        const tp = ASSIST_TOPICOS.find(x => x.k === AI_VERSOES);
+        const daqui = APP.desktop ? versaoDaqui() : '';
+        return ans(`<b>${esc(tp.nome)}</b>: ${esc(tp.cam)}.
+          <div class="ai-note">${esc(tp.faz)}</div>
+          ${daqui ? `<div class="ai-note">${esc(daqui)}</div>` : ''}
+          <div class="ai-btns">${aiBtn('Ver as versões no GitHub', tp.abrir, true)}</div>`);
+      }
+    }
+    return _aiHandleWa.apply(this, arguments);
+  };
+  const _aiHelpWa = aiHelp;
+  aiHelp = function () {
+    const r = _aiHelpWa.apply(this, arguments);
+    r.html = r.html.replace('</ul>', `<li>“o WhatsApp abre no aplicativo do computador?”, “qual a versão nova do aplicativo?”</li>
+      </ul>`);
+    return r;
   };
 
   function baseMenuGroups() {
