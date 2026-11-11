@@ -7228,6 +7228,7 @@
       if (M.dent >= 0) dentistId = imp.dentMap[norm(cleanSpaces(impCel(lin, M.dent)))] || '';
       if (!dentistId || !getDentist(dentistId)) return ign('dentista sem correspondência no Dente Sempre');
       if (date < hoje && !admin) return ign('dia que já passou (só o administrador importa)');
+      if (!admin && diaTrancado(date)) return ign('agenda do dia trancada (só o administrador importa)');
       let dur = M.dur >= 0 ? impDuracao(impCel(lin, M.dur)) : null;
       if (!dur && h.fim) dur = h.fim - h.ini;
       if (!dur || dur < 5 || dur > 480) dur = imp.durPadrao;
@@ -8552,6 +8553,1056 @@
       </ul>`);
     return r;
   };
+
+  // ---------- Feedbacks da recepção (11/11) ----------
+  // 1) Trancar a agenda do dia: com o dia trancado, só o administrador cria, altera, exclui ou remarca consultas
+  //    (e bloqueios / almoço) naquele dia. A recepção continua marcando Veio / Não veio e escrevendo anotações.
+  //    Trancar: administrador e recepção. Destrancar: só o administrador. Fica em db.dayLocks { data: {em, por} }
+  //    e vai na sincronização como "dayLocks:AAAA-MM-DD" (área Agenda).
+  // 2) Indicado por: campo opcional no cadastro e na edição do paciente. Quem indicou ganha um desconto
+  //    (padrão 10%, o administrador muda em Menu → Configurações → Desconto por indicação) na próxima consulta.
+  //    O desconto conta como usado quando quem indicou vem a uma consulta (Veio) depois da indicação, ou na mão.
+  // 3) Juntar duplicatas: pacientes (nome e telefone iguais ou muito parecidos, ou o mesmo CPF) e tipos de
+  //    consulta (procedimentos) com o mesmo nome. Mostra quantas consultas mudam e pede confirmação.
+  // 4) Novo horário / Alterar: campo "Termina às" (HH:MM) junto com o tempo em minutos. Um atualiza o outro.
+  // 5 e 6) Interface: o que é clicável parece botão e o que é só informação fica liso; e no computador a tela
+  //    se ajusta ao tamanho do monitor (colunas proporcionais, lado direito sem barra de rolagem, barra de
+  //    comandos sem rolagem de lado). As funções que já existiam continuam iguais: aqui elas só ganham conferências.
+
+  // ===== 1) Trancar a agenda do dia =====
+  const dlMapa = () => {
+    if (!db.dayLocks || typeof db.dayLocks !== 'object' || Array.isArray(db.dayLocks)) db.dayLocks = {};
+    return db.dayLocks;
+  };
+  const diaTrancado = date => !!(date && dlMapa()[date]);
+  const trancadoPraMim = date => diaTrancado(date) && !souAdmin();
+  const avisoTranca = date => `A agenda de ${fmtDMY(date)} está trancada. Só o administrador pode criar, alterar, excluir ou remarcar consultas neste dia.`;
+  let dlRecusa = null;   // último dia recusado (a assistente usa para explicar)
+  function liberaTranca(date) { if (!trancadoPraMim(date)) return true; dlRecusa = date; toast(avisoTranca(date)); return false; }
+  ACT_PERM.daylock = 'agenda.editar';
+  ACT_PERM.dayunlock = 'agenda.editar';   // e ainda precisa ser administrador (conferido em destrancarDia)
+
+  function trancarDia(date) {
+    date = date || state.date;
+    if (!allow('agenda.editar')) return;
+    if (diaTrancado(date)) { toast(`A agenda de ${fmtDMY(date)} já está trancada.`); return; }
+    closeMenu(); closeBaseMenu();
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Recepção do dia</div><h2>Trancar a agenda de ${esc(longDate(date))}?</h2></div>${closeX}</div>
+      <div class="dl-explica">
+        <p><b>Com a agenda trancada, ninguém cria, altera, exclui ou remarca consultas neste dia</b>, em nenhum dentista. Só o administrador.</p>
+        <p>A recepção continua marcando <b>Veio</b> e <b>Não veio</b> e escrevendo anotações.</p>
+        <p>${souAdmin() ? 'Você é administrador: continua podendo mudar e pode destrancar quando quiser.' : 'Só o administrador pode destrancar depois.'}</p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-close-modal>Cancelar</button>
+        <button type="button" class="btn btn-primary" id="dlGo">${I.lock}Trancar agenda</button>
+      </div>`);
+    $('#dlGo').onclick = () => {
+      const u = currentUser();
+      dlMapa()[date] = { em: new Date().toISOString(), por: u ? u.name : '', porId: u ? u.id : '' };
+      save(); closeModal(true); render();
+      toast(`Agenda de ${fmtDMY(date)} trancada.`);
+    };
+  }
+  function destrancarDia(date) {
+    date = date || state.date;
+    if (!souAdmin()) { toast('Só o administrador pode destrancar a agenda.'); return; }
+    if (!diaTrancado(date)) return;
+    delete dlMapa()[date];
+    save(); closeMenu(); render();
+    toast(`Agenda de ${fmtDMY(date)} destrancada.`);
+  }
+
+  // Sincronização: trancas (área Agenda) e regra do desconto por indicação (área Configurações)
+  SYNC_AREAS.find(a => a.id === 'agenda').parts.push('dayLocks');
+  PART_AREA.dayLocks = 'agenda';
+  SYNC_AREAS.find(a => a.id === 'configuracoes').parts.push('referral');
+  PART_AREA.referral = 'configuracoes';
+  const _syncRecordsFB = syncRecords;
+  syncRecords = function (d) {
+    const out = _syncRecordsFB.apply(this, arguments);
+    const m = d && d.dayLocks;
+    if (m && typeof m === 'object' && !Array.isArray(m)) Object.keys(m).forEach(k => { out['dayLocks:' + k] = m[k]; });
+    if (d && d.referral && typeof d.referral === 'object') out['referral:config'] = d.referral;
+    return out;
+  };
+  const _applyRemoteFB = applyRemote;
+  applyRemote = function (c) {
+    if (c && typeof c.key === 'string') {
+      const i = c.key.indexOf(':'), part = c.key.slice(0, i), id = c.key.slice(i + 1);
+      if (part === 'dayLocks') {
+        if (c.op === 'apagar' || !c.data) delete dlMapa()[id];
+        else dlMapa()[id] = JSON.parse(JSON.stringify(c.data));
+        return;
+      }
+      if (part === 'referral') {
+        db.referral = c.op === 'apagar' || !c.data || typeof c.data !== 'object' ? null : JSON.parse(JSON.stringify(c.data));
+        return;
+      }
+    }
+    return _applyRemoteFB.apply(this, arguments);
+  };
+  const _descreverPendenteFB = descreverPendente;
+  descreverPendente = function (c) {
+    const i = c.key.indexOf(':'), part = c.key.slice(0, i), id = c.key.slice(i + 1);
+    if (part === 'dayLocks') return `${c.op === 'apagar' ? 'Agenda destrancada' : 'Agenda trancada'} · ${fmtDM(id)}`;
+    if (part === 'referral') return 'Desconto por indicação (regra)';
+    return _descreverPendenteFB.apply(this, arguments);
+  };
+
+  // Aviso na agenda quando o dia está trancado
+  const _renderSummaryFB = renderSummary;
+  renderSummary = function () {
+    const r = _renderSummaryFB.apply(this, arguments);
+    const date = state.date, sc = $('#agendaScroll');
+    const tr = diaTrancado(date);
+    if (sc) sc.classList.toggle('dl-on', tr && !souAdmin());
+    const box = $('#summary');
+    if (tr && box) {
+      const t = dlMapa()[date] || {};
+      const bar = document.createElement('div');
+      bar.className = 'dl-bar';
+      bar.setAttribute('role', 'status');
+      bar.innerHTML = `<span class="dl-ico" aria-hidden="true">${I.lock}</span>
+        <span class="dl-txt"><b>Agenda do dia trancada.</b> ${souAdmin() ? 'Você é administrador e pode mudar.' : 'Só o administrador cria, altera, exclui ou remarca. Veio / Não veio e anotações continuam liberados.'}
+        ${t.por || t.em ? `<small>Trancada${t.por ? ' por ' + esc(t.por) : ''}${t.em ? ' em ' + fmtStamp(t.em) : ''}.</small>` : ''}</span>
+        ${souAdmin() ? '<button type="button" class="btn btn-small" id="dlUnlock">' + I.unlock + 'Destrancar</button>' : ''}`;
+      box.insertBefore(bar, box.firstChild);
+      if ($('#dlUnlock')) $('#dlUnlock').onclick = () => destrancarDia(date);
+    }
+    return r;
+  };
+
+  // Conferências antes das funções que mudam a agenda de um dia (as funções continuam as mesmas)
+  const _openApptDrawerFB = openApptDrawer, _onSubmitApptFB = onSubmitAppt;
+  const _releaseSlotFB = releaseSlot, _openDeleteModalFB = openDeleteModal, _openApptModalFB = openApptModal;
+  const _removeBlockFB = removeBlock, _openBlockModalFB = openBlockModal, _openLunchModalFB = openLunchModal;
+  const _slotMenuItemsFB = slotMenuItems, _apptMenuItemsFB = apptMenuItems, _blockMenuItemsFB = blockMenuItems, _lunchMenuItemsFB = lunchMenuItems;
+  const _desfAplicarFB = desfAplicar;
+  openApptDrawer = function (opts) {
+    const o = opts || {};
+    if (can('agenda.editar') && !souAdmin()) {
+      const a = o.apptId ? getAppt(o.apptId) : null;
+      if (a) { if (!liberaTranca(a.date)) return; }
+      else if (o.date) { if (!liberaTranca(o.date)) return; }
+      else if (o.time) { if (!liberaTranca(state.date)) return; }
+    }
+    const r = _openApptDrawerFB.apply(this, arguments);
+    fimSync();
+    if (!$('#drawer').hidden && trancadoPraMim($('#fDate').value) && can('agenda.editar')) showFormError(avisoTranca($('#fDate').value) + ' Escolha outra data.');
+    return r;
+  };
+  onSubmitAppt = function (e) {
+    if (can('agenda.editar') && !souAdmin()) {
+      const orig = form.editingId ? getAppt(form.editingId) : null, date = $('#fDate').value;
+      const ruim = orig && diaTrancado(orig.date) ? orig.date : (diaTrancado(date) ? date : '');
+      if (ruim) {
+        if (e && e.preventDefault) e.preventDefault();
+        hideFormError();
+        return showFormError(avisoTranca(ruim) + (ruim === date && !(orig && orig.date === date) ? ' Escolha outra data.' : ''));
+      }
+    }
+    return _onSubmitApptFB.apply(this, arguments);
+  };
+  releaseSlot = function (id) { const a = getAppt(id); if (a && !liberaTranca(a.date)) return; return _releaseSlotFB.apply(this, arguments); };
+  openDeleteModal = function (id) { const a = getAppt(id); if (a && !liberaTranca(a.date)) return; return _openDeleteModalFB.apply(this, arguments); };
+  removeBlock = function (id) { const b = getBlock(id); if (b && !liberaTranca(b.date)) return; return _removeBlockFB.apply(this, arguments); };
+  openLunchModal = function (dentistId, date) { if (!liberaTranca(date || state.date)) return; return _openLunchModalFB.apply(this, arguments); };
+  openBlockModal = function (opts) {
+    const o = opts || {};
+    if (o.time && !liberaTranca(state.date)) return;
+    const r = _openBlockModalFB.apply(this, arguments);
+    const f = $('#blockForm');
+    if (f && typeof f.onsubmit === 'function') {
+      const orig = f.onsubmit;
+      f.onsubmit = function (e) {
+        const date = $('#bDate').value;
+        if (trancadoPraMim(date)) { e.preventDefault(); $('#bError').textContent = avisoTranca(date); $('#bError').hidden = false; return; }
+        return orig.apply(this, arguments);
+      };
+    }
+    return r;
+  };
+  // Detalhe da consulta num dia trancado: Veio / Não veio e WhatsApp continuam; mudar sai
+  openApptModal = function (id) {
+    const r = _openApptModalFB.apply(this, arguments);
+    const a = getAppt(id), m = $('#modal');
+    if (!a || $('#modalWrap').hidden || !diaTrancado(a.date) || !can('agenda.editar')) return r;
+    if (!souAdmin()) {
+      ['#aResched', '#aEdit', '#aDel', '#aRelease', '#aFitHere'].forEach(s => { const b = $(s, m); if (b) b.remove(); });
+      const acts = $('.actions', m);
+      if (acts && !acts.children.length) acts.remove();
+    }
+    if (!$('.dl-aviso', m) && (souAdmin() || !$('.dp-aviso', m))) {
+      const av = document.createElement('div');
+      av.className = 'dp-aviso dl-aviso';
+      av.innerHTML = `<span class="dp-ico" aria-hidden="true">${I.lock}</span><div><b>Agenda do dia trancada.</b> ${souAdmin()
+        ? 'Você é administrador e pode mudar esta consulta.'
+        : 'Só o administrador altera, exclui ou remarca. Veio / Não veio continuam liberados.'}</div>`;
+      const ref = $('.actions', m);
+      if (ref) m.insertBefore(av, ref); else m.appendChild(av);
+    }
+    return r;
+  };
+  // Menus do botão direito
+  const itemTrancado = () => ({ label: 'Agenda do dia trancada', icon: I.lock, disabled: true, run: () => {} });
+  apptMenuItems = function (a) {
+    let items = _apptMenuItemsFB.apply(this, arguments);
+    if (a && trancadoPraMim(a.date)) {
+      items = items.filter(it => !['resched', 'edit', 'fit', 'delete', 'release'].includes(it.act));
+      items.push({ sep: true }, itemTrancado());
+    }
+    return items;
+  };
+  slotMenuItems = function () {
+    let items = _slotMenuItemsFB.apply(this, arguments);
+    const date = state.date;
+    if (trancadoPraMim(date)) items = [itemTrancado()].concat(items.filter(it => it.act === 'hours'));
+    if (!diaTrancado(date)) items.push({ sep: true }, { act: 'daylock', label: 'Trancar agenda deste dia…', icon: I.lock, run: () => trancarDia(date) });
+    else if (souAdmin()) items.push({ sep: true }, { act: 'dayunlock', label: 'Destrancar agenda deste dia', icon: I.unlock, run: () => destrancarDia(date) });
+    return items;
+  };
+  blockMenuItems = function (b) {
+    let items = _blockMenuItemsFB.apply(this, arguments);
+    if (b && trancadoPraMim(b.date)) items = items.filter(it => it.act !== 'unblock').concat([{ sep: true }, itemTrancado()]);
+    return items;
+  };
+  lunchMenuItems = function () {
+    let items = _lunchMenuItemsFB.apply(this, arguments);
+    if (trancadoPraMim(state.date)) items = [itemTrancado()].concat(items.filter(it => it.act === 'hours'));
+    return items;
+  };
+  // Desfazer / Refazer: uma consulta de dia trancado só o administrador muda
+  desfAplicar = function (refazer) {
+    if (!souAdmin()) {
+      const pilha = refazer ? refPilha : desfPilha, item = pilha[pilha.length - 1];
+      const dia = item && item.mud.filter(c => c.k.startsWith('appointments:'))
+        .map(c => [c.antes, c.depois].filter(Boolean).map(v => JSON.parse(v).date)).flat().find(diaTrancado);
+      if (dia) { toast(avisoTranca(dia)); return; }
+    }
+    const pilha = refazer ? refPilha : desfPilha, item = pilha[pilha.length - 1];
+    const r = _desfAplicarFB.apply(this, arguments);
+    if (refazer && item && item.nome === 'Juntar pacientes' && refPilha[refPilha.length - 1] !== item) {
+      const sai = new Set(item.mud.filter(c => c.k.startsWith('patients:') && !c.depois).map(c => c.k.slice(9)));
+      if ([...sai].some(id => getPatient(id) && !db.appointments.some(a => a.patientId === id))) {
+        db.patients = db.patients.filter(p => !(sai.has(p.id) && !db.appointments.some(a => a.patientId === p.id)));
+        save(); render();
+      }
+    }
+    return r;
+  };
+  // Importar agenda: a conferência do dia trancado fica dentro de impProcessar (uma linha, junto com a do dia passado)
+
+  // ===== 2) Indicado por e desconto por indicação =====
+  const indRegra = () => {
+    const r = db.referral && typeof db.referral === 'object' ? db.referral : {};
+    const valor = Number(r.valor);
+    return { on: r.on !== false, tipo: r.tipo === 'valor' ? 'valor' : 'pct', valor: Number.isFinite(valor) && valor > 0 ? valor : 10 };
+  };
+  const indDescTxt = () => {
+    const r = indRegra();
+    return r.tipo === 'valor' ? r.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : `${String(r.valor).replace('.', ',')}%`;
+  };
+  // Indicações feitas por um paciente: usadas (numa consulta em que veio, ou dadas na mão) e a usar
+  function indicacoesDe(pid) {
+    const refs = db.patients.filter(x => x.referredBy === pid && x.id !== pid)
+      .sort((x, y) => String(x.referredAt || x.createdAt || '').localeCompare(String(y.referredAt || y.createdAt || '')));
+    const vindas = db.appointments.filter(a => a.patientId === pid && a.status === 'arrived')
+      .sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start));
+    const pegas = new Set(), usadas = [], pendentes = [];
+    refs.forEach(x => {
+      if (x.referralUsed) { usadas.push({ x, manual: x.referralUsed }); return; }
+      const desde = String(x.referredAt || x.createdAt || '');
+      const a = vindas.find(v => !pegas.has(v.id) && (v.arrivedAt || v.date + 'T23:59:59') >= desde);
+      if (a) { pegas.add(a.id); usadas.push({ x, appt: a }); } else pendentes.push(x);
+    });
+    return { refs, usadas, pendentes };
+  }
+  // A próxima consulta marcada de quem tem desconto a usar (é nela que o desconto aparece)
+  function consultaComDesconto(pid) {
+    if (!indRegra().on || !indicacoesDe(pid).pendentes.length) return null;
+    const hoje = todayStr();
+    return db.appointments.filter(a => a.patientId === pid && a.status === 'scheduled' && a.date >= hoje)
+      .sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start))[0] || null;
+  }
+  const temDescontoNesta = a => !!a && a.status === 'scheduled' && (() => { const c = consultaComDesconto(a.patientId); return !!c && c.id === a.id; })();
+
+  // Campo "Indicado por" (cadastro e edição): busca outro paciente pelo nome ou telefone
+  function indCampoHtml(pre, valor) {
+    return `<div class="field ind-field" data-ind="${pre}">
+      <label class="label" for="${pre}Ind">Indicado por <span class="ind-opc">(opcional)</span></label>
+      <input id="${pre}Ind" autocomplete="off" placeholder="Nome ou telefone de outro paciente" value="${esc(valor || '')}">
+      <div class="ind-sug" id="${pre}IndSug" hidden></div>
+      <div class="ind-res" id="${pre}IndRes"></div>
+    </div>`;
+  }
+  function indAchar(txt, ignorar) {
+    const q = cleanSpaces(txt);
+    if (!q) return null;
+    const d = digits(q);
+    if (!/[a-zà-ú]/i.test(q) && d.length >= 8) {
+      const l = db.patients.filter(p => p.id !== ignorar && digits(p.phone).slice(-8) === d.slice(-8));
+      return l.length === 1 ? l[0] : null;
+    }
+    const l = db.patients.filter(p => p.id !== ignorar && norm(p.name) === norm(q));
+    return l.length === 1 ? l[0] : null;
+  }
+  function indCampoLigar(pre, ignorar, atual) {
+    const inp = $('#' + pre + 'Ind'), sug = $('#' + pre + 'IndSug'), res = $('#' + pre + 'IndRes');
+    if (!inp) return;
+    let escolhido = atual || null;
+    const mostrar = () => {
+      const p = escolhido && getPatient(escolhido);
+      if (p && cleanSpaces(inp.value) === p.name) { res.innerHTML = `<span class="ind-ok">${I.check} ${esc(p.name)} · ${esc(phoneOut(p.phone))}</span>`; return; }
+      escolhido = null;
+      const q = cleanSpaces(inp.value);
+      const achado = indAchar(q, ignorar);
+      if (achado) { escolhido = achado.id; res.innerHTML = `<span class="ind-ok">${I.check} ${esc(achado.name)} · ${esc(phoneOut(achado.phone))}</span>`; return; }
+      res.innerHTML = q ? '<span class="ind-txt">Escolha um paciente da lista para valer o desconto. Sem escolher, fica anotado só o texto.</span>' : '';
+    };
+    const fecharSug = () => { sug.hidden = true; sug.innerHTML = ''; };
+    inp.addEventListener('input', () => {
+      escolhido = null;
+      const q = cleanSpaces(inp.value);
+      const lista = q.length >= 2 ? searchPatients(q, 6).filter(p => p.id !== ignorar) : [];
+      sug.innerHTML = lista.map(p => `<button type="button" class="ind-op" data-ind-pid="${p.id}"><b>${esc(p.name)}</b><span>${esc(phoneOut(p.phone))}</span></button>`).join('');
+      sug.hidden = !lista.length;
+      mostrar();
+    });
+    sug.addEventListener('mousedown', e => e.preventDefault());
+    sug.addEventListener('click', e => {
+      const b = e.target.closest('[data-ind-pid]');
+      if (!b) return;
+      const p = getPatient(b.dataset.indPid);
+      if (!p) return;
+      escolhido = p.id; inp.value = p.name;
+      fecharSug(); mostrar();
+    });
+    inp.addEventListener('blur', () => setTimeout(fecharSug, 120));
+    inp.addEventListener('keydown', e => { if (e.key === 'Escape' && !sug.hidden) { e.stopPropagation(); fecharSug(); } });
+    mostrar();
+    inp._indLer = () => ({ texto: cleanSpaces(inp.value), pid: escolhido && getPatient(escolhido) && escolhido !== ignorar ? escolhido : null });
+  }
+  // Grava a indicação no paciente. Devolve true se mudou.
+  function indAplicar(p, v) {
+    if (!p || !v) return false;
+    const antes = JSON.stringify([p.referredBy || '', p.referredByText || '']);
+    if (!v.texto) { delete p.referredBy; delete p.referredByText; delete p.referredAt; delete p.referralUsed; }
+    else if (v.pid && v.pid !== p.id) {
+      if (p.referredBy !== v.pid) { p.referredBy = v.pid; p.referredAt = new Date().toISOString(); delete p.referralUsed; }
+      delete p.referredByText;
+    } else {
+      delete p.referredBy; delete p.referredAt; delete p.referralUsed;
+      p.referredByText = v.texto.slice(0, 80);
+    }
+    return JSON.stringify([p.referredBy || '', p.referredByText || '']) !== antes;
+  }
+  // Cadastro de paciente novo (no Novo horário)
+  const _renderPickerFB = renderPicker, _savePatientFromSubformFB = savePatientFromSubform;
+  renderPicker = function () {
+    const r = _renderPickerFB.apply(this, arguments);
+    const err = $('#npError');
+    if (err && !$('#npInd') && can('pacientes.editar')) {
+      err.insertAdjacentHTML('beforebegin', indCampoHtml('np', ''));
+      indCampoLigar('np', null, null);
+    }
+    return r;
+  };
+  savePatientFromSubform = function () {
+    const inp = $('#npInd'), v = inp && inp._indLer ? inp._indLer() : null;
+    const id = _savePatientFromSubformFB.apply(this, arguments);
+    if (id && v && v.texto) {
+      const p = getPatient(id);
+      if (indAplicar(p, v)) {
+        save();
+        if (v.pid) toast(`Paciente cadastrado. Indicado por ${getPatient(v.pid).name}${indRegra().on ? `: ${getPatient(v.pid).name.split(' ')[0]} ganhou ${indDescTxt()} de desconto na próxima consulta` : ''}.`);
+      }
+    }
+    return id;
+  };
+  // Edição do paciente
+  const _openPatientEditFB = openPatientEdit;
+  openPatientEdit = function (id) {
+    const r = _openPatientEditFB.apply(this, arguments);
+    const p = getPatient(id), f = $('#peForm');
+    if (!p || !f || $('#peInd')) return r;
+    const ref = $('.hint', f) || $('#peError');
+    const txt = p.referredBy && getPatient(p.referredBy) ? getPatient(p.referredBy).name : (p.referredByText || '');
+    ref.insertAdjacentHTML('beforebegin', indCampoHtml('pe', txt));
+    indCampoLigar('pe', id, p.referredBy || null);
+    const orig = f.onsubmit;
+    f.onsubmit = function (e) {
+      const inp = $('#peInd'), v = inp && inp._indLer ? inp._indLer() : null;
+      const marca = p.editedAt;
+      const res = orig.apply(this, arguments);
+      if (v && p.editedAt !== marca && indAplicar(p, v)) { save(); openPatientDetail(id); }
+      return res;
+    };
+    return r;
+  };
+  // Ficha do paciente: quem indicou, quantas indicações fez e o desconto
+  const _openPatientDetailFB = openPatientDetail;
+  openPatientDetail = function (id) {
+    const r = _openPatientDetailFB.apply(this, arguments);
+    const p = getPatient(id), m = $('#modal'), dl = m && $('dl.facts', m);
+    if (!p || !dl || $('#modalWrap').hidden || $('.ind-box', m)) return r;
+    const quem = p.referredBy ? getPatient(p.referredBy) : null;
+    const I2 = indicacoesDe(id), regra = indRegra();
+    const nomes = I2.refs.map(x => `<button type="button" class="link" data-ind-ver="${x.id}">${esc(x.name)}</button>`).join(', ');
+    const prox = consultaComDesconto(id);
+    const usadas = I2.usadas.map(u => u.appt
+      ? `<li>Usado na consulta de ${fmtDMY(u.appt.date)} às ${u.appt.start} (indicação de ${esc(u.x.name)})</li>`
+      : `<li>Dado baixa em ${fmtStamp(u.manual.em)}${u.manual.por ? ' por ' + esc(u.manual.por) : ''} (indicação de ${esc(u.x.name)})</li>`).join('');
+    const box = document.createElement('section');
+    box.className = 'ind-box';
+    box.innerHTML = `
+      <h3>${I.users} Indicações</h3>
+      <dl class="facts ind-facts">
+        <dt>Indicado por</dt><dd>${quem ? `<button type="button" class="link" data-ind-ver="${quem.id}">${esc(quem.name)}</button>${p.referredAt ? ` <span class="muted-sm">desde ${fmtDMY(p.referredAt.slice(0, 10))}</span>` : ''}`
+          : (p.referredByText ? `${esc(p.referredByText)} <span class="muted-sm">(não está no cadastro)</span>` : '—')}</dd>
+        <dt>Indicações feitas</dt><dd>${I2.refs.length ? `<b>${I2.refs.length}</b> · ${nomes}` : 'Nenhuma'}</dd>
+      </dl>
+      ${I2.pendentes.length && regra.on ? `<div class="ind-desc">
+          <span class="ind-tag">${I.gift} Desconto por indicação: ${esc(indDescTxt())}</span>
+          <span>${I2.pendentes.length === 1 ? '1 desconto a usar' : I2.pendentes.length + ' descontos a usar'}${prox ? ` · próxima consulta: <b>${fmtDMY(prox.date)} às ${prox.start}</b>` : ' · ainda sem consulta marcada'}. Usa um por consulta.</span>
+          ${can('pacientes.editar') ? '<button type="button" class="btn btn-small" id="indBaixa">Marcar desconto como usado</button>' : ''}
+        </div>` : ''}
+      ${usadas ? `<ul class="ind-usadas">${usadas}</ul>` : ''}`;
+    dl.after(box);
+    $$('[data-ind-ver]', box).forEach(b => b.onclick = () => openPatientDetail(b.dataset.indVer));
+    if ($('#indBaixa')) $('#indBaixa').onclick = () => {
+      if (!allow('pacientes.editar')) return;
+      const x = indicacoesDe(id).pendentes[0];
+      if (!x) return;
+      const u = currentUser();
+      x.referralUsed = { em: new Date().toISOString(), por: u ? u.name : '' };
+      save(); openPatientDetail(id);
+      toast('Desconto marcado como usado.');
+    };
+    return r;
+  };
+  // Detalhe da consulta: avisa o desconto na próxima consulta de quem indicou
+  const _openApptModalInd = openApptModal;
+  openApptModal = function (id) {
+    const r = _openApptModalInd.apply(this, arguments);
+    const a = getAppt(id), m = $('#modal');
+    if (a && !$('#modalWrap').hidden && temDescontoNesta(a)) {
+      const pills = $('.pills', m);
+      if (pills && !$('.ind-pill', pills)) pills.insertAdjacentHTML('beforeend', `<span class="pill ind-pill">Desconto por indicação: ${esc(indDescTxt())}</span>`);
+    }
+    return r;
+  };
+  // Mensagem de confirmação (WhatsApp): uma frase a mais quando é a consulta com desconto
+  const _buildMessageFB = buildMessage;
+  buildMessage = function (a) {
+    const txt = _buildMessageFB.apply(this, arguments);
+    return temDescontoNesta(a) ? `${txt} Por ter indicado um paciente, você tem ${indDescTxt()} de desconto nesta consulta. Obrigado pela indicação!` : txt;
+  };
+  // Configurações → Desconto por indicação (administrador)
+  function abrirRegraIndicacao() {
+    if (!allow('config')) return;
+    closeMenu(); closeBaseMenu();
+    const r = indRegra();
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow">Configurações</div><h2>Desconto por indicação</h2></div>${closeX}</div>
+      <form id="indForm" class="stack" novalidate>
+        <p class="hint">Quando um paciente novo é cadastrado com “Indicado por”, quem indicou ganha este desconto na próxima consulta. O desconto aparece na ficha do paciente, no detalhe da consulta e na mensagem de confirmação. Ele conta como usado quando o paciente vem à consulta (Veio).</p>
+        <label class="ind-chk" for="indOn"><input type="checkbox" id="indOn"${r.on ? ' checked' : ''}><span>Dar desconto por indicação</span></label>
+        <div class="two">
+          <label class="field"><span class="label">Tipo de desconto</span><select id="indTipo"><option value="pct"${r.tipo === 'pct' ? ' selected' : ''}>Porcentagem (%)</option><option value="valor"${r.tipo === 'valor' ? ' selected' : ''}>Valor fixo (R$)</option></select></label>
+          <label class="field"><span class="label" id="indValLab">${r.tipo === 'valor' ? 'Valor (R$)' : 'Porcentagem (%)'}</span><input id="indValor" inputmode="decimal" value="${String(r.valor).replace('.', ',')}"></label>
+        </div>
+        <div class="error" id="indErr" hidden></div>
+        <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button></div>
+      </form>`);
+    $('#indTipo').onchange = e => { $('#indValLab').textContent = e.target.value === 'valor' ? 'Valor (R$)' : 'Porcentagem (%)'; };
+    $('#indForm').onsubmit = e => {
+      e.preventDefault();
+      const tipo = $('#indTipo').value === 'valor' ? 'valor' : 'pct';
+      const valor = Number(String($('#indValor').value).replace(/[^\d,.]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+      if (!(valor > 0) || (tipo === 'pct' && valor > 100)) { $('#indErr').textContent = tipo === 'pct' ? 'Escreva uma porcentagem de 1 a 100.' : 'Escreva o valor do desconto em reais.'; $('#indErr').hidden = false; return; }
+      db.referral = { on: $('#indOn').checked, tipo, valor: Math.round(valor * 100) / 100 };
+      save(); closeModal(true); render();
+      toast(db.referral.on ? `Desconto por indicação: ${indDescTxt()}.` : 'Desconto por indicação desligado.');
+    };
+  }
+  ACT_PERM.indicacao = 'config';
+
+  // ===== 3) Juntar duplicatas: pacientes e tipos de consulta (procedimentos) =====
+  const nomeChave = s => norm(s).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  function distancia(a, b) {
+    if (Math.abs(a.length - b.length) > 3) return 9;
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function nomesParecidos(x, y) {
+    const a = nomeChave(x), b = nomeChave(y);
+    if (!a || !b) return false;
+    if (a === b || distancia(a, b) <= 2) return true;
+    const ta = a.split(' '), tb = b.split(' ');
+    if (ta[0] !== tb[0]) return false;
+    // Mesmo primeiro nome e um nome está dentro do outro (ex.: "Maria Souza" e "Maria de Souza Lima")
+    const sa = new Set(ta), sb = new Set(tb);
+    return ta.every(t => sb.has(t)) || tb.every(t => sa.has(t)) || ta[ta.length - 1] === tb[tb.length - 1];
+  }
+  // Grupos de pacientes duplicados: mesmo CPF, ou telefone igual (últimos 8 números) com nome igual ou muito parecido
+  function gruposPacientes() {
+    const pai = new Map(db.patients.map(p => [p.id, p.id]));
+    const raiz = id => { while (pai.get(id) !== id) id = pai.get(id); return id; };
+    const unir = (x, y) => { const a = raiz(x), b = raiz(y); if (a !== b) pai.set(b, a); };
+    const porTel = new Map(), porCpf = new Map();
+    db.patients.forEach(p => {
+      const t = digits(p.phone).slice(-8), c = digits(p.cpf);
+      if (t.length === 8) { if (!porTel.has(t)) porTel.set(t, []); porTel.get(t).push(p); }
+      if (c.length === 11) { if (!porCpf.has(c)) porCpf.set(c, []); porCpf.get(c).push(p); }
+    });
+    porTel.forEach(l => { for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) if (nomesParecidos(l[i].name, l[j].name)) unir(l[i].id, l[j].id); });
+    porCpf.forEach(l => l.slice(1).forEach(p => unir(l[0].id, p.id)));
+    const g = new Map();
+    db.patients.forEach(p => { const k = raiz(p.id); if (!g.has(k)) g.set(k, []); g.get(k).push(p); });
+    return [...g.values()].filter(l => l.length > 1).sort((x, y) => byName(x[0], y[0]));
+  }
+  const consultasDo = pid => db.appointments.filter(a => a.patientId === pid && a.status !== 'deleted').length;
+  function juntarPacientesAgora(ficaId, saiIds) {
+    const fica = getPatient(ficaId);
+    if (!fica) return 0;
+    const sai = new Set(saiIds.filter(x => x !== ficaId && getPatient(x)));
+    let n = 0;
+    db.appointments.forEach(a => { if (sai.has(a.patientId)) { a.patientId = ficaId; n++; } });
+    (db.prostheses || []).forEach(x => { if (sai.has(x.patientId)) x.patientId = ficaId; });
+    db.patients.forEach(p => {
+      if (sai.has(p.referredBy)) { if (p.id === ficaId) { delete p.referredBy; delete p.referredAt; delete p.referralUsed; } else p.referredBy = ficaId; }
+    });
+    // O que ficou vazio no cadastro que fica é completado com os dados do outro
+    db.patients.filter(p => sai.has(p.id)).forEach(o => {
+      ['birth', 'cpf', 'rg', 'address'].forEach(k => { if (!fica[k] && o[k]) fica[k] = o[k]; });
+      if (!fica.referredBy && !fica.referredByText && (o.referredBy || o.referredByText) && o.referredBy !== ficaId) {
+        ['referredBy', 'referredByText', 'referredAt', 'referralUsed'].forEach(k => { if (o[k]) fica[k] = o[k]; });
+      }
+      if (o.temProtese && !fica.temProtese) fica.temProtese = o.temProtese;
+      if (o.createdAt && (!fica.createdAt || o.createdAt < fica.createdAt)) fica.createdAt = o.createdAt;
+    });
+    db.patients = db.patients.filter(p => !sai.has(p.id));
+    fica.editedAt = new Date().toISOString();
+    save(); render();
+    return n;
+  }
+  const juntarPacientes = desfRastrear(juntarPacientesAgora, 'Juntar pacientes');
+  function abrirJuntarPacientes() {
+    if (!allow('pacientes.editar')) return;
+    if (isPrivate()) { toast('Desligue o modo recepção ocupada para juntar pacientes.'); return; }
+    closeMenu(); closeBaseMenu();
+    const grupos = gruposPacientes();
+    openModal(`
+      <div class="modal-head"><div><button type="button" class="link" id="jpBack">‹ Pacientes</button><h2>Juntar pacientes duplicados</h2></div>${closeX}</div>
+      <p class="hint">Pacientes com o mesmo CPF, ou com telefone igual e nome igual ou muito parecido. Escolha qual cadastro fica: as consultas dos outros passam para ele, e os dados que faltam nele são completados com os dos outros.</p>
+      <div class="jd-list" id="jpList">${grupos.length ? grupos.map((l, gi) => {
+        const ord = l.slice().sort((x, y) => consultasDo(y.id) - consultasDo(x.id) || String(x.createdAt || '').localeCompare(String(y.createdAt || '')));
+        return `<div class="jd-grupo" data-jg="${gi}">
+          ${ord.map((p, i) => `<label class="jd-op"><input type="radio" name="jg${gi}" value="${p.id}"${i === 0 ? ' checked' : ''}>
+            <span class="jd-nome"><b>${esc(p.name)}</b><small>${esc(phoneOut(p.phone))}${p.cpf ? ' · CPF ' + esc(p.cpf) : ''}${p.birth ? ' · nasc. ' + fmtDMY(p.birth) : ''}</small></span>
+            <span class="jd-uso">${consultasDo(p.id)} ${consultasDo(p.id) === 1 ? 'consulta' : 'consultas'}</span></label>`).join('')}
+          <div class="jd-bts"><span class="muted-sm">Marque o cadastro que fica.</span><button type="button" class="btn btn-primary btn-small" data-jg-go="${gi}">Juntar</button></div>
+        </div>`;
+      }).join('') : '<p class="jd-vazio">Nenhum paciente duplicado encontrado.</p>'}</div>`, true);
+    $('#jpBack').onclick = openPatientsModal;
+    $$('[data-jg-go]').forEach(b => b.onclick = () => {
+      const l = grupos[Number(b.dataset.jgGo)];
+      const fica = ($(`input[name="jg${b.dataset.jgGo}"]:checked`) || {}).value;
+      const outros = l.filter(p => p.id !== fica);
+      const n = outros.reduce((s, p) => s + db.appointments.filter(a => a.patientId === p.id).length, 0);
+      const pf = getPatient(fica);
+      openModal(`
+        <div class="modal-head"><div><div class="eyebrow">Juntar pacientes</div><h2>Juntar em “${esc(pf.name)}”?</h2></div>${closeX}</div>
+        <p><b>${n} ${n === 1 ? 'consulta passa' : 'consultas passam'}</b> para ${esc(pf.name)} · ${esc(phoneOut(pf.phone))}.</p>
+        <ul class="jd-sai">${outros.map(p => `<li>${esc(p.name)} · ${esc(phoneOut(p.phone))}: ${db.appointments.filter(a => a.patientId === p.id).length} ${db.appointments.filter(a => a.patientId === p.id).length === 1 ? 'consulta' : 'consultas'} (este cadastro sai)</li>`).join('')}</ul>
+        <p class="hint">O histórico fica todo no cadastro que fica. Dá para desfazer com Ctrl+Z (ou Menu → Desfazer).${online() ? ' Se quem sai já usava a Área do paciente, envie um link novo pelo cadastro que fica.' : ''}</p>
+        <div class="modal-foot"><button type="button" class="btn" id="jpVoltar">Voltar</button><button type="button" class="btn btn-primary" id="jpOk">Juntar cadastros</button></div>`);
+      $('#jpVoltar').onclick = abrirJuntarPacientes;
+      $('#jpOk').onclick = () => {
+        const feitas = juntarPacientes(fica, outros.map(p => p.id));
+        abrirJuntarPacientes();
+        toast(`Cadastros juntados em ${pf.name}. ${feitas} ${feitas === 1 ? 'consulta passou' : 'consultas passaram'} para ele.`);
+      };
+    });
+  }
+  // Tipos de consulta com o mesmo nome (maiúsculas, acentos, espaços e pontuação não contam)
+  function gruposTipos() {
+    const m = new Map();
+    const pos = t => { const i = db.types.indexOf(t); return i < 0 ? 9999 : i; };
+    const add = t => { const k = nomeChave(t); if (!k) return; if (!m.has(k)) m.set(k, new Set()); m.get(k).add(t); };
+    db.types.forEach(add);
+    db.appointments.forEach(a => { if (a.typeName) add(a.typeName); });
+    return [...m.values()].map(s => [...s].sort((x, y) => pos(x) - pos(y) || tdUso(y) - tdUso(x))).filter(l => l.length > 1);
+  }
+  function juntarTiposAgora(fica, sai) {
+    const s = new Set(sai.filter(t => t !== fica));
+    let n = 0;
+    db.appointments.forEach(a => { if (s.has(a.typeName)) { a.typeName = fica; n++; } });
+    const mapa = tdMapa();
+    s.forEach(t => {
+      if (!mapa[fica] && mapa[t]) mapa[fica] = mapa[t];
+      if (!db.typeStyles[fica] && db.typeStyles[t]) db.typeStyles[fica] = db.typeStyles[t];
+    });
+    const i = db.types.findIndex(t => t === fica || s.has(t));
+    db.types = db.types.filter(t => !s.has(t) && t !== fica);
+    db.types.splice(i < 0 ? db.types.length : Math.min(i, db.types.length), 0, fica);
+    save(); render();
+    return n;
+  }
+  const juntarTipos = desfRastrear(juntarTiposAgora, 'Juntar tipos de consulta');
+  function abrirJuntarTipos() {
+    if (!podeTipos()) { toast('Seu usuário não tem permissão para isso.'); return; }
+    closeMenu(); closeBaseMenu();
+    const grupos = gruposTipos();
+    openModal(`
+      <div class="modal-head"><div><button type="button" class="link" id="jtBack">‹ Tipos de consulta</button><h2>Juntar procedimentos duplicados</h2></div>${closeX}</div>
+      <p class="hint">Tipos de consulta com o mesmo nome escrito de jeitos diferentes (maiúsculas, acentos, espaços). Escolha o nome que fica: as consultas antigas dos outros passam a usar ele.</p>
+      <div class="jd-list">${grupos.length ? grupos.map((l, gi) => `<div class="jd-grupo">
+          ${l.map((t, i) => `<label class="jd-op"><input type="radio" name="jt${gi}" value="${esc(t)}"${i === 0 ? ' checked' : ''}>
+            <span class="jd-nome"><b>${esc(t)}</b><small>${db.types.includes(t) ? 'Na lista de tipos' : 'Só nas consultas'}</small></span>
+            <span class="jd-uso">${tdUso(t)} ${tdUso(t) === 1 ? 'consulta' : 'consultas'}</span></label>`).join('')}
+          <div class="jd-bts"><span class="muted-sm">Marque o nome que fica.</span><button type="button" class="btn btn-primary btn-small" data-jt-go="${gi}">Juntar</button></div>
+        </div>`).join('') : '<p class="jd-vazio">Nenhum tipo de consulta duplicado encontrado.</p>'}</div>`, true);
+    $('#jtBack').onclick = () => abrirTiposConsulta();
+    $$('[data-jt-go]').forEach(b => b.onclick = () => {
+      const gi = Number(b.dataset.jtGo), l = grupos[gi];
+      const fica = ($(`input[name="jt${gi}"]:checked`) || {}).value;
+      const outros = l.filter(t => t !== fica);
+      const n = db.appointments.filter(a => outros.includes(a.typeName)).length;
+      openModal(`
+        <div class="modal-head"><div><div class="eyebrow">Juntar procedimentos</div><h2>Juntar em “${esc(fica)}”?</h2></div>${closeX}</div>
+        <p><b>${n} ${n === 1 ? 'consulta passa' : 'consultas passam'}</b> a usar “${esc(fica)}”.</p>
+        <ul class="jd-sai">${outros.map(t => `<li>“${esc(t)}”: ${db.appointments.filter(a => a.typeName === t).length} ${db.appointments.filter(a => a.typeName === t).length === 1 ? 'consulta' : 'consultas'} (este nome sai)</li>`).join('')}</ul>
+        <p class="hint">Dá para desfazer com Ctrl+Z (ou Menu → Desfazer).</p>
+        <div class="modal-foot"><button type="button" class="btn" id="jtVoltar">Voltar</button><button type="button" class="btn btn-primary" id="jtOk">Juntar procedimentos</button></div>`);
+      $('#jtVoltar').onclick = abrirJuntarTipos;
+      $('#jtOk').onclick = () => {
+        const feitas = juntarTipos(fica, outros);
+        abrirJuntarTipos();
+        toast(`Procedimentos juntados em “${fica}”. ${feitas} ${feitas === 1 ? 'consulta mudou' : 'consultas mudaram'}.`);
+      };
+    });
+  }
+  // Botões "Juntar duplicatas" na janela Pacientes e em Tipos de consulta
+  const _openPatientsModalFB = openPatientsModal, _abrirTiposConsultaFB = abrirTiposConsulta;
+  openPatientsModal = function () {
+    const r = _openPatientsModalFB.apply(this, arguments);
+    const head = $('#modal .modal-head');
+    if (head && $('#plList') && can('pacientes.editar') && !$('#plJuntar')) {
+      const n = gruposPacientes().length;
+      head.insertAdjacentHTML('afterend', `<div class="pl-acoes"><button type="button" class="btn btn-small" id="plJuntar">${I.users}Juntar duplicatas${n ? ` <span class="jd-n">${n}</span>` : ''}</button></div>`);
+      $('#plJuntar').onclick = abrirJuntarPacientes;
+    }
+    return r;
+  };
+  abrirTiposConsulta = function () {
+    const r = _abrirTiposConsultaFB.apply(this, arguments);
+    const foot = $('#modal .modal-foot');
+    if (foot && $('#tcList') && !$('#tcJuntar')) {
+      const n = gruposTipos().length;
+      foot.insertAdjacentHTML('afterbegin', `<button type="button" class="btn" id="tcJuntar">Juntar duplicatas${n ? ` <span class="jd-n">${n}</span>` : ''}</button>`);
+      $('#tcJuntar').onclick = abrirJuntarTipos;
+    }
+    return r;
+  };
+
+  // O assistente guardou a janela Pacientes antiga: passa a abrir a nova (com o botão Juntar duplicatas)
+  ASSIST_TOPICOS.forEach(t => { if (t && t.abrir === _openPatientsModalFB) t.abrir = openPatientsModal; });
+  // Botão Configurações (no alto): "Desconto por indicação…" junto dos tipos de consulta
+  const _openMenuFB = openMenu;
+  openMenu = function (titulo, itens) {
+    if (titulo === 'Configurações' && Array.isArray(itens) && !itens.some(it => it && it.act === 'indicacao')) {
+      let i = itens.findIndex(it => it && it.act === 'types');
+      if (i < 0) i = itens.findIndex(it => it && it.act === 'customize');
+      if (i >= 0) {
+        itens = itens.slice();
+        itens.splice(i + 1, 0, { act: 'indicacao', label: 'Desconto por indicação…', icon: I.gift, run: abrirRegraIndicacao });
+        const args = Array.from(arguments); args[1] = itens;
+        return _openMenuFB.apply(this, args);
+      }
+    }
+    return _openMenuFB.apply(this, arguments);
+  };
+
+  // ===== 4) Novo horário: "Termina às" (HH:MM) junto com o tempo em minutos =====
+  (function () {
+    const tempo = $('#fDuration') && $('#fDuration').closest('.field');
+    if (!tempo || $('#fEnd')) return;
+    const lab = document.createElement('label');
+    lab.className = 'field fb-fim';
+    lab.innerHTML = '<span class="label">Termina às</span><input type="time" id="fEnd" aria-describedby="fRange">';
+    tempo.after(lab);
+    tempo.closest('.field-row').classList.add('fb-4');
+  })();
+  // Hora + minutos → "Termina às"
+  function fimSync() {
+    const fim = $('#fEnd');
+    if (!fim || document.activeElement === fim) return;
+    const t = $('#fTime').value, d = Number($('#fDuration').value);
+    fim.value = t && Number.isInteger(d) && d > 0 && toMin(t) + d < 24 * 60 ? fromMin(toMin(t) + d) : '';
+  }
+  const _updateRangeFB = updateRange;
+  updateRange = function () { const r = _updateRangeFB.apply(this, arguments); fimSync(); return r; };
+  // "Termina às" → minutos (e, sem a hora de início, a hora a partir dos minutos)
+  function fimDigitado() {
+    const fim = $('#fEnd').value, dur = $('#fDuration'), ini = $('#fTime');
+    if (!fim) return;
+    if (!ini.value) {
+      const d = Number(dur.value);
+      if (Number.isInteger(d) && d > 0 && toMin(fim) - d >= 0) { ini.value = fromMin(toMin(fim) - d); ini.dispatchEvent(new Event('input', { bubbles: true })); }
+      else $('#fRange').textContent = 'Escolha a hora de início: o tempo é calculado sozinho.';
+      return;
+    }
+    const d = toMin(fim) - toMin(ini.value);
+    if (d > 0) {
+      if (String(d) !== dur.value) { dur.value = String(d); dur.dispatchEvent(new Event('input', { bubbles: true })); }
+    } else {
+      $('#fRange').textContent = 'O término precisa ser depois da hora de início.';
+    }
+  }
+  $('#fEnd').addEventListener('input', fimDigitado);
+  $('#fEnd').addEventListener('change', fimDigitado);
+  $('#fEnd').addEventListener('blur', () => setTimeout(fimSync, 0));
+  $('#fTime').addEventListener('input', fimSync);
+  $('#fDuration').addEventListener('input', fimSync);
+
+  // ===== Menu: trancar o dia, juntar duplicatas e desconto por indicação =====
+  const _baseMenuGroupsFB = baseMenuGroups;
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroupsFB.apply(this, arguments);
+    const grupo = (titulo, depois) => {
+      let g = gs.find(x => x.title === titulo);
+      if (!g) { g = { title: titulo, items: [] }; gs.splice(depois >= 0 ? depois : gs.length, 0, g); }
+      return g;
+    };
+    if (can('agenda.editar')) {
+      const date = state.date, tr = diaTrancado(date);
+      const item = tr
+        ? { id: 'daylock', icon: I.lock, ico: 'warn', label: souAdmin() ? 'Destrancar agenda do dia' : 'Agenda do dia trancada', sub: souAdmin() ? `${fmtDMY(date)} · volta a deixar a recepção mudar` : `${fmtDMY(date)} · só o administrador destranca`,
+            state: ['Trancada', 'bad'], run: () => souAdmin() ? destrancarDia(date) : toast(avisoTranca(date)) }
+        : { id: 'daylock', icon: I.lock, label: 'Trancar agenda do dia', sub: `${fmtDMY(date)} · ninguém muda as consultas, só o administrador`, state: ['Aberta', ''], run: () => trancarDia(date) };
+      const g = grupo('Recepção do dia', 1);
+      const i = g.items.findIndex(it => it.id === 'pendencias');
+      g.items.splice(i >= 0 ? i + 1 : g.items.length, 0, item);
+    }
+    if (can('pacientes.editar')) {
+      const g = gs.find(x => x.title === 'Pacientes');
+      if (g) {
+        const n = gruposPacientes().length;
+        g.items.push({ id: 'juntarpac', icon: I.users, label: 'Juntar pacientes duplicados', sub: n ? `${n} ${n === 1 ? 'grupo encontrado' : 'grupos encontrados'}` : 'Nome e telefone iguais ou parecidos', state: n ? [String(n), 'bad'] : null, run: abrirJuntarPacientes });
+      }
+    }
+    if (can('config')) {
+      const g = grupo('Configurações', -1);
+      const i = g.items.findIndex(it => it.id === 'tiposconsulta');
+      g.items.splice(i >= 0 ? i + 1 : g.items.length, 0,
+        { id: 'indicacao', icon: I.gift, label: 'Desconto por indicação', sub: indRegra().on ? `${indDescTxt()} na próxima consulta de quem indicou` : 'Desligado', run: abrirRegraIndicacao });
+    }
+    return gs;
+  };
+
+  // ===== Assistente: as novidades da recepção =====
+  const AI_TRANCA = /\b(tranc\w*|tranqu\w*|destranc\w*|destranqu\w*|destrav\w*)\b|\btrav\w* (a )?agenda\b|\bagenda (do dia )?travad\w*/;
+  const AI_INDICA = /\b(indica\w*|indicou|indicad[oa]s?|recomend\w*)\b|\bdescontos?\b/;
+  const AI_DUPLIC = /\b(duplicad\w*|duplicat\w*|repetid[oa]s)\b|\b(junt(ar|e|em|a|ando)|mescl\w*|unific\w*)\b.*\b(pacientes?|cadastros?|procediment\w*|tipos?)\b/;
+  const AI_FIM = /\btermin\w* as\b|\b(hora|horario) (de|do) (fim|termino)\b|\bhoras? e minutos\b|\bhh ?: ?mm\b|\bque horas? termina\b/;
+  ASSIST_TOPICOS.unshift(
+    { k: AI_TRANCA, nome: 'Trancar agenda do dia', cam: 'Menu → Recepção do dia → Trancar agenda do dia, ou botão direito num horário livre da agenda → Trancar agenda deste dia',
+      faz: 'Com o dia trancado, ninguém cria, altera, exclui ou remarca consultas (nem bloqueios e almoço) naquele dia, só o administrador. A recepção continua marcando Veio / Não veio e escrevendo anotações. Aparece um aviso amarelo em cima da agenda. Destrancar: só o administrador, no botão Destrancar do aviso.',
+      own: true, abrir: () => trancarDia(state.date), pode: () => can('agenda.editar'), quem: 'o administrador e a recepção (destrancar: só o administrador)' },
+    { k: AI_INDICA, nome: 'Indicado por e desconto por indicação', cam: 'Campo “Indicado por” no cadastro do paciente novo (Novo horário) e em Pacientes → ficha → Editar dados. A regra do desconto fica em Menu → Configurações → Desconto por indicação',
+      faz: 'Na ficha do paciente aparece quem indicou e quantas indicações ele fez. Quem indicou ganha o desconto (padrão 10%, ou um valor fixo) na próxima consulta: aparece na ficha, no detalhe da consulta e na mensagem de confirmação do WhatsApp. Conta como usado quando o paciente vem (Veio) ou no botão “Marcar desconto como usado”.',
+      own: true, abrir: abrirRegraIndicacao, pode: () => can('pacientes.ver'), quem: 'o administrador e a recepção (a regra do desconto: só o administrador)' },
+    { k: AI_DUPLIC, nome: 'Juntar duplicatas', cam: 'Pacientes → Juntar duplicatas (ou Menu → Pacientes → Juntar pacientes duplicados). Procedimentos: Menu → Configurações → Tipos de consulta → Juntar duplicatas',
+      faz: 'Lista pacientes com nome e telefone iguais ou muito parecidos (ou o mesmo CPF) e tipos de consulta com o mesmo nome escrito diferente. Você escolhe qual fica; as consultas dos outros passam para ele. Antes de juntar, mostra quantas consultas mudam. Dá para desfazer com Ctrl+Z.',
+      own: true, abrir: abrirJuntarPacientes, pode: () => can('pacientes.editar'), quem: 'o administrador e a recepção' },
+    { k: AI_FIM, nome: 'Termina às (hora do fim)', cam: 'Novo horário ou Alterar: campo “Termina às”, ao lado de “Tempo (min)”',
+      faz: 'Dá para escrever a hora em que a consulta termina (ex.: 14:30) em vez dos minutos. Um campo atualiza o outro: Hora 14:00 + 30 min mostra Termina às 14:30; e escrever Termina às 15:15 muda o tempo para 75 min.',
+      own: true, pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' }
+  );
+  const aiNomeP = p => `<b>${esc(p.name)}</b>`;
+  function aiIndicacaoDe(p) {
+    const quem = p.referredBy ? getPatient(p.referredBy) : null;
+    const I2 = indicacoesDe(p.id), prox = consultaComDesconto(p.id);
+    return ans(`${aiNomeP(p)}:
+      <ul>
+        <li>Indicado por: ${quem ? aiNomeP(quem) : (p.referredByText ? esc(p.referredByText) + ' (não está no cadastro)' : 'ninguém anotado')}</li>
+        <li>Indicações feitas: <b>${I2.refs.length}</b>${I2.refs.length ? ' (' + I2.refs.map(x => esc(x.name)).join(', ') + ')' : ''}</li>
+        ${I2.pendentes.length && indRegra().on ? `<li>Desconto a usar: <b>${esc(indDescTxt())}</b>${I2.pendentes.length > 1 ? ` (${I2.pendentes.length} descontos, um por consulta)` : ''}${prox ? ` · próxima consulta ${dayWord(prox.date)} às ${prox.start}` : ' · ainda sem consulta marcada'}</li>` : ''}
+      </ul>
+      <div class="ai-btns">${aiBtn('Abrir a ficha', () => openPatientDetail(p.id), true)}</div>`);
+  }
+  const _aiHandleFB = aiHandle;
+  aiHandle = function (raw) {
+    const t = aiNormV7(raw);
+    if (!t) return _aiHandleFB.apply(this, arguments);
+    const pergunta = /^(?:e )?(onde|aonde|cade|como|o que e|o que faz|para que serve|pra que serve)\b/.test(t) || /\b(onde fica|como (faco|funciona|uso|eu))\b/.test(t);
+    // Trancar / destrancar a agenda do dia
+    if (AI_TRANCA.test(t)) {
+      const tp = ASSIST_TOPICOS.find(x => x.k === AI_TRANCA);
+      if (pergunta) return aiResponderTopico(tp, false);
+      const dt = aiDate(t);
+      if (dt && dt.invalid) return unsure('Essa data não existe. Confira o dia e o mês.');
+      const date = dt ? dt.date : state.date;
+      if (/\b(quais|que) dias\b|\bdias trancad/.test(t)) {
+        const dias = Object.keys(dlMapa()).filter(d => d >= todayStr()).sort();
+        return ans(dias.length ? `Dias trancados daqui para frente: ${dias.map(d => `<b>${fmtDMY(d)}</b>`).join(', ')}.` : 'Nenhum dia trancado daqui para frente.');
+      }
+      if (/\b(destranc\w*|destranqu\w*|destrav\w*)\b/.test(t)) {
+        if (!diaTrancado(date)) return ans(`A agenda ${dayWord(date)} não está trancada.`);
+        if (!souAdmin()) return unsure(`A agenda ${dayWord(date)} está trancada. Só o administrador pode destrancar.`);
+        return ans(`A agenda ${dayWord(date)} está trancada. Para destrancar, clique abaixo.
+          <div class="ai-btns">${aiBtn('Destrancar ' + dayWord(date), () => { goToDate(date); destrancarDia(date); }, true)}</div>`);
+      }
+      if (/\b(esta|ta|estao|ficou|foi)\b/.test(t) && /\btrancad\w*\b/.test(t) && !/\b(tranque|trancar|tranca a|tranca o)\b/.test(t)) {
+        const x = dlMapa()[date];
+        return ans(x ? `Sim. A agenda ${dayWord(date)} está trancada${x.por ? ' (por ' + esc(x.por) + ')' : ''}. ${souAdmin() ? 'Você é administrador e pode mudar.' : 'Só o administrador muda as consultas desse dia.'}` : `Não. A agenda ${dayWord(date)} está aberta.`);
+      }
+      if (!can('agenda.editar')) return unsure(`Seu usuário não pode trancar a agenda. Quem pode: ${esc(tp.quem)}.`);
+      if (diaTrancado(date)) return ans(`A agenda ${dayWord(date)} já está trancada.${souAdmin() ? `<div class="ai-btns">${aiBtn('Destrancar', () => { goToDate(date); destrancarDia(date); })}</div>` : ''}`);
+      if (date !== state.date) goToDate(date);
+      trancarDia(date);
+      return ans(`Abri a confirmação para trancar a agenda ${dayWord(date)}. Confira e clique em <b>Trancar agenda</b>.
+        <div class="ai-note">Eu não tranco sozinha.</div>`);
+    }
+    // Indicações e desconto
+    if (AI_INDICA.test(t)) {
+      const tp = ASSIST_TOPICOS.find(x => x.k === AI_INDICA);
+      if (!can('pacientes.ver')) return unsure(`Seu usuário não vê os pacientes. Quem pode: ${esc(tp.quem)}.`);
+      if (/\b(regra|configur\w*|porcentagem|percentual|valor fixo|mud\w* o desconto|alter\w* o desconto|quanto e o desconto|qual (e )?o desconto|de quanto)\b/.test(t) && !aiPatient(t).p) {
+        const r = indRegra();
+        return ans(`Desconto por indicação: <b>${r.on ? esc(indDescTxt()) : 'desligado'}</b>${r.on ? ' na próxima consulta de quem indicou' : ''}.
+          <div class="ai-note">Fica em Menu → Configurações → Desconto por indicação (só o administrador muda).</div>
+          ${can('config') ? `<div class="ai-btns">${aiBtn('Abrir Desconto por indicação', abrirRegraIndicacao, true)}</div>` : ''}`);
+      }
+      if (pergunta) return aiResponderTopico(tp, false);
+      const ap = aiPatient(t);
+      if (ap.ambiguous) return ambiguousPatients(ap.ambiguous);
+      if (ap.p) return aiIndicacaoDe(ap.p);
+      if (/\bquem\b.*\b(tem|ganhou|ganha|com)\b.*\bdesconto\b|\bdescontos? (a usar|pendentes?)\b/.test(t)) {
+        const lista = db.patients.filter(p => indicacoesDe(p.id).pendentes.length);
+        if (!indRegra().on) return ans('O desconto por indicação está desligado (Menu → Configurações → Desconto por indicação).');
+        return ans(lista.length ? `${lista.length} ${lista.length === 1 ? 'paciente tem' : 'pacientes têm'} desconto de ${esc(indDescTxt())} a usar:
+          <ul>${lista.sort(byName).map(p => { const c = consultaComDesconto(p.id); return `<li>${aiNomeP(p)}<span class="muted">${c ? `próxima consulta ${dayWord(c.date)} às ${c.start}` : 'sem consulta marcada'}</span><span class="ai-li-btns">${aiBtn('Ficha', () => openPatientDetail(p.id))}</span></li>`; }).join('')}</ul>`
+          : 'Nenhum paciente com desconto por indicação a usar.');
+      }
+      return aiResponderTopico(tp, false);
+    }
+    // Juntar duplicatas
+    if (AI_DUPLIC.test(t) && !/\bencaix\w*/.test(t)) {
+      const tp = ASSIST_TOPICOS.find(x => x.k === AI_DUPLIC);
+      if (pergunta) return aiResponderTopico(tp, false);
+      if (/\b(procediment\w*|tipos?)\b/.test(t)) {
+        if (!podeTipos()) return unsure(`Seu usuário não pode mudar os tipos de consulta. Quem pode: ${esc(tp.quem)}.`);
+        const n = gruposTipos().length;
+        abrirJuntarTipos();
+        return ans(`Abri <b>Juntar procedimentos duplicados</b>: ${n ? `${n} ${n === 1 ? 'grupo encontrado' : 'grupos encontrados'}` : 'nenhum duplicado encontrado'}.
+          ${n ? '<div class="ai-note">Marque o nome que fica e clique em Juntar. Eu não junto sozinha.</div>' : ''}`);
+      }
+      if (!can('pacientes.editar')) return unsure(`Seu usuário não pode mudar os pacientes. Quem pode: ${esc(tp.quem)}.`);
+      if (isPrivate()) return unsure('Desligue o modo recepção ocupada para juntar pacientes.');
+      const n = gruposPacientes().length;
+      abrirJuntarPacientes();
+      return ans(`Abri <b>Juntar pacientes duplicados</b>: ${n ? `${n} ${n === 1 ? 'grupo encontrado' : 'grupos encontrados'}` : 'nenhum duplicado encontrado'}.
+        ${n ? '<div class="ai-note">Marque o cadastro que fica e clique em Juntar. Eu não junto sozinha.</div>' : ''}`);
+    }
+    // Termina às
+    if (AI_FIM.test(t) && !/\b(agend\w*|marqu\w*|marcar|remarc\w*|remarq\w*)\b/.test(t)) return aiResponderTopico(ASSIST_TOPICOS.find(x => x.k === AI_FIM), false);
+    // Agendar / remarcar num dia trancado: o painel não abre, e a assistente diz o motivo
+    dlRecusa = null;
+    const res = _aiHandleFB.apply(this, arguments);
+    if (dlRecusa && res && /Abri/.test(res.html || '') && $('#drawer').hidden) return unsure(esc(avisoTranca(dlRecusa)));
+    return res;
+  };
+  const _aiHelpFB = aiHelp;
+  aiHelp = function () {
+    const r = _aiHelpFB.apply(this, arguments);
+    r.html = r.html.replace('</ul>', `<li>“tranque a agenda de hoje”, “a agenda de amanhã está trancada?”, “destranque a agenda” (administrador)</li>
+        <li>“quem a Maria Souza indicou?”, “quem tem desconto por indicação?”, “juntar pacientes duplicados”, “juntar procedimentos repetidos”</li>
+      </ul>`);
+    return r;
+  };
+
+  // ===== 5 e 6) Interface e layout que se adapta à tela =====
+  // Os botões que ficam só com o ícone em telas menores ganham o nome ao parar o mouse
+  [['#fitBtn', 'Encaixe / emergência'], ['#blockBtn', 'Bloquear horário'], ['#patientsBtn', 'Pacientes'], ['#dentistsBtn', 'Dentistas e horários'], ['#bdayBtn', 'Aniversariantes do mês'], ['#dayListBtn', 'Lista do dia'], ['#confirmBtn', 'Confirmar pacientes'], ['#searchBtn', 'Buscar consultas'], ['#privacyBtn', 'Modo recepção ocupada'], ['#moreBtn', 'Configurações']]
+    .forEach(([s, t]) => { const b = $(s); if (b && !b.title) b.title = t; });
+  (function () {
+    const st = document.createElement('style');
+    st.textContent = `
+  /* Trancar o dia */
+  .dl-bar{flex:1 1 100%;order:-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--amber-soft);border:1px solid #f0d28a;border-left:4px solid var(--amber);padding:7px 10px;color:var(--amber-ink);font-size:14px}
+  .dl-bar .dl-ico svg{width:18px;height:18px;display:block}
+  .dl-bar .dl-txt{flex:1 1 260px;min-width:0}
+  .dl-bar small{display:block;color:#7a5a12;font-size:12px;margin-top:1px}
+  .dl-bar .btn{display:inline-flex;align-items:center;gap:6px;background:#fff}
+  .dl-explica p{margin:0 0 8px}
+  #dlGo{display:inline-flex;align-items:center;gap:8px}
+  #agendaScroll.dl-on .slot{cursor:not-allowed}
+  @media (hover:hover){ #agendaScroll.dl-on .row:not(.off) .slot:hover{background:#fbf6ea;color:transparent} }
+  /* Indicação */
+  .ind-field{position:relative}
+  .ind-opc{font-weight:400;color:var(--muted)}
+  .ind-sug{position:absolute;left:0;right:0;z-index:45;background:#fff;border:1px solid var(--line-strong);border-radius:var(--r);box-shadow:0 10px 28px rgba(16,24,40,.18);padding:4px;max-height:240px;overflow:auto}
+  .ind-op{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:4px;font-size:15px;min-height:40px;align-items:center}
+  .ind-op:hover,.ind-op:focus-visible{background:var(--accent-hover)}
+  .ind-op span{color:var(--muted);font-size:14px;white-space:nowrap}
+  .ind-res{font-size:13px;margin-top:4px;min-height:0}
+  .ind-ok{display:inline-flex;align-items:center;gap:5px;color:var(--green-ink);font-weight:600}
+  .ind-ok svg{width:15px;height:15px}
+  .ind-txt{color:var(--muted)}
+  .ind-box{margin:4px 0 14px;padding:10px 12px;border:1px solid var(--line);background:#fafbfc}
+  .ind-box h3{display:flex;align-items:center;gap:8px;font-size:15px;margin:0 0 6px;color:#26324a}
+  .ind-box h3 svg{width:17px;height:17px;color:var(--accent)}
+  .ind-box .ind-facts{margin:0;border:0;background:none;padding:0}
+  .ind-facts .link{padding:0}
+  .ind-desc{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:10px;padding:8px 10px;background:var(--green-soft);border:1px solid #b9dfc6;border-left:4px solid var(--green);color:var(--green-ink);font-size:14px}
+  .ind-tag{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+  .ind-tag svg{width:16px;height:16px}
+  .ind-desc .btn{margin-left:auto;background:#fff}
+  .ind-chk{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+  .ind-chk input{width:20px;height:20px;min-height:0;margin:0;accent-color:var(--accent)}
+  .ind-usadas{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--muted)}
+  .pill.ind-pill{background:var(--green-soft);color:var(--green-ink);border:1px solid #b9dfc6}
+  /* Juntar duplicatas */
+  .pl-acoes{display:flex;justify-content:flex-end;margin:-4px 0 8px}
+  .pl-acoes .btn,#tcJuntar{display:inline-flex;align-items:center;gap:6px}
+  .jd-n{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:var(--red);color:#fff;font-size:12px;line-height:18px;text-align:center}
+  .jd-list{display:flex;flex-direction:column;gap:10px;margin-top:10px;max-height:min(60vh,520px);overflow:auto}
+  .jd-grupo{border:1px solid var(--line);padding:6px;background:#fff}
+  .jd-op{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r);cursor:pointer}
+  .jd-op:hover{background:var(--accent-hover)}
+  .jd-op input{width:18px;height:18px;min-height:0;margin:0}
+  .jd-op:has(input:checked){background:var(--select);box-shadow:inset 3px 0 0 var(--accent)}
+  .jd-nome{display:flex;flex-direction:column;min-width:0}
+  .jd-nome b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .jd-nome small{color:var(--muted);font-size:13px}
+  .jd-uso{font-size:13px;color:#33405a;white-space:nowrap}
+  .jd-bts{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 2px;border-top:1px solid var(--line-soft);margin-top:4px}
+  .jd-vazio{padding:12px;color:var(--muted);margin:0}
+  .jd-sai{margin:0 0 10px;padding-left:20px}
+  /* Termina às */
+  .field-row.fb-4{grid-template-columns:minmax(0,1.3fr) minmax(0,.95fr) minmax(0,1fr) minmax(0,.95fr)}
+  .field-row.fb-4 > .field{min-width:0}
+  .field-row.fb-4 input{min-width:0;width:100%}
+  .field-row.fb-4 .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .field-row.fb-4 input[type=date],.field-row.fb-4 input[type=time]{padding-left:8px;padding-right:6px}
+
+  /* ---- 5) O que é clicável parece botão; o que é só informação fica liso ---- */
+  .infochip.lunch-link:not(:disabled){background:#fff;border-color:var(--accent-line);cursor:pointer}
+  .infochip.lunch-link:not(:disabled):hover{background:var(--accent-hover);border-color:var(--accent)}
+  .infochip.lunch-link:disabled{background:transparent;border-color:transparent;padding-left:2px;cursor:default;color:#33405a}
+  .infochip.lunch-link:disabled svg{color:var(--muted)}
+  .infochip.warn.lunch-link:disabled{background:var(--red-soft);border-color:#edc4c4;color:var(--red-ink);padding-left:10px}
+  .infochip.warn.lunch-link:disabled svg{color:var(--red)}
+  .ev{cursor:pointer}
+  .ev-status{letter-spacing:.01em}
+  .cmd{transition:background-color .12s,border-color .12s}
+  .cmd-primary{box-shadow:0 1px 2px rgba(16,24,40,.2)}
+  .cmd:focus-visible,.btn:focus-visible,.iconbtn:focus-visible,.infochip:focus-visible,.dentist:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .link{text-underline-offset:2px}
+  .pane-foot .link{font-size:14px}
+  .dentist{transition:background-color .12s}
+  .menu-item[disabled]{font-style:italic}
+  /* Barras de rolagem finas, de programa (a agenda continua rolando, sem a barra grossa de página) */
+  .agenda-scroll,.side,.dentist-list,.modal,.drawer-body,.plist,.tc-list,.jd-list,.commandbar,.bm-body,#bmBody{scrollbar-width:thin;scrollbar-color:#c3cad4 transparent}
+
+  /* ---- 6) Computador: a tela se ajusta ao monitor ---- */
+  @media (min-width:1181px){
+    .workspace{grid-template-columns:clamp(220px,14vw,320px) minmax(0,1fr) clamp(300px,19vw,400px)}
+  }
+  @media (min-width:861px) and (max-width:1180px){
+    .workspace{grid-template-columns:minmax(0,1fr) clamp(260px,28vw,310px)}
+  }
+  /* Barra de comandos sem rolagem de lado: em telas menores os botões secundários ficam só com o ícone */
+  @media (min-width:601px) and (max-width:1180px){
+    #fitBtn,#blockBtn,#dentistsBtn,#bdayBtn,#privacyBtn,#moreBtn,#dayListBtn{font-size:0;gap:0;padding:0 9px}
+    #fitBtn::after,#blockBtn::after,#dentistsBtn::after,#bdayBtn::after,#privacyBtn::after,#moreBtn::after,#dayListBtn::after{content:none!important}
+  }
+  @media (min-width:601px) and (max-width:1023px){
+    #confirmBtn,#patientsBtn,#searchBtn{font-size:0;gap:0;padding:0 9px}
+    #confirmBtn::after,#patientsBtn::after,#searchBtn::after{content:none!important}
+    .cmd-sep{margin:0 2px}
+  }
+  /* Tablet em pé: o Menu também fica só com o ícone, para a barra caber sem rolar */
+  @media (min-width:601px) and (max-width:800px){
+    #menuBtn{font-size:0;gap:0;padding:0 12px}
+    #menuBtn::after{content:none!important}
+  }
+  /* Coluna da direita: o calendário e a legenda ficam inteiros e as anotações usam o espaço que sobra */
+  @media (min-width:861px){
+    .side > .notes-pane{flex:1 1 0;min-height:118px}
+    .side > .notes-pane.collapsed{flex:none;min-height:0}
+    .side #notesText{min-height:40px}
+    .side #notesText:placeholder-shown{overflow:hidden}
+    .legend{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
+  }
+  /* Computador: legenda em 3 colunas (uma linha a menos), "Fora do expediente" ocupa duas */
+  @media (min-width:1181px){
+    .legend{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 8px;padding:9px 10px}
+    .legend span:last-child{grid-column:span 2}
+  }
+  @media (min-width:861px) and (max-height:860px){
+    .cal-day{height:29px}
+    .cal-body{padding:6px 10px 8px}
+    .cal-wd{padding:2px 0}
+    .cal-head{margin-bottom:2px}
+    .cal-foot{margin-top:5px}
+    .legend{gap:3px 8px;padding:7px 10px;font-size:12px}
+  }
+  @media (min-width:861px) and (max-height:720px){
+    .cal-day{height:24px;font-size:13px}
+    .cal-nav{width:28px;height:28px}
+    .cal-foot{display:none}
+    .side .pane-head{height:34px}
+    .side > .notes-pane{min-height:132px}
+    .note-tab{padding:4px 8px 6px}
+    .legend{gap:2px 8px;padding:6px 10px;font-size:12px}
+    .legend .dot{width:12px;height:10px}
+  }
+  @media (min-width:861px) and (max-height:680px){
+    .cal-day{height:22px}
+    .cal-body{padding:5px 10px 6px}
+  }
+  /* Janela muito baixa (menos de 620px): o calendário fica mínimo e, se ainda faltar espaço, só a coluna da direita rola */
+  @media (min-width:861px) and (max-height:620px){
+    .cal-day{height:21px}
+    .cal-wd{font-size:11px;padding:1px 0}
+    .cal-body{padding:4px 10px 6px}
+    .side > .notes-pane{min-height:120px}
+  }
+  @media (min-width:861px) and (min-height:1000px){
+    .cal-day{height:clamp(34px,3.7vh,46px);font-size:15px}
+  }
+
+  /* ---- Tablet e celular: áreas de toque maiores (o celular já tem as dele) ---- */
+  @media (min-width:601px) and (max-width:860px){
+    .infochip{height:40px}
+    .daynav .iconbtn{width:42px;height:42px}
+    .daynav .btn{height:42px}
+  }
+  @media (max-width:860px){
+    .dl-bar{font-size:15px}
+    .jd-op{min-height:48px}
+    .ind-desc .btn{margin-left:0;width:100%;height:44px}
+  }
+  @media (max-width:600px){
+    .field-row.fb-4{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .field-row.fb-4 .field:first-child{grid-column:1/-1}
+    .infochip.lunch-link:disabled{padding-left:4px}
+    .jd-bts .btn{height:44px;padding:0 18px}
+    .dl-bar .btn{height:44px}
+    .ind-op{min-height:48px}
+  }`;
+    document.head.appendChild(st);
+  })();
 
   function baseMenuGroups() {
     const today = todayStr();

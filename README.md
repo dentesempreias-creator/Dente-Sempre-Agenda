@@ -916,3 +916,41 @@ O app de celular desenha a tela de ponta a ponta (Capacitor 8, `SystemBars` com 
 **Versões no site.** O site ganhou a seção **Atualizações** (veja o `LEIA-ME.md` do site). A lista de versões fica no `index.html` do site, na lista `VERSOES`, e os downloads apontam para https://github.com/dentesempreias-creator/Dente-Sempre-Agenda/releases.
 
 **Assistente.** Ela responde "o WhatsApp abre no aplicativo do computador?" (explica o caminho acima) e "qual a versão nova do aplicativo?" (aponta a seção Atualizações do site, mostra a versão instalada no computador e tem o botão **Ver as versões no GitHub**).
+
+
+## 19. Pedidos da recepção: trancar o dia, indicação, duplicatas, "Termina às" e tela que se ajusta
+
+Tudo funciona sem internet, como o resto. O código novo fica num bloco só no `app/fonte/dente-sempre.html`, com o comentário `Feedbacks da recepção (11/11)`, logo antes de `function baseMenuGroups()`. As funções antigas continuam iguais; o bloco só acrescenta conferências antes ou depois delas. Fora do bloco, só entrou uma linha na importação de agenda (consultas de dia trancado ficam de fora, menos para o administrador). O servidor não mudou.
+
+**1. Trancar agenda do dia**
+- Onde: Menu → Recepção do dia → **Trancar agenda do dia**, ou botão direito num horário livre → **Trancar agenda deste dia…**. Também pela assistente: "tranque a agenda de hoje".
+- Quem tranca: o administrador e a recepção. Quem destranca: só o administrador (botão **Destrancar** no aviso amarelo, botão direito, ou Menu).
+- Com o dia trancado, só o administrador cria, altera, exclui ou remarca consultas naquele dia, em todos os dentistas. Também ficam travados o encaixe, o bloqueio de horário, o almoço do dia, o Desfazer de consulta desse dia e a importação para esse dia.
+- Continuam liberados: **Veio**, **Não veio**, WhatsApp e as anotações.
+- Aviso: faixa amarela em cima da agenda ("Agenda do dia trancada", com quem trancou e quando). No detalhe da consulta aparece o mesmo aviso.
+- Dados: `db.dayLocks = { "AAAA-MM-DD": { em, por, porId } }`. Vai na sincronização como `dayLocks:AAAA-MM-DD`, na área Agenda.
+
+**2. Indicado por e desconto por indicação**
+- Campo **Indicado por** (opcional) no cadastro do paciente novo (Novo horário → Cadastrar novo paciente) e em Pacientes → ficha → **Editar dados**. Busca outro paciente pelo nome ou telefone. Se a pessoa não estiver no cadastro, o texto fica anotado, mas sem desconto.
+- Ficha do paciente, seção **Indicações**: quem indicou, quantas indicações ele fez (com os nomes), o desconto a usar e a próxima consulta.
+- Regra: quem indicou ganha o desconto na próxima consulta, um desconto por indicação. Padrão: 10%. O administrador muda em Menu → Configurações → **Desconto por indicação** (porcentagem ou valor fixo em R$, ou desligado). Essa regra vai na sincronização como `referral:config` (área Configurações).
+- O desconto aparece na ficha, no detalhe da próxima consulta marcada (etiqueta verde) e na mensagem de confirmação do WhatsApp ("Por ter indicado um paciente, você tem 10% de desconto nesta consulta").
+- Conta como usado quando o paciente que indicou vem a uma consulta (Veio) depois da indicação, ou no botão **Marcar desconto como usado** da ficha. Não é sistema financeiro: só controle e aviso.
+- Dados no paciente: `referredBy` (id de quem indicou), `referredByText` (texto livre), `referredAt`, `referralUsed`.
+
+**3. Juntar duplicatas**
+- Pacientes: botão **Juntar duplicatas** na janela Pacientes (e Menu → Pacientes → Juntar pacientes duplicados). Acha pacientes com o mesmo CPF, ou com o mesmo telefone e nome igual ou muito parecido ("Maria Souza" e "maria souza", "Carla Dias" e "Carla Dias Santos"). Mesmo telefone com outro nome (mãe e filha) não entra.
+- Você marca qual cadastro fica. Antes de juntar, a confirmação mostra quantas consultas passam. As consultas, as próteses e as indicações dos outros passam para o que fica; dados vazios dele (nascimento, CPF, RG, endereço) são completados com os dos outros.
+- Procedimentos: Menu → Configurações → Tipos de consulta → **Juntar duplicatas**. Junta tipos com o mesmo nome escrito diferente (maiúsculas, acentos, espaços). As consultas antigas passam a usar o nome que ficou.
+- Dá para desfazer com Ctrl+Z (Menu → Desfazer).
+
+**4. Termina às**
+- No Novo horário e no Alterar, ao lado de **Tempo (min)**, o campo **Termina às** (HH:MM). Um atualiza o outro: Hora 14:00 + 30 min mostra 14:30; escrever 15:15 muda o tempo para 75 min. Sem a hora de início, o "Termina às" com o tempo calcula a hora de início.
+
+**5 e 6. Interface e tela que se ajusta ao monitor (só CSS)**
+- O que é clicável parece botão (Almoço · Alterar com borda); o que é só informação fica liso (Expediente, quando o usuário não pode mudar). Contorno de foco no teclado e barras de rolagem finas.
+- Computador: as colunas acompanham a largura (dentistas 14% da tela, de 220 a 320 px; lado direito 19%, de 300 a 400 px). A coluna da direita cabe sem barra de rolagem: o calendário diminui em telas baixas e as anotações usam o espaço que sobra. A legenda fica em 3 colunas.
+- Barra de comandos sem rolagem para o lado: em telas de 601 a 1180 px de largura, os botões secundários ficam só com o ícone (o nome aparece ao parar o mouse).
+- Medido: sem barras de rolagem além da própria agenda em 1366x768, 1366x705, 1280x650, 1536x780, 1920x1080, 2560x1440 e 1024x700. Só em janelas com menos de 620 px de altura a coluna da direita ainda rola. No celular a tela continua como estava (o celular já tinha passado pelo ajuste de toque).
+
+**Assistente.** Responde "tranque a agenda de hoje" (abre a confirmação), "a agenda de amanhã está trancada?", "destranque a agenda" (só administrador, com botão), "quem a Maria indicou?", "quem tem desconto por indicação?", "qual o desconto por indicação?", "juntar pacientes duplicados", "juntar procedimentos repetidos" e "onde coloco a hora que termina?". Pedindo para agendar num dia trancado, ela explica que o dia está trancado.
