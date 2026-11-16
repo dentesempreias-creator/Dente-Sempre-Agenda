@@ -12,7 +12,9 @@
 //    - gerar chave de ativação nova;
 //    - senha provisória nova para o administrador da clínica;
 //    - pagamentos recebidos pelo Mercado Pago;
-//    - login e senha de cada usuário da clínica (ficha da clínica).
+//    - login e senha de cada usuário da clínica (ficha da clínica);
+//    - indicações entre clínicas: "Indicada por" na clínica nova e, na ficha,
+//      o desconto acumulado e o botão "Desconto dado" (13/11, veja indicacoes.js).
 //
 //  Segurança:
 //   - desligado enquanto PAINEL_SENHA não existir (mínimo 12 caracteres);
@@ -42,7 +44,7 @@ const senhaForm = token => sha('dente-sempre-painel-form|' + token).slice(0, 32)
 
 function criarPainel(ctx) {
   const { sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
-    novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre } = ctx;
+    novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre, indicacoes } = ctx;
   let preparado = false;
   const s = () => { const db = sistema(); if (!preparado) { db.exec(SCHEMA); preparado = true; } return db; };
   const ligado = () => SENHA.length >= 12;
@@ -201,6 +203,7 @@ function criarPainel(ctx) {
           <label><span>Plano</span><select name="plano">${Object.keys(planos.PLANOS).map(p => `<option value="${p}"${(v.plano || planos.PLANO_PADRAO) === p ? ' selected' : ''}>${esc(planos.nomeDoPlano(p))}</option>`).join('')}</select></label>
           <label><span>Dias de validade</span><input name="dias" inputmode="numeric" maxlength="4" value="${esc(v.dias || '')}" placeholder="teste: ${planos.PLANOS.teste.dias} · outros: sem data"></label>
         </div>
+        <label><span>Indicada por (opcional)</span><input name="indicadaPor" maxlength="40" value="${esc(v.indicadaPor || '')}" placeholder="código da clínica que indicou"></label>
         <button class="bt bp" type="submit">Criar clínica</button>
       </form>`, info);
   }
@@ -229,6 +232,7 @@ function criarPainel(ctx) {
         <dt>Dentistas ativos</dt><dd>${cont.dentistas} de ${lim.dentistas}</dd>
         <dt>Usuários ativos</dt><dd>${cont.usuarios} de ${lim.usuarios}</dd>
         <dt>Criada em</dt><dd>${dataBR(c.criadaEm)}</dd>
+        ${linhaIndicacoes(c, acao)}
       </dl></div>
       ${caixaUsuarios(c)}
       <div class="caixa"><h2>Mudar plano</h2>
@@ -248,6 +252,15 @@ function criarPainel(ctx) {
         ${chaves.map(k => `<tr><td class="mono">${esc(k.chave)}</td><td>${dataBR(k.criadaEm)}</td><td>${k.bloqueada ? '<span class="tag mal">Bloqueada</span>' : '<span class="tag ok">Vale</span>'}</td></tr>`).join('')}</table></div>
       <div class="caixa rolar"><h2>Pagamentos</h2>
         ${pedidos.length ? tabelaPedidos(pedidos, false) : '<p style="margin:0">Nenhum pagamento pela internet ainda.</p>'}</div>`, info);
+  }
+
+  // Indicações feitas pela clínica e o desconto acumulado (13/11). "Desconto dado" marca as que valiam como usadas.
+  function linhaIndicacoes(c, acao) {
+    if (!indicacoes) return '';
+    const r = indicacoes().resumo(c.id);
+    if (!r.valendo && !r.aguardando && !r.usadas) return '<dt>Indicações</dt><dd>Nenhuma</dd>';
+    return `<dt>Indicações</dt><dd>${r.valendo} valendo · ${r.aguardando} aguardando a indicada assinar · ${r.usadas} já usadas
+      ${r.pct ? `<br><b>${r.pct}% de desconto</b> na próxima cobrança <span class="muted">(dê o desconto e depois clique abaixo)</span>${acao('indicacoes-usadas', 'Desconto dado', 'bg')}` : ''}</dd>`;
   }
 
   // Usuários da clínica com login e senha (06/11). A senha vem da cópia criptografada (senhas-visiveis.js).
@@ -320,6 +333,10 @@ function criarPainel(ctx) {
       S.prepare('UPDATE clinicas SET plano = ?, situacao = ?, validaAte = ? WHERE id = ?').run(p, p === 'teste' ? 'teste' : 'ativa', validaAte, c.id);
       return msg('ok', `Plano ${esc(planos.nomeDoPlano(p))} salvo${validaAte ? ' até ' + dataBR(validaAte) : ', sem data para acabar'}.`);
     }
+    if (acao === 'indicacoes-usadas' && indicacoes) {
+      const n = indicacoes().usar(c.id);
+      return n ? msg('ok', `${n} ${n === 1 ? 'indicação marcada' : 'indicações marcadas'} como usada${n === 1 ? '' : 's'}.`) : msg('esp', 'Nenhuma indicação valendo para marcar.');
+    }
     if (acao === 'revogar' || acao === 'liberar') {
       const r = S.prepare('UPDATE aparelhos SET revogado = ? WHERE clinicaId = ? AND aparelho = ?').run(acao === 'revogar' ? 1 : 0, c.id, String(f.get('aparelho') || ''));
       if (!r.changes) return msg('mal', 'Aparelho não encontrado.');
@@ -375,10 +392,10 @@ function criarPainel(ctx) {
           return ir('/painel', { 'Set-Cookie': cookie('', 0) });
         }
         if (caminho === '/painel/nova') {
-          const v = { nome: String(f.get('nome') || '').replace(/\s+/g, ' ').trim().slice(0, 80), codigo: String(f.get('codigo') || '').trim().slice(0, 30), plano: String(f.get('plano') || ''), dias: String(f.get('dias') || '').replace(/\D/g, '').slice(0, 4) };
+          const v = { nome: String(f.get('nome') || '').replace(/\s+/g, ' ').trim().slice(0, 80), codigo: String(f.get('codigo') || '').trim().slice(0, 30), plano: String(f.get('plano') || ''), dias: String(f.get('dias') || '').replace(/\D/g, '').slice(0, 4), indicadaPor: String(f.get('indicadaPor') || '').trim().toLowerCase().slice(0, 40) };
           if (v.nome.length < 2) return enviar(400, paginaNova(info, v, 'Escreva o nome da clínica.'));
           let r;
-          try { r = criarClinica({ nome: v.nome, codigo: v.codigo || undefined, plano: v.plano, dias: v.dias || undefined }); }
+          try { r = criarClinica({ nome: v.nome, codigo: v.codigo || undefined, plano: v.plano, dias: v.dias || undefined, indicadaPor: v.indicadaPor || undefined }); }
           catch (e) { return enviar(400, paginaNova(info, v, e.message)); }
           const servidor = String(process.env.ENDERECO_PUBLICO || '').replace(/\/+$/, '');
           return ir('/painel/clinica?c=' + encodeURIComponent(r.clinica.codigo) + '&aviso=' + guardarAviso(msg('ok', `Clínica criada. A senha também fica na ficha da clínica, em Usuários e senhas.

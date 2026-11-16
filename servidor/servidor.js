@@ -17,6 +17,11 @@
 //    node servidor.js aparelhos <codigo>      |  node servidor.js revogar-aparelho <codigo> <aparelho>
 //    node servidor.js liberar-aparelho <codigo> <aparelho>
 //    node servidor.js senha-admin <codigo>    (senha provisória nova para o administrador)
+//  Desconto por indicação entre clínicas (veja indicacoes.js):
+//    node servidor.js indicacao <codigo-de-quem-indicou> <codigo-da-indicada>
+//    node servidor.js indicacoes <codigo>     (o que a clínica indicou e o desconto acumulado)
+//    node servidor.js indicacoes-usadas <codigo>   (depois de dar o desconto na cobrança)
+//    (ou na criação: nova-clinica "Nome" --indicada-por <codigo>)
 //  Cópias:
 //    node servidor.js copia                   (todas as clínicas e o sistema)
 //    node servidor.js copia-clinica <codigo>
@@ -43,6 +48,7 @@ const { criarAreaDoPaciente } = require('./area.js');
 const { criarPagamento } = require('./pagamento.js');
 const { criarPainel } = require('./painel.js');
 const { criarAssinatura } = require('./assinatura.js');
+const { criarIndicacoes } = require('./indicacoes.js');
 
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';                          // atrás do Caddy/Nginx: 127.0.0.1
@@ -654,8 +660,44 @@ const ROTAS = {
     }
     const lista = d.prepare('SELECT * FROM usuarios ORDER BY criadoEm').all().map(lerUsuario);
     return { ok: true, usuario: publico(lista.find(x => x.id === id)), usuarios: lista.map(publico) };
+  },
+
+  // "Meu plano" no programa (13/11): plano, valores e desconto por indicação. Só o administrador; só lê.
+  // Funciona também com o plano vencido ou suspenso, para o administrador ver o que aconteceu.
+  '/api/plano'(corpo, req) {
+    const { u, clinica } = autenticar(req, corpo, { semSituacao: true });
+    exigir(u.role === 'admin', 'Só o administrador vê o plano da clínica.');
+    return Object.assign({ ok: true }, dadosDoPlano(clinica));
   }
 };
+
+// Valores e desconto por indicação de uma clínica (o cálculo fica aqui no servidor; o programa só mostra)
+function dadosDoPlano(clinica) {
+  const { centavosDe } = require('./pagamento.js');
+  const pagos = Object.keys(planos.PLANOS).filter(p => p !== 'teste');
+  const precoMes = p => centavosDe(process.env['PRECO_' + p.toUpperCase()]) || centavosDe(planos.PLANOS[p] && planos.PLANOS[p].preco) || null;
+  const recorrente = String(process.env.ASSINATURA_RECORRENTE || '1') !== '0';
+  const meses = String(process.env.PAGAMENTO_MESES || '1,3,6,12').split(',').map(Number);
+  const temAno = !recorrente && meses.includes(12);
+  // Assinatura mensal ativa: o valor dela vale mais que a tabela (o preço pode ter mudado depois)
+  let ass = null;
+  try { ass = sistema().prepare("SELECT centavosMes, situacao FROM ass_assinaturas WHERE clinicaId = ? AND situacao IN ('ativa', 'pausada') ORDER BY criadaEm DESC LIMIT 1").get(clinica.id) || null; }
+  catch (e) { ass = null; }   // a tabela só existe depois da primeira assinatura no servidor
+  const mes = clinica.plano === 'teste' ? null : ((ass && ass.centavosMes) || precoMes(clinica.plano));
+  const ind = indicacoes().resumo(clinica.id);
+  const comDesconto = c => c ? Math.round(c * (100 - ind.pct) / 100) : null;
+  return {
+    plano: { id: clinica.plano, nome: planos.nomeDoPlano(clinica.plano) },
+    situacao: clinica.situacao, validaAte: clinica.validaAte || null, codigo: clinica.codigo, clinica: clinica.nome,
+    limites: planos.limites(clinica),
+    valores: {
+      mes, ano: mes && temAno ? mes * 12 : null, recorrente, assinaturaAtiva: !!ass,
+      tabela: pagos.map(p => ({ id: p, nome: planos.nomeDoPlano(p), mes: precoMes(p), ano: temAno && precoMes(p) ? precoMes(p) * 12 : null }))
+    },
+    indicacao: Object.assign({}, ind, { mesComDesconto: comDesconto(mes), anoComDesconto: mes && temAno ? comDesconto(mes * 12) : null, cobrancaAutomatica: false }),
+    lidoEm: agora()
+  };
+}
 
 let lp = null;
 const linkPaciente = () => lp || (lp = criarLinkDoPaciente({ sistema, bancoDaClinica, clinicaPorId, emTransacao, getMeta, setMeta, planos, agora, recusa }));
@@ -665,9 +707,11 @@ let pagP = null;
 const pagamento = () => pagP || (pagP = criarPagamento({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, emTransacao, planos, agora, lerUsuario, senhaConfere }));
 let assP = null;   // assinatura recorrente (Mercado Pago Assinaturas)
 const assinatura = () => assP || (assP = criarAssinatura({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, emTransacao, planos, agora, lerUsuario, senhaConfere, pagamento }));
+let indP = null;   // desconto por indicação entre clínicas (13/11)
+const indicacoes = () => indP || (indP = criarIndicacoes({ sistema, clinicaPorId, clinicaPorCodigo, agora }));
 let painelP = null;
 const painelAdm = () => painelP || (painelP = criarPainel({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
-  novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre }));
+  novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre, indicacoes }));
 
 // Só para teste no navegador (SERVIR_PROGRAMA=1). Em uso real, a clínica usa o aplicativo.
 function servirHtml(res) {
@@ -746,8 +790,11 @@ function novaChaveDaClinica(clinica) {
   sistema().prepare('INSERT INTO licencas (chave, clinicaId, criadaEm) VALUES (?, ?, ?)').run(k, clinica.id, agora());
   return k;
 }
-function criarClinica({ nome, codigo, plano, dias, adminLogin = 'admin', adminSenha }) {
+function criarClinica({ nome, codigo, plano, dias, adminLogin = 'admin', adminSenha, indicadaPor }) {
   const S = sistema();
+  // Indicada por outra clínica (13/11): confere antes de criar, para não ficar clínica criada com indicação errada
+  const porInd = indicadaPor ? clinicaPorCodigo(String(indicadaPor).trim().toLowerCase()) : null;
+  if (indicadaPor && !porInd) throw new Error(`Não achei a clínica que indicou ("${indicadaPor}"). Veja os códigos com: node servidor.js clinicas`);
   if (MAX_CLINICAS > 0 && S.prepare('SELECT COUNT(*) n FROM clinicas').get().n >= MAX_CLINICAS) {
     throw new Error(`Este servidor já tem o máximo de clínicas configurado (MAX_CLINICAS=${MAX_CLINICAS}).`);
   }
@@ -769,7 +816,8 @@ function criarClinica({ nome, codigo, plano, dias, adminLogin = 'admin', adminSe
     .run(id, cod, nome, plano, plano === 'teste' ? 'teste' : 'ativa', validaAte, agora());
   const clinica = clinicaPorId(id);
   const chave = novaChaveDaClinica(clinica);
-  return { clinica, login: adminLogin, senha, chave };
+  if (porInd) indicacoes().registrar(porInd.codigo, clinica);
+  return { clinica, login: adminLogin, senha, chave, indicadaPor: porInd ? porInd.codigo : null };
 }
 
 // Converte o banco.json da versão anterior (um arquivo para todas as clínicas)
@@ -832,14 +880,15 @@ function main() {
     return;
   }
   if (cmd === 'nova-clinica') {
-    if (!a1) { console.log('Use: node servidor.js nova-clinica "Nome da clínica" [--codigo sorriso] [--plano teste|basico|profissional] [--dias 30]'); process.exitCode = 1; return; }
+    if (!a1) { console.log('Use: node servidor.js nova-clinica "Nome da clínica" [--codigo sorriso] [--plano teste|basico|profissional] [--dias 30] [--indicada-por <codigo>]'); process.exitCode = 1; return; }
     try {
-      const r = criarClinica({ nome: String(a1).trim(), codigo: opcao(args, 'codigo'), plano: opcao(args, 'plano'), dias: opcao(args, 'dias') });
+      const r = criarClinica({ nome: String(a1).trim(), codigo: opcao(args, 'codigo'), plano: opcao(args, 'plano'), dias: opcao(args, 'dias'), indicadaPor: opcao(args, 'indicada-por') });
       console.log(`Clínica "${r.clinica.nome}" criada.`);
       console.log(`  Código da clínica: ${r.clinica.codigo}`);
       console.log(`  Plano: ${planos.nomeDoPlano(r.clinica.plano)}${r.clinica.validaAte ? ' (até ' + planos.dataBR(r.clinica.validaAte) + ')' : ''}`);
       console.log(`  Primeiro acesso: usuário ${r.login}, senha provisória ${r.senha}`);
       console.log(`  Chave de ativação: ${r.chave}`);
+      if (r.indicadaPor) console.log(`  Indicada por: ${r.indicadaPor} (vale desconto para ela quando esta clínica assinar um plano)`);
     } catch (e) { console.log('Não criei a clínica: ' + e.message); process.exitCode = 1; }
     return;
   }
@@ -861,6 +910,28 @@ function main() {
     const validaAte = ate ? new Date(ate + 'T23:59:59').toISOString() : (a2 === 'teste' ? new Date(Date.now() + planos.PLANOS.teste.dias * 86400000).toISOString() : null);
     sistema().prepare('UPDATE clinicas SET plano = ?, situacao = ?, validaAte = ? WHERE id = ?').run(a2, a2 === 'teste' ? 'teste' : 'ativa', validaAte, c.id);
     console.log(linhaClinica(clinicaPorId(c.id)));
+    return;
+  }
+  // Desconto por indicação entre clínicas (13/11)
+  if (cmd === 'indicacao') {
+    if (!a1 || !a2) { console.log('Use: node servidor.js indicacao <codigo-de-quem-indicou> <codigo-da-clinica-indicada>'); process.exitCode = 1; return; }
+    const r = indicacoes().registrar(a1, a2);
+    if (r.erro) { console.log('Não anotei: ' + r.erro); process.exitCode = 1; return; }
+    console.log(`Anotado: ${r.por.nome} (${r.por.codigo}) indicou ${r.indicada.nome} (${r.indicada.codigo}).`);
+    console.log(r.indicada.plano === 'teste' ? 'O desconto passa a valer quando a clínica indicada assinar um plano.' : 'A clínica indicada já tem plano pago: o desconto já vale.');
+    return;
+  }
+  if (cmd === 'indicacoes' || cmd === 'indicacoes-usadas') {
+    const c = exigirClinica(a1);
+    if (cmd === 'indicacoes-usadas') {
+      const n = indicacoes().usar(c.id);
+      console.log(n ? `${n} ${n === 1 ? 'indicação marcada' : 'indicações marcadas'} como usada${n === 1 ? '' : 's'} (o desconto já foi dado).` : 'Nenhuma indicação valendo para marcar.');
+      return;
+    }
+    const r = indicacoes().resumo(c.id), l = indicacoes().lista(c.id);
+    console.log(`${c.nome} (${c.codigo}): ${r.valendo} valendo, ${r.aguardando} aguardando a indicada assinar, ${r.usadas} já usadas.`);
+    console.log(`Desconto na próxima cobrança: ${r.pct}% (${r.porIndicacao}% por indicação, até ${r.maximo}%).`);
+    l.forEach(x => console.log(`  ${(x.indicada ? x.indicada.codigo : '(clínica apagada)').padEnd(22)} ${String(x.criadaEm).slice(0, 10)}  ${x.situacao}${x.usadaEm ? ' em ' + String(x.usadaEm).slice(0, 10) : ''}`));
     return;
   }
   if (cmd === 'suspender' || cmd === 'reativar') {

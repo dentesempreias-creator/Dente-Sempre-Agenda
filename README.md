@@ -20,6 +20,7 @@ dente-sempre/
 │   ├── area.js                   ← área do paciente: entra com telefone + código e vê as próprias consultas
 │   ├── pagamento.js              ← pagamento pelo Mercado Pago: /assinar e o aviso automático (seção 12)
 │   ├── painel.js                 ← painel de administração em /painel, com senha (seção 12)
+│   ├── indicacoes.js             ← desconto por indicação entre clínicas (seção 20)
 │   ├── Dockerfile                ← para Fly.io, Railway, Render...
 │   └── hospedagem/               ← instalação num VPS com HTTPS automático (Caddy)
 └── .github/workflows/gerar-apps.yml   ← gera o APK e os instaladores no GitHub, de graça
@@ -930,7 +931,7 @@ Tudo funciona sem internet, como o resto. O código novo fica num bloco só no `
 - Aviso: faixa amarela em cima da agenda ("Agenda do dia trancada", com quem trancou e quando). No detalhe da consulta aparece o mesmo aviso.
 - Dados: `db.dayLocks = { "AAAA-MM-DD": { em, por, porId } }`. Vai na sincronização como `dayLocks:AAAA-MM-DD`, na área Agenda.
 
-**2. Indicado por e desconto por indicação**
+**2. Indicado por e desconto por indicação** *(tirado em 13/11: não existe mais no programa; veja a seção 20)*
 - Campo **Indicado por** (opcional) no cadastro do paciente novo (Novo horário → Cadastrar novo paciente) e em Pacientes → ficha → **Editar dados**. Busca outro paciente pelo nome ou telefone. Se a pessoa não estiver no cadastro, o texto fica anotado, mas sem desconto.
 - Ficha do paciente, seção **Indicações**: quem indicou, quantas indicações ele fez (com os nomes), o desconto a usar e a próxima consulta.
 - Regra: quem indicou ganha o desconto na próxima consulta, um desconto por indicação. Padrão: 10%. O administrador muda em Menu → Configurações → **Desconto por indicação** (porcentagem ou valor fixo em R$, ou desligado). Essa regra vai na sincronização como `referral:config` (área Configurações).
@@ -940,7 +941,7 @@ Tudo funciona sem internet, como o resto. O código novo fica num bloco só no `
 
 **3. Juntar duplicatas**
 - Pacientes: botão **Juntar duplicatas** na janela Pacientes (e Menu → Pacientes → Juntar pacientes duplicados). Acha pacientes com o mesmo CPF, ou com o mesmo telefone e nome igual ou muito parecido ("Maria Souza" e "maria souza", "Carla Dias" e "Carla Dias Santos"). Mesmo telefone com outro nome (mãe e filha) não entra.
-- Você marca qual cadastro fica. Antes de juntar, a confirmação mostra quantas consultas passam. As consultas, as próteses e as indicações dos outros passam para o que fica; dados vazios dele (nascimento, CPF, RG, endereço) são completados com os dos outros.
+- Você marca qual cadastro fica. Antes de juntar, a confirmação mostra quantas consultas passam. As consultas e as próteses dos outros passam para o que fica; dados vazios dele (nascimento, CPF, RG, endereço) são completados com os dos outros.
 - Procedimentos: Menu → Configurações → Tipos de consulta → **Juntar duplicatas**. Junta tipos com o mesmo nome escrito diferente (maiúsculas, acentos, espaços). As consultas antigas passam a usar o nome que ficou.
 - Dá para desfazer com Ctrl+Z (Menu → Desfazer).
 
@@ -953,4 +954,62 @@ Tudo funciona sem internet, como o resto. O código novo fica num bloco só no `
 - Barra de comandos sem rolagem para o lado: em telas de 601 a 1180 px de largura, os botões secundários ficam só com o ícone (o nome aparece ao parar o mouse).
 - Medido: sem barras de rolagem além da própria agenda em 1366x768, 1366x705, 1280x650, 1536x780, 1920x1080, 2560x1440 e 1024x700. Só em janelas com menos de 620 px de altura a coluna da direita ainda rola. No celular a tela continua como estava (o celular já tinha passado pelo ajuste de toque).
 
-**Assistente.** Responde "tranque a agenda de hoje" (abre a confirmação), "a agenda de amanhã está trancada?", "destranque a agenda" (só administrador, com botão), "quem a Maria indicou?", "quem tem desconto por indicação?", "qual o desconto por indicação?", "juntar pacientes duplicados", "juntar procedimentos repetidos" e "onde coloco a hora que termina?". Pedindo para agendar num dia trancado, ela explica que o dia está trancado.
+**Assistente.** Responde "tranque a agenda de hoje" (abre a confirmação), "a agenda de amanhã está trancada?", "destranque a agenda" (só administrador, com botão), "juntar pacientes duplicados", "juntar procedimentos repetidos" e "onde coloco a hora que termina?". Pedindo para agendar num dia trancado, ela explica que o dia está trancado.
+
+
+## 20. Ajustes após mais tempo de uso (13/11)
+
+Tudo funciona sem internet, como o resto (menos o Meu plano, que precisa do servidor para buscar os valores e depois guarda a última leitura). O código novo do programa fica num bloco só no `app/fonte/dente-sempre.html`, com o comentário `Ajustes após mais tempo de uso (13/11)`, logo antes de `function baseMenuGroups()`. O juntar duplicatas e a retirada do desconto de pacientes mexeram no bloco de 11/11 (seção 19). No servidor entrou o arquivo `servidor/indicacoes.js` (o `Dockerfile` e o `hospedagem/instalar-vps.sh` já copiam ele), a rota `/api/plano` no `servidor.js` e o campo de indicação no `painel.js`. **Atualize o servidor junto com os aplicativos**: com o servidor antigo, o Meu plano avisa "O servidor ainda não tem o Meu plano"; o resto funciona igual.
+
+**1. Aba Pacientes mostra todos**
+- Antes a janela Pacientes mostrava só os 100 primeiros. Agora mostra todos: abre com 150, e ao rolar até o fim aparecem os próximos sozinhos (também tem o botão **Mostrar mais**).
+- Em cima da lista aparece o total ("365 pacientes cadastrados" ou "12 pacientes encontrados").
+- A busca procura em todos os pacientes, por nome ou telefone.
+
+**2. Juntar duplicatas por nome, telefone ou os dois**
+- Onde: Pacientes → **Juntar duplicatas** (ou Menu → Pacientes → Juntar pacientes duplicados).
+- Em cima da janela, **Juntar por**: **Nome e telefone** (a regra de antes: mesmo CPF, ou mesmo telefone com nome igual ou muito parecido), **Só o nome** (nome escrito igual; maiúsculas, acentos e espaços não contam) ou **Só o telefone** (mesmo número, mesmo com nomes diferentes).
+- Em cada grupo: marque o cadastro que fica e desmarque **Juntar** em quem não é a mesma pessoa (fica riscado e não entra).
+- A confirmação continua mostrando quantas consultas passam, contando só quem está marcado.
+- Desfazer: Ctrl+Z ou Menu → Desfazer.
+
+**3. Desconto por indicação de pacientes: tirado**
+- Saiu do programa: o campo "Indicado por" (Novo horário e ficha), a seção Indicações da ficha, a etiqueta de desconto na consulta, a frase de desconto na mensagem do WhatsApp, o item Menu → Configurações → Desconto por indicação e as perguntas da assistente sobre isso.
+- A regra antiga (`referral:config`) não é mais lida nem enviada; quem tinha a regra salva manda um "apagar" para o servidor na próxima sincronização. Os campos antigos que ficaram nos cadastros (`referredBy`, `referredByText`, `referredAt`, `referralUsed`) não aparecem em lugar nenhum e não atrapalham.
+
+**4. Meu plano (só o administrador)**
+- Onde: Menu → Configurações → **Meu plano**, ou o botão Configurações (em cima) → **Meu plano…**. Pela assistente: "meu plano", "quanto tenho de desconto por indicação?", "como indico outra clínica?".
+- Mostra: plano (Teste grátis, Básico ou Profissional) e situação, mensalidade (e anuidade, quando o servidor oferece pagamento de 12 meses), validade, limites do plano e o código da clínica.
+- **Desconto por indicação**: quantas indicações estão valendo, a porcentagem acumulada, a próxima mensalidade com o desconto ("em vez de R$ …"), indicações aguardando a clínica indicada assinar e as já usadas. Em **Como indicar** tem o texto explicando e o botão **Copiar convite** (com o código da clínica).
+- Botão **Assinar ou renovar** (abre a mesma página de assinatura de antes).
+- Sem internet: mostra a última leitura guardada, com o aviso "mostrando o que veio em …". Com a chave local (sem servidor): explica que o plano aparece quando o programa estiver ligado ao servidor.
+- A recepção e o dentista não veem o Meu plano (nem no menu, nem pela assistente, nem pelo servidor).
+
+**Regra do desconto entre clínicas (fica no servidor)**
+- Uma clínica indica outra. Quando a indicada sai do teste grátis e passa para um plano pago, a indicação **vale**: quem indicou ganha `DESCONTO_INDICACAO` % (padrão 10) na próxima mensalidade ou anuidade. As indicações se somam até `DESCONTO_INDICACAO_MAX` % (padrão 50).
+- Onde anotar quem indicou (só você, o dono do Dente Sempre):
+  - Painel → **Nova clínica** → campo **Indicada por** (código da clínica que indicou);
+  - `dente-sempre nova-clinica "Nome" --indicada-por <codigo>`;
+  - depois de criada: `dente-sempre indicacao <codigo-de-quem-indicou> <codigo-da-indicada>`.
+- Ver: na ficha da clínica no painel, a linha **Indicações** ("2 valendo · 1 aguardando · 0 já usadas" e a porcentagem). Ou `dente-sempre indicacoes <codigo>`.
+- **Estrutura preparada:** o servidor guarda as indicações e faz a conta (porcentagem e valor final), e o programa mostra. A cobrança do Mercado Pago **ainda não tira o desconto sozinha**. Quem cuida das cobranças dá o desconto e depois clica em **Desconto dado** na ficha da clínica no painel (ou `dente-sempre indicacoes-usadas <codigo>`). As indicações passam para "já usadas" e o Meu plano volta para 0% até a próxima indicação valer.
+- Uma clínica não pode indicar a si mesma, e cada clínica só pode ser indicada uma vez.
+
+| Variável | Para quê | Padrão |
+|---|---|---|
+| `DESCONTO_INDICACAO` | porcentagem de desconto por indicação que vale | 10 |
+| `DESCONTO_INDICACAO_MAX` | máximo somando as indicações | 50 |
+
+**5. Mensagens prontas no WhatsApp**
+- Onde:
+  - clique na consulta → **WhatsApp**: a janela agora tem **Tipo de mensagem** (Confirmar consulta, Lembrete de véspera, Remarcar consulta, Cancelar consulta, Está a caminho?, Faltou à consulta, Agradecer a visita e os modelos da clínica);
+  - botão direito (ou toque longo no celular) numa consulta agendada → grupo **Mensagem no WhatsApp** (Confirmar, Lembrete de véspera, Remarcar, Cancelar e Outras mensagens…);
+  - Menu → Recepção do dia → **Mensagens prontas do WhatsApp**, ou botão Configurações → **Mensagens prontas do WhatsApp…**.
+- O texto escolhido já vem com nome, data, hora, dentista e o nome da clínica, e pode ser editado antes de abrir o WhatsApp. "Confirmar consulta" é o mesmo texto de antes. Nada é enviado sozinho.
+- **Salvar este texto como modelo**: guarda o texto editado com um nome; o nome do paciente, a data, a hora e o nome da clínica viram marcas (`{nome}`, `{data}`, `{dia}`, `{hora}`, `{tipo}`, `{dentista}`, `{equipe}`), que trocam sozinhas na próxima vez.
+- **Modelos da clínica…**: criar, editar e excluir os modelos. Os modelos são da clínica: vão na sincronização (`msgModelos:<id>`, área Configurações) e aparecem em todos os aparelhos. Quem pode: quem já podia mandar a confirmação (administrador e recepção).
+- **Assistente**: "manda mensagem de remarque para a Maria", "lembrete de véspera para o João", "manda mensagem de cancelamento para o Pedro Alves", "mensagens prontas". Ela abre a janela com o tipo certo na próxima consulta marcada do paciente (no "faltou", na consulta em que faltou). Se tiver dois pacientes com o mesmo nome, pede o nome completo.
+
+**Ajuste pequeno de tela:** o campo de busca da janela Pacientes e o texto da janela do WhatsApp ficavam com a borda direita cortada; agora cabem na janela, no computador e no celular.
+
+**Não mudou:** sincronização (só entrou a parte nova `msgModelos` e saiu a regra antiga de indicação), permissões, próteses, área do paciente e regras do dia.
