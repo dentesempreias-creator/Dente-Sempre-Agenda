@@ -316,6 +316,38 @@ function fazerCopia() {
   return pasta;
 }
 
+// "Começar do zero" de uma clínica (24/11): saiu do programa e agora só o dono faz, pelo painel.
+// Antes, guarda uma cópia do arquivo da clínica (em copias/). Apaga consultas, pacientes e dentistas e o que depende
+// deles (as mesmas partes do Começar do zero do programa); usuários, senhas, configurações, tipos e anotações continuam.
+// Nova "época" com "zero-" na frente: cada aparelho guarda o que tinha, esvazia a agenda e recebe tudo de novo do servidor.
+const PARTES_ZERAR = ['appointments', 'patients', 'dentists', 'blocks', 'lunchDays', 'replies', 'prostheses', 'orcamentos'];
+function contarParaZerar(d) {
+  const n = {};
+  for (const r of d.prepare("SELECT substr(key, 1, instr(key, ':') - 1) parte, COUNT(*) n FROM registros WHERE op != 'apagar' GROUP BY parte").all()) {
+    if (PARTES_ZERAR.includes(r.parte)) n[r.parte] = r.n;
+  }
+  return n;
+}
+function zerarClinica(c) {
+  const d = bancoDaClinica(c.id);
+  fs.mkdirSync(PASTA_COPIAS, { recursive: true, mode: 0o700 });
+  const copia = path.join(PASTA_COPIAS, `clinica-${c.codigo}-antes-de-zerar-${carimbo()}.db`);
+  copiarBanco(d, copia);
+  const apagados = emTransacao(d, () => {
+    const n = contarParaZerar(d), at = agora();
+    let r = Number(getMeta(d, 'rev') || 0);
+    const apaga = d.prepare("UPDATE registros SET op = 'apagar', data = NULL, rev = ?, by = 'painel', user = '', at = ? WHERE key = ?");
+    for (const x of d.prepare("SELECT key FROM registros WHERE op != 'apagar' ORDER BY rev").all()) {
+      if (PARTES_ZERAR.includes(x.key.slice(0, x.key.indexOf(':')))) apaga.run(++r, at, x.key);
+    }
+    setMeta(d, 'rev', r);
+    setMeta(d, 'epoca', 'zero-' + crypto.randomBytes(6).toString('hex'));
+    setMeta(d, 'zeradaEm', at);
+    return n;
+  });
+  return { copia, apagados };
+}
+
 // =====================================================================
 //  RESPOSTAS, SEGURANÇA E SESSÃO
 // =====================================================================
@@ -484,6 +516,18 @@ const ROTAS = {
     const p = problemaSenha(corpo.senhaNova, u);
     if (p) throw recusa(400, 'senha-fraca', p);
     d.prepare('UPDATE usuarios SET senha = ?, mustChange = 0, senhaTrocadaEm = ? WHERE id = ?').run(JSON.stringify(novaSenha(corpo.senhaNova)), agora(), u.id);
+    return { ok: true };
+  },
+
+  // { senha } — Área restrita do programa (24/11): confere a senha do administrador antes das opções perigosas
+  // (restaurar backup, usuários e senhas, desativar aparelho). Só confere; não muda nada. Erros contam no limite de tentativas.
+  '/api/conferir-senha'(corpo, req) {
+    const { u, clinica } = autenticar(req, corpo, { semSituacao: true });
+    exigir(u.role === 'admin', 'Só o administrador entra na área restrita.');
+    const chave = 'restrita|' + clinica.id + '|' + u.id;
+    conferirBloqueio(chave);
+    if (!senhaConfere(u.senha, corpo.senha)) { anotarErro(chave); throw recusa(400, 'senha', 'Senha errada.'); }
+    tentativas.delete(chave);
     return { ok: true };
   },
 
@@ -711,7 +755,7 @@ let indP = null;   // desconto por indicação entre clínicas (13/11)
 const indicacoes = () => indP || (indP = criarIndicacoes({ sistema, clinicaPorId, clinicaPorCodigo, agora }));
 let painelP = null;
 const painelAdm = () => painelP || (painelP = criarPainel({ sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
-  novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre, indicacoes }));
+  novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre, indicacoes, zerarClinica, contarParaZerar }));
 
 // Só para teste no navegador (SERVIR_PROGRAMA=1). Em uso real, a clínica usa o aplicativo.
 function servirHtml(res) {

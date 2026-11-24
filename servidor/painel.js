@@ -14,7 +14,9 @@
 //    - pagamentos recebidos pelo Mercado Pago;
 //    - login e senha de cada usuário da clínica (ficha da clínica);
 //    - indicações entre clínicas: "Indicada por" na clínica nova e, na ficha,
-//      o desconto acumulado e o botão "Desconto dado" (13/11, veja indicacoes.js).
+//      o desconto acumulado e o botão "Desconto dado" (13/11, veja indicacoes.js);
+//    - Área restrita da clínica: "Começar do zero" (24/11). Saiu do programa da clínica;
+//      só o dono faz, aqui, escrevendo o código da clínica para confirmar. Guarda uma cópia antes.
 //
 //  Segurança:
 //   - desligado enquanto PAINEL_SENHA não existir (mínimo 12 caracteres);
@@ -44,7 +46,7 @@ const senhaForm = token => sha('dente-sempre-painel-form|' + token).slice(0, 32)
 
 function criarPainel(ctx) {
   const { sistema, bancoDaClinica, clinicaPorId, clinicaPorCodigo, listarClinicas, criarClinica, novaChaveDaClinica,
-    novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre, indicacoes } = ctx;
+    novaSenha, senhaProvisoria, contarDentistasAtivos, planos, agora, pagamento, cofre, indicacoes, zerarClinica, contarParaZerar } = ctx;
   let preparado = false;
   const s = () => { const db = sistema(); if (!preparado) { db.exec(SCHEMA); preparado = true; } return db; };
   const ligado = () => SENHA.length >= 12;
@@ -137,6 +139,7 @@ function criarPainel(ctx) {
   .busca{display:flex;gap:8px} .busca input{max-width:320px}
   .entrar{max-width:380px;margin:60px auto}
   .muted{color:#6b7584;font-size:14px;font-weight:400}
+  .restrita{border-color:#f0b9b9;background:#fffafa} .restrita h2{color:#962c2c}
 </style></head><body>
 <header><div class="in"><b>Painel · Dente Sempre</b>${info ? `<nav>
   <a href="/painel"${titulo === 'Clínicas' ? ' class="on"' : ''}>Clínicas</a><a href="/painel/nova"${titulo === 'Nova clínica' ? ' class="on"' : ''}>Nova clínica</a><a href="/painel/pagamentos"${titulo === 'Pagamentos' ? ' class="on"' : ''}>Pagamentos</a>
@@ -251,7 +254,27 @@ function criarPainel(ctx) {
         <table><tr><th>Chave</th><th>Criada em</th><th>Situação</th></tr>
         ${chaves.map(k => `<tr><td class="mono">${esc(k.chave)}</td><td>${dataBR(k.criadaEm)}</td><td>${k.bloqueada ? '<span class="tag mal">Bloqueada</span>' : '<span class="tag ok">Vale</span>'}</td></tr>`).join('')}</table></div>
       <div class="caixa rolar"><h2>Pagamentos</h2>
-        ${pedidos.length ? tabelaPedidos(pedidos, false) : '<p style="margin:0">Nenhum pagamento pela internet ainda.</p>'}</div>`, info);
+        ${pedidos.length ? tabelaPedidos(pedidos, false) : '<p style="margin:0">Nenhum pagamento pela internet ainda.</p>'}</div>
+      ${caixaRestrita(info, c)}`, info);
+  }
+
+  // Área restrita da clínica (24/11): "Começar do zero" saiu do programa da clínica e ficou só aqui
+  const NOMES_PARTES = { appointments: ['consulta', 'consultas'], patients: ['paciente', 'pacientes'], dentists: ['dentista', 'dentistas'],
+    blocks: ['bloqueio', 'bloqueios'], lunchDays: ['almoço do dia', 'almoços do dia'], replies: ['resposta de paciente', 'respostas de pacientes'],
+    prostheses: ['prótese', 'próteses'], orcamentos: ['orçamento', 'orçamentos'] };
+  const contagemTxt = n => Object.keys(NOMES_PARTES).filter(k => n[k]).map(k => `${n[k]} ${NOMES_PARTES[k][n[k] === 1 ? 0 : 1]}`).join(', ');
+  function caixaRestrita(info, c) {
+    if (!zerarClinica) return '';
+    let n = {};
+    try { n = contarParaZerar(bancoDaClinica(c.id)); } catch (e) { n = {}; }
+    const txt = contagemTxt(n);
+    return `<div class="caixa restrita"><h2>Área restrita · Começar do zero</h2>
+      <p>Apaga ${txt ? `<b>${esc(txt)}</b>` : 'as consultas, os pacientes e os dentistas (hoje não há nenhum)'} desta clínica, no servidor e em todos os aparelhos (na próxima sincronização).
+        Continuam: usuários e senhas, nome e cores da clínica, tipos de consulta, anotações, aparelhos, chaves e plano.</p>
+      <p class="muted">Antes de apagar, o servidor guarda uma cópia do arquivo da clínica na pasta de cópias (dá para voltar com <span class="mono">restaurar-clinica</span>). Cada aparelho também guarda o que tinha antes de esvaziar.</p>
+      <form method="post" action="/painel/acao">${oculto(info)}<input type="hidden" name="c" value="${esc(c.codigo)}"><input type="hidden" name="acao" value="zerar">
+        <label style="max-width:420px"><span>Para confirmar, escreva o código da clínica: <span class="mono">${esc(c.codigo)}</span></span><input name="confirmar" autocomplete="off" spellcheck="false" required></label>
+        <button class="bt bd" type="submit">Apagar os dados da clínica</button></form></div>`;
   }
 
   // Indicações feitas pela clínica e o desconto acumulado (13/11). "Desconto dado" marca as que valiam como usadas.
@@ -336,6 +359,11 @@ function criarPainel(ctx) {
     if (acao === 'indicacoes-usadas' && indicacoes) {
       const n = indicacoes().usar(c.id);
       return n ? msg('ok', `${n} ${n === 1 ? 'indicação marcada' : 'indicações marcadas'} como usada${n === 1 ? '' : 's'}.`) : msg('esp', 'Nenhuma indicação valendo para marcar.');
+    }
+    if (acao === 'zerar' && zerarClinica) {
+      if (String(f.get('confirmar') || '').trim().toLowerCase() !== c.codigo) return msg('mal', 'Nada foi apagado: o código digitado não é o desta clínica.');
+      const r = zerarClinica(c), txt = contagemTxt(r.apagados);
+      return msg('esp', `${txt ? 'Pronto. Foram apagados: ' + esc(txt) : 'Pronto. Não havia nada para apagar'}. Os aparelhos da clínica ficam vazios na próxima sincronização.<br><span class="muted">Cópia de antes: <span class="mono">${esc(r.copia)}</span></span>`);
     }
     if (acao === 'revogar' || acao === 'liberar') {
       const r = S.prepare('UPDATE aparelhos SET revogado = ? WHERE clinicaId = ? AND aparelho = ?').run(acao === 'revogar' ? 1 : 0, c.id, String(f.get('aparelho') || ''));

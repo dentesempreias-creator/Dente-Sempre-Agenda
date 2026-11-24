@@ -87,7 +87,7 @@ Saem o instalador do Windows (.exe) e o APK de teste do Android, sem assinatura.
 
 **Como o programa fica no celular** (telas de até 600px; no computador nada muda):
 
-- **Barra fixa embaixo** com os 5 atalhos mais usados: Menu, Confirmar, Lista, Pacientes e Mais. O resto (Encaixe, Bloquear, Aniversários, Dentistas e Modo ocupada) fica no Menu.
+- **Barra fixa embaixo** com os 5 atalhos mais usados: Menu, Confirmar, Lista, Pacientes e Mais. O resto (Encaixe, Bloquear, Aniversários e Dentistas) fica no Menu.
 - O botão **+ Novo horário** fica flutuando acima da barra. Quando você digita nas anotações ou na assistente, a barra sai da frente do teclado.
 - **Agenda:** cartões com nome e horário maiores, e linhas de 15 minutos mais altas, melhores para o dedo.
 - **Janelas** abrem de baixo para cima. Os botões de ação ficam em duas colunas, e Salvar/Cancelar ficam sempre visíveis no rodapé.
@@ -255,7 +255,7 @@ Acha qualquer consulta pelo **nome do paciente** ou pelo **procedimento** (limpe
 
 **Como usar:**
 
-1. Digite o nome (ou parte dele) ou o procedimento. Pode misturar: `maria canal`. Acentos e maiúsculas não importam. Só números, como `98765`, busca pelo telefone. Isso vale para quem pode ver pacientes e só fora do modo ocupada.
+1. Digite o nome (ou parte dele) ou o procedimento. Pode misturar: `maria canal`. Acentos e maiúsculas não importam. Só números, como `98765`, busca pelo telefone. Isso vale para quem pode ver pacientes.
 2. Se quiser, escolha:
    - o **Período**: hoje, próximos 7 ou 30 dias, últimos 30 dias, este mês, mês passado, este ano ou **Escolher datas** (De / Até);
    - a **Situação**: agendado, atrasado/sem registro, chegou, faltou, confirmado pelo paciente ou pediu remarque;
@@ -661,7 +661,7 @@ O que dá para fazer no painel:
 |---|---|
 | **Clínicas** | lista de todas as clínicas, com plano, situação, validade e aparelhos em uso; busca por nome ou código; totais no topo |
 | **Nova clínica** | cria a clínica com plano e dias. Mostra o código, o usuário, a senha provisória e a chave de ativação, e já monta o texto para mandar à clínica |
-| Ficha da clínica (clique no nome) | **suspender / reativar**; **gerar chave nova** (as antigas continuam valendo); **senha nova do administrador**; **mudar plano e validade** à mão; **login e senha de cada usuário**; ver os **aparelhos ativados** e desativar ou liberar cada um; ver as chaves e os pagamentos da clínica |
+| Ficha da clínica (clique no nome) | **suspender / reativar**; **gerar chave nova** (as antigas continuam valendo); **senha nova do administrador**; **mudar plano e validade** à mão; **login e senha de cada usuário**; ver os **aparelhos ativados** e desativar ou liberar cada um; ver as chaves e os pagamentos da clínica; no fim, **Área restrita · Começar do zero** (seção 21) |
 | **Pagamentos** | se o Mercado Pago está configurado e todos os pedidos, com a situação de cada um |
 
 Proteções do painel:
@@ -797,7 +797,7 @@ Em **Menu → Configurações → Importar agenda…** (administrador e recepç�
 - Todas as funções de antes continuam iguais, inclusive as permissões:
   - agenda, pacientes, dentistas e permissões;
   - Mensagem para grupo e personalização;
-  - backup e modo "ocupada".
+  - backup.
 
 ### Falta para começar a vender
 
@@ -840,7 +840,9 @@ Em **Menu → Configurações**, só para o administrador:
 
 ### Começar do zero
 
-**Menu → Configurações → Começar do zero**, ou o botão **Configurações** no alto. Só o administrador vê.
+*(Mudou em 24/11, seção 21: com servidor, só você faz, pelo painel; sem servidor, fica na Área restrita e pede a senha do administrador.)*
+
+**Menu → Área restrita → Começar do zero** (só sem servidor), ou o botão **Configurações** no alto. Só o administrador vê.
 - Apaga consultas, pacientes e dentistas, e o que depende deles: bloqueios, almoços do dia, respostas dos pacientes e próteses.
 - Continuam: usuários e senhas, nome e cores da clínica, tipos de consulta (com a duração padrão), anotações e protéticos.
 - Pede confirmação forte: mostra "Isso apaga tudo. Tem certeza?" e só libera o botão depois de escrever **APAGAR**.
@@ -895,7 +897,7 @@ O app de celular desenha a tela de ponta a ponta (Capacitor 8, `SystemBars` com 
 - **Embaixo:** a barra de botões, o botão Novo horário, os rodapés das janelas e o menu Mais ficam acima da barra de gestos (ou dos botões) do telefone.
 - **Deitado:** nada fica embaixo da câmera de lado.
 - As medidas vêm do telefone (`env(safe-area-inset-*)` ou `--safe-area-inset-*`, que o Capacitor coloca). No computador e no navegador elas valem 0, e a tela do computador ficou igual.
-- **Barra de cima no celular:** lupa, sincronização e usuário com a mesma altura (44 px, bom para o dedo), numa linha só. O nome "Dente Sempre" não quebra em duas linhas. Em telas de até 349 px, a sincronização mostra só a bolinha colorida (verde, amarela ou vermelha); tocando nela abre a Sincronização. O aviso "Modo recepção ocupada" corta com "…" se não couber.
+- **Barra de cima no celular:** lupa, sincronização e usuário com a mesma altura (44 px, bom para o dedo), numa linha só. O nome "Dente Sempre" não quebra em duas linhas. Em telas de até 349 px, a sincronização mostra só a bolinha colorida (verde, amarela ou vermelha); tocando nela abre a Sincronização.
 - **Tamanho da fonte do Android:** o app não aumenta mais o texto quando a fonte do sistema está grande (`MainActivity.java`, `setTextZoom(100)`). Com a fonte grande, o "Sincronizado" ficava maior que o botão. O app já usa letras e botões grandes no celular.
 - Testado em 320, 360, 412 (Realme 11) e 430 px de largura, com a área do sistema simulada.
 
@@ -1013,3 +1015,59 @@ Tudo funciona sem internet, como o resto (menos o Meu plano, que precisa do serv
 **Ajuste pequeno de tela:** o campo de busca da janela Pacientes e o texto da janela do WhatsApp ficavam com a borda direita cortada; agora cabem na janela, no computador e no celular.
 
 **Não mudou:** sincronização (só entrou a parte nova `msgModelos` e saiu a regra antiga de indicação), permissões, próteses, área do paciente e regras do dia.
+
+---
+
+## 21. Pedidos de 24/11
+
+Tudo funciona sem internet, menos a conferência da senha da Área restrita com servidor (sem internet, ela usa a entrada sem internet guardada no aparelho). O código novo do programa fica num bloco só no `app/fonte/dente-sempre.html`, entre os comentários `Pedidos de 24/11` e `fim dos pedidos de 24/11`, logo antes de `function baseMenuGroups()`. Fora do bloco mudaram: a retirada do Modo ocupada (botão, aviso, item do menu e da assistente), duas linhas da lista de Pacientes (bloco de 13/11), uma do Juntar pacientes (que agora leva os orçamentos junto) e uma do Começar do zero de 06/11 (não entra no botão Configurações quando há servidor). No servidor: rota `/api/conferir-senha` e a função `zerarClinica` no `servidor.js`, a Área restrita no `painel.js`, e a consulta com mais de um dentista no `area.js` e no `paciente.js`. Nenhum arquivo novo (o `Dockerfile` e o `instalar-vps.sh` não mudam). **Atualize o servidor junto com os aplicativos**: com o servidor antigo, a senha da Área restrita é conferida pela entrada sem internet do aparelho, e o Começar do zero não aparece no painel.
+
+**1. Orçamento do paciente**
+- Onde: **Pacientes → abra o paciente → Orçamentos → + Novo orçamento**. Também no cadastro de paciente novo (no Novo horário): marque **Fazer o orçamento deste paciente** (opcional). O modelo abre logo depois de salvar, já com o dentista e o procedimento da consulta.
+- O modelo tem: dados do paciente (nome, telefone, nascimento com a idade e CPF), data, dentista, situação (**Em aberto**, **Aprovado** ou **Não aprovado**), uma linha por procedimento com **dente(s)**, **procedimento**, **quantidade** e **valor unitário**, o subtotal de cada linha, o **total** (soma sozinho) e observações (forma de pagamento, validade…).
+- **Dentes:** escreva (ex.: 11, 21) ou toque no ícone do dente para escolher no desenho da boca (permanentes ou de leite, numeração FDI). A quantidade acompanha o número de dentes, até você mudar à mão.
+- Procedimento: sugere os tipos de consulta e o que já foi usado em outros orçamentos. Valor: aceita `150`, `150,00` ou `1.200,50`.
+- **Imprimir:** botão **Salvar e imprimir** no modelo, ou **Imprimir** na lista de orçamentos do paciente. Modelo neutro, para qualquer clínica: nome e logo da clínica (os de Personalizar), número e data, dados do paciente, tabela, total, observações e espaço para as assinaturas do paciente e do dentista. No celular não imprime (avisa para imprimir pelo computador).
+- Cada orçamento ganha um número (ex.: 2611-K3PD). Editar e excluir (pede duas vezes) pelo próprio orçamento. Fechar com mudança não salva avisa na janela.
+- Quem pode: administrador e recepção (os mesmos que editam pacientes). O dentista não vê.
+- Sincronização: `orcamentos:<id>`, na área **Pacientes**. Entra no backup, no Desfazer (juntar pacientes) e no Juntar duplicatas.
+- Assistente: "fazer orçamento para a Maria", "orçamento do João", "onde faço orçamento?".
+
+**2 e 3. Status do paciente: Em aberto, Veio e Não veio**
+- Toda consulta começa **Em aberto** (era "Agendado"; o nome mudou na agenda, legenda, barra de baixo, busca e Lista do dia).
+- Clique na consulta → **Status do paciente**: três botões, **Em aberto · Veio · Não veio**. Dá para trocar depois de marcar (Veio ↔ Não veio) e voltar para Em aberto. No botão direito: Veio, Não veio e **Voltar para Em aberto**.
+- **Só no dia da consulta.** Dia futuro: ninguém muda o status. Dia passado: a recepção não muda (só completa pela tela de pendências o que ficou sem status, como antes); o **administrador corrige** entre Veio e Não veio (Em aberto só no próprio dia).
+- Falta com horário liberado: só volta a Veio ou Em aberto se ninguém usou o horário depois (avisa quem está lá).
+- Desfazer: "Voltar para Em aberto · Maria". Assistente: "deixa a Maria em aberto".
+
+**4. Coluna Dentistas:** no lugar da data, **dentistas ativos / limite do plano** (ex.: 2/8). Fica amarelo quando chega no limite. Sem servidor (sem plano), mostra só o número.
+
+**5. Modo recepção ocupada:** saiu (botão, aviso e opção do menu).
+
+**6. Janelas que se ajustam à tela**
+- As janelas largas (Lista do dia, Pacientes, Confirmar, orçamento…) usam mais da tela em monitores grandes (até 1180 px) e as pequenas crescem um pouco em telas Full HD e 4K.
+- **Lista do dia:** nada é cortado; nome, tipo e dentista quebram a linha quando precisam.
+- Nome comprido de dentista quebra a linha (na coluna Dentistas e na janela Dentistas) em vez de cortar com "…".
+- Conferido abrindo 33 janelas do programa em 1280×720, 1366×768, 1920×1080, 2560×1440, tablet (768×1024) e celular (390×844): nenhuma sai da tela nem rola para o lado.
+
+**7. Agenda do dia trancada:** os horários livres ficam com listras e cadeado ("Agenda trancada"), como um horário bloqueado; passando o mouse aparece "+ 10:30 livre" (o administrador ainda pode marcar). As consultas do dia ganham um cadeado pequeno ao lado da hora.
+
+**8. Consulta com mais de um dentista**
+- **Novo horário → "+ Mais um dentista nesta consulta"** (abaixo do Dentista) → marque os outros dentistas.
+- A consulta entra na agenda de **cada** dentista, no mesmo horário (uma cópia por dentista, ligadas pelo campo `grupo`). O cartão mostra "com Dr. Ricardo"; o detalhe mostra "Dentistas: Dra. Cleo e Dr. Ricardo".
+- Confere o expediente e os horários ocupados de cada dentista antes de salvar.
+- **Veio, Não veio, Em aberto, liberar horário, editar, remarcar e excluir valem para todas as cópias.** Editando, dá para pôr ou tirar dentistas.
+- Conta uma vez só: Lista do dia (com todos os dentistas), Confirmar pacientes, histórico e número de consultas do paciente, área do paciente e link de confirmação (que mostram os nomes de todos). A mensagem do WhatsApp cita todos os dentistas.
+
+**9. Pacientes por dentista**
+- Pacientes → **Dentista**: Todos os dentistas, um dentista, ou **Sem consulta**. Vem das consultas (não precisa cadastrar nada).
+- Cada paciente da lista mostra os dentistas dele. No cadastro do paciente, a linha **Dentistas** (ex.: "Dra. Cleo (3 consultas) · Dr. Ricardo (1 consulta)").
+
+**10. Área restrita**
+- No programa, as opções perigosas ficam juntas em **Menu → Área restrita** (e no botão Configurações, em "Área restrita · pede a senha"): **Usuários e senhas**, **Restaurar backup**, e também **Desativar este aparelho** e **Enviar backup restaurado para todos**.
+- Pedem a **senha do administrador** (a mesma de entrar). Com servidor, quem confere é o servidor (`/api/conferir-senha`, com limite de tentativas). Depois da senha certa, fica aberta **10 minutos** neste aparelho; sair fecha na hora. Recepção e dentista continuam sem acesso, como antes.
+- **Começar do zero saiu do programa** quando ele usa o servidor: aparece só a explicação "é feito pelo suporte". Sem servidor (modo local), continua dentro da Área restrita, com senha e APAGAR.
+- **No seu painel:** ficha da clínica → **Área restrita · Começar do zero**. Mostra o que vai ser apagado (ex.: "120 consultas, 85 pacientes, 2 dentistas, 4 orçamentos"); para confirmar, escreva o **código da clínica**. Apaga consultas, pacientes, dentistas, bloqueios, almoços do dia, respostas dos pacientes, próteses e orçamentos. Continuam: usuários e senhas, nome e cores da clínica, tipos, anotações, aparelhos, chaves e plano.
+- Antes de apagar, o servidor guarda uma cópia: `dados/copias/clinica-<codigo>-antes-de-zerar-<data>.db` (volta com `dente-sempre restaurar-clinica <codigo> <arquivo>`). Na próxima sincronização, cada aparelho guarda o que tinha, esvazia a agenda e avisa "O suporte do Dente Sempre apagou os dados da clínica (Começar do zero)".
+
+**Não mudou:** permissões (as regras de cada perfil são as mesmas), sincronização (só entrou a parte `orcamentos`), próteses, regras do dia, `config.json` e a chave pública.

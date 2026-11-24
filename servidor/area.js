@@ -216,18 +216,34 @@ function criarAreaDoPaciente(ctx) {
   }
 
   // [SEGURANÇA] só as consultas DESTE paciente; nada de outros pacientes
+  // 24/11: consulta com mais de um dentista (cópias ligadas pelo campo "grupo") aparece uma vez só,
+  // com todos os dentistas (_dentistas) e os ids de todas as cópias (_ids, para achar a resposta dada em qualquer uma)
   function consultasDoPaciente(info) {
-    const out = [];
-    for (const r of info.d.prepare("SELECT data FROM registros WHERE key LIKE 'appointments:%' AND op = 'salvar'").all()) {
+    const out = [], grupos = new Map();
+    for (const r of info.d.prepare("SELECT data FROM registros WHERE key LIKE 'appointments:%' AND op = 'salvar' ORDER BY key").all()) {
       let a; try { a = JSON.parse(r.data); } catch (e) { continue; }
       if (!a || a.patientId !== info.patientId || a.status === 'deleted' || !/^\d{4}-\d{2}-\d{2}$/.test(a.date || '')) continue;
+      if (a.grupo) {
+        const g = grupos.get(a.grupo);
+        if (g) { g._ids.push(a.id); if (a.dentistId && !g._dentistas.includes(a.dentistId)) g._dentistas.push(a.dentistId); continue; }
+        a._ids = [a.id]; a._dentistas = a.dentistId ? [a.dentistId] : [];
+        grupos.set(a.grupo, a);
+      }
       out.push(a);
     }
     return out;
   }
   function respostaDe(d, a) {
-    const r = registro(d, 'replies:' + a.id);
-    return r && r.date === a.date && r.start === a.start && ['confirmado', 'remarcar', 'cancelado'].includes(r.tipo) ? r : null;
+    for (const id of a._ids || [a.id]) {
+      const r = registro(d, 'replies:' + id);
+      if (r && r.date === a.date && r.start === a.start && ['confirmado', 'remarcar', 'cancelado'].includes(r.tipo)) return r;
+    }
+    return null;
+  }
+  // Nome dos dentistas da consulta: "Dra. Ana" ou "Dra. Ana e Dr. João"
+  function nomesDentistas(d, a) {
+    const n = (a._dentistas || [a.dentistId]).map(id => String((registro(d, 'dentists:' + id) || {}).name || '')).filter(Boolean);
+    return n.length <= 1 ? (n[0] || '') : n.slice(0, -1).join(', ') + ' e ' + n[n.length - 1];
   }
   // O que o paciente pode fazer nesta consulta, pelas regras da clínica
   function podeFazer(info, a, resp) {
@@ -320,11 +336,11 @@ function criarAreaDoPaciente(ctx) {
     futuras.sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start));
     passadas.sort((x, y) => (y.date + y.start).localeCompare(x.date + x.start));
     const dentistas = {};
-    const nomeDentista = id => (id in dentistas) ? dentistas[id] : (dentistas[id] = String((registro(info.d, 'dentists:' + id) || {}).name || ''));
+    const nomeDentista = a => { const k = (a._dentistas || [a.dentistId]).join('|'); return (k in dentistas) ? dentistas[k] : (dentistas[k] = nomesDentistas(info.d, a)); };
     const waGeral = waLink(info, `Olá! Sou ${nome}, paciente da clínica.`);
     const cartoes = futuras.map(a => {
       const resp = respostaDe(info.d, a), pode = podeFazer(info, a, resp);
-      const dent = nomeDentista(a.dentistId);
+      const dent = nomeDentista(a);
       let estado = '';
       if (resp && resp.tipo === 'confirmado') estado = `<div class="ok">✓ Presença confirmada em ${esc(horaNaClinica(resp.em))}.</div>`;
       if (resp && resp.tipo === 'remarcar') estado = `<div class="rem">Pedido de remarque enviado em ${esc(horaNaClinica(resp.em))}. A clínica vai falar com você para combinar um novo horário.</div>`;
@@ -346,7 +362,7 @@ function criarAreaDoPaciente(ctx) {
       </div>`;
     }).join('');
     const rotulo = a => a.status === 'arrived' ? 'Realizada' : a.status === 'no_show' ? 'Não compareceu' : (respostaDe(info.d, a) || {}).tipo === 'cancelado' ? 'Cancelada' : '';
-    const anteriores = passadas.slice(0, PASSADAS).map(a => `<li><div><b>${dm(a.date)}/${a.date.slice(0, 4)}</b> às ${esc(a.start)}<small>${[a.typeName, nomeDentista(a.dentistId)].filter(Boolean).map(esc).join(' · ')}</small></div><span class="tag">${rotulo(a)}</span></li>`).join('');
+    const anteriores = passadas.slice(0, PASSADAS).map(a => `<li><div><b>${dm(a.date)}/${a.date.slice(0, 4)}</b> às ${esc(a.start)}<small>${[a.typeName, nomeDentista(a)].filter(Boolean).map(esc).join(' · ')}</small></div><span class="tag">${rotulo(a)}</span></li>`).join('');
     const corpo = `
       <h1>Olá, ${esc(primeiroNome(nome)) || 'paciente'}!</h1>
       ${aviso ? `<div class="aviso" role="status">${esc(aviso)}</div>` : ''}
@@ -361,7 +377,7 @@ function criarAreaDoPaciente(ctx) {
   }
 
   function paginaConfirmarCancelamento(info, a) {
-    const dent = String((registro(info.d, 'dentists:' + a.dentistId) || {}).name || '');
+    const dent = nomesDentistas(info.d, a);
     return moldura(info, 'Cancelar consulta', `
       <h1>Cancelar esta consulta?</h1>
       <div class="card"><div class="quando">${esc(dataPorExtenso(a.date))}</div><div class="hora">${esc(a.start)}</div>

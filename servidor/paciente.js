@@ -107,10 +107,20 @@ function criarLinkDoPaciente(ctx) {
     const logo = /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(conf.logo || '') && conf.logo.length < 1500000 ? conf.logo : '';
     if (!a) return { clinica, d, link, nomeClinica, cor, logo, erro: 'apagada' };
     const dentista = registro(d, 'dentists:' + a.dentistId);
+    let nomeDentista = dentista ? dentista.name : '', varios = false;
+    if (a.grupo) {   // 24/11: consulta com mais de um dentista (cópias com o mesmo "grupo"): mostra todos
+      const ids = [];
+      for (const r of d.prepare("SELECT data FROM registros WHERE key LIKE 'appointments:%' AND op = 'salvar' ORDER BY key").all()) {
+        let x; try { x = JSON.parse(r.data); } catch (e) { continue; }
+        if (x && x.grupo === a.grupo && x.status !== 'deleted' && x.dentistId && !ids.includes(x.dentistId)) ids.push(x.dentistId);
+      }
+      const n = ids.map(id => (registro(d, 'dentists:' + id) || {}).name).filter(Boolean);
+      if (n.length > 1) { nomeDentista = n.slice(0, -1).join(', ') + ' e ' + n[n.length - 1]; varios = true; }
+    }
     const paciente = registro(d, 'patients:' + a.patientId);
     const resp = registro(d, 'replies:' + a.id);
     return { clinica, d, link, a, h, nomeClinica, cor, logo,
-      dentista: dentista ? dentista.name : '', nome: primeiroNome(paciente && paciente.name),
+      dentista: nomeDentista, varios, nome: primeiroNome(paciente && paciente.name),
       resposta: resp && resp.date === a.date && resp.start === a.start ? resp : null };
   }
 
@@ -143,7 +153,7 @@ function criarLinkDoPaciente(ctx) {
       const dados = `<dl>
         <dt>Data</dt><dd>${esc(dataPorExtenso(a.date))}</dd>
         <dt>Horário</dt><dd class="hora">${esc(a.start)}</dd>
-        ${info.dentista ? `<dt>Dentista</dt><dd>${esc(info.dentista)}</dd>` : ''}
+        ${info.dentista ? `<dt>${info.varios ? 'Dentistas' : 'Dentista'}</dt><dd>${esc(info.dentista)}</dd>` : ''}
         ${a.typeName ? `<dt>Procedimento</dt><dd>${esc(a.typeName)}</dd>` : ''}
       </dl>`;
       const r = info.resposta;

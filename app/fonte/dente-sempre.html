@@ -1014,7 +1014,6 @@
   </span>
   <span class="tb-name">Dente Sempre</span></span>
   <span class="tb-sub" id="clinicName">— Agenda da clínica</span>
-  <span class="tb-badge" id="privacyBadge" hidden>Modo recepção ocupada</span>
   <span class="tb-right">
     <span class="tb-clock" id="clock"></span>
     <button type="button" class="tb-search" id="tbSearch" aria-label="Buscar consultas" title="Buscar consultas"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
@@ -1040,7 +1039,6 @@
   <button data-short="Buscar" class="cmd" id="searchBtn" title="Buscar consultas por paciente, procedimento ou período (atalho: B)" aria-keyshortcuts="B"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><span class="cmd-txt">Buscar</span></button>
   <button class="cmd" id="dentistsBtn" data-perm="dentistas.editar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Dentistas</button>
   <span class="cmd-spacer" aria-hidden="true"></span>
-  <button data-short="Ocupada" class="cmd cmd-privacy" id="privacyBtn" data-perm="privacidade" aria-pressed="false" title="Esconde CPF, RG, endereço e o telefone completo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c5 0 9 4.5 10 7a12 12 0 0 1-2.7 3.6M6.3 6.4A12.5 12.5 0 0 0 2 12c1 2.5 5 7 10 7a9.6 9.6 0 0 0 4.3-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg><span class="cmd-txt">Modo ocupada</span></button>
   <button data-short="Config." class="cmd" id="moreBtn" data-menu-trigger aria-haspopup="menu" title="Aparência, backup, sincronização, usuários e ativação"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="cmd-txt">Configurações</span></button>
 </nav>
 
@@ -3951,7 +3949,8 @@
   const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
   // ---------- Modo recepção ocupada ----------
-  const isPrivate = () => !!device.privacy;   // vale para este computador (não sobe para o servidor)
+  // 24/11: o modo recepção ocupada foi retirado (não era útil). Fica sempre desligado.
+  const isPrivate = () => false;
   const HIDDEN = '<span class="muted">Oculto (modo recepção ocupada)</span>';
   // Telefone completo só fora do modo ocupada: (11) •••••-4321
   function phoneOut(phone) {
@@ -3961,9 +3960,7 @@
     return `(${d.slice(0, 2)}) •••••-${d.slice(-4)}`;
   }
   function renderPrivacy() {
-    document.body.classList.toggle('privacy', isPrivate());
-    $('#privacyBadge').hidden = !isPrivate();
-    $('#privacyBtn').setAttribute('aria-pressed', String(isPrivate()));
+    document.body.classList.remove('privacy');
   }
   function togglePrivacy() {
     if (!allow('privacidade')) return;
@@ -4639,7 +4636,7 @@
   const ROLES = {
     admin: { label: 'Administrador', perms: '*',
       about: 'Faz tudo: dentistas e horários, configurações, usuários, restaurar backup e desativar a chave.' },
-    recepcao: { label: 'Recepção', about: 'Agenda de todos os dentistas, confirmar, pacientes, bloqueio e almoço do dia, exportar backup, modo ocupada e anotações.',
+    recepcao: { label: 'Recepção', about: 'Agenda de todos os dentistas, confirmar, pacientes, bloqueio e almoço do dia, exportar backup e anotações.',
       perms: ['agenda.todos', 'agenda.editar', 'confirmar', 'listas', 'pacientes.ver', 'pacientes.editar', 'bloqueio',
         'backup.exportar', 'privacidade', 'anotacoes', 'assistente', 'sync', 'sync.enviar'] },
     dentista: { label: 'Dentista', about: 'Vê só a própria agenda e o telefone do paciente. Não vê CPF, RG nem endereço e não muda nada.',
@@ -5501,7 +5498,7 @@
       <h3>O que sobe e desce</h3>
       <ul class="sy-areas" id="syAreas">${SYNC_AREAS.map(a => { const n = syncInfo.byArea[a.id] || 0; return `<li data-area="${a.id}"><span><b>${a.label}</b><small>${a.sub}</small></span>
         <span class="pill ${n ? 'st-late' : 'st-arrived'}">${n ? n + (n === 1 ? ' pendente' : ' pendentes') : 'Em dia'}</span></li>`; }).join('')}</ul>
-      <p class="hint">Não sobem: usuários e senhas, modo recepção ocupada, ativação e a data do último backup deste aparelho.</p>
+      <p class="hint">Não sobem: usuários e senhas, ativação e a data do último backup deste aparelho.</p>
       ${rs ? (can('backup.restaurar')
         ? '<div class="error" id="syRestoreWarn">Enviar o backup restaurado deixa o servidor igual ao backup e <b>apaga o que veio depois em todos os aparelhos</b>.</div>'
         : '<p class="hint" id="syRestoreWarn">Só o administrador pode decidir o que fazer com o backup restaurado.</p>') : ''}
@@ -7903,7 +7900,7 @@
   // Botão Configurações (no alto, à direita): Começar do zero no fim da lista, antes de Sair
   const _openMenuV6 = openMenu;
   openMenu = function (titulo, itens) {
-    if (titulo === 'Configurações' && Array.isArray(itens) && souAdmin() && !itens.some(it => it && it.act === 'comecar-zero')) {
+    if (titulo === 'Configurações' && Array.isArray(itens) && souAdmin() && !online() && !itens.some(it => it && it.act === 'comecar-zero')) {
       itens = itens.slice();
       const i = itens.findIndex(it => it && it.act === 'exit');
       itens.splice(i >= 0 ? i : itens.length, 0, { header: 'Dados' }, { act: 'comecar-zero', label: 'Começar do zero…', icon: I.trash, cls: 'danger', run: abrirComecarDoZero }, { sep: true });
@@ -8307,7 +8304,6 @@
     { k: /\bconfirm\w*\b/, nome: 'Confirmar pacientes', cam: 'Botão Confirmar na barra, ou Menu → Recepção do dia → Confirmar pacientes', faz: 'Monta as mensagens de WhatsApp de confirmação, uma por vez.', own: true, abrir: () => openConfirmModal(state.date, ''), pode: () => can('confirmar'), quem: 'o administrador e a recepção' },
     { k: /\b(lista do dia|imprimir|imprimo)\b/, nome: 'Lista do dia', cam: 'Botão Lista do dia na barra, ou Menu → Recepção do dia → Lista do dia', faz: 'Ver ou imprimir as consultas do dia.', own: true, abrir: () => openDayListModal(state.date, ''), pode: () => can('listas'), quem: 'o administrador e a recepção' },
     { k: /\b(mensagem para (o )?grupo|mensagem em grupo|mensagens? para varios)\b/, nome: 'Mensagem para grupo', cam: 'Menu → Recepção do dia → Mensagem para grupo', faz: 'Mensagens para faltosos, consultas de amanhã e outros filtros.', abrir: openGroupMsgModal, pode: () => can('confirmar'), quem: 'o administrador e a recepção' },
-    { k: /\b(modo (recepcao )?ocupada|recepcao ocupada|esconder dados)\b/, nome: 'Modo recepção ocupada', cam: 'Botão Modo ocupada na barra, ou Menu → Recepção do dia → Modo recepção ocupada', faz: 'Esconde os dados pessoais e o telefone completo enquanto há gente olhando a tela.', abrir: togglePrivacy, pode: () => can('privacidade'), quem: 'o administrador e a recepção' },
     { k: /\b(aniversari\w*)\b/, nome: 'Aniversariantes do mês', cam: 'Botão Aniversários na barra, ou Menu → Pacientes → Aniversariantes do mês', faz: 'Lista quem faz aniversário e abre a mensagem de parabéns.', own: true, abrir: () => openBirthdaysModal(), pode: () => can('listas'), quem: 'o administrador e a recepção' },
     { k: /\b(area do paciente|acesso do paciente|link do paciente|portal)\b/, nome: 'Área do paciente', cam: 'Regras: Menu → Configurações → Área do paciente. Para mandar o acesso: Menu → Pacientes → abra o paciente → Enviar acesso à área do paciente', faz: 'O paciente vê as consultas e confirma, pede para remarcar ou cancela. Precisa do servidor (internet).', abrir: () => (online() && can('config') ? openAreaSettings() : openPatientsModal()), pode: () => can('pacientes.ver'), quem: 'o administrador e a recepção', so: () => online() ? '' : 'Este aparelho está sem servidor, então a área do paciente não aparece no menu.' },
     { k: /\b(importar|importo|importa)\b.*\bpacientes?\b|\bpacientes?\b.*\bimport\w*/, nome: 'Importar pacientes', cam: 'Menu → Configurações → Importar pacientes…', faz: 'Traz o cadastro de uma planilha (CSV ou Excel) com Nome, Telefone, Nascimento e outros dados. Mostra um resumo antes.', abrir: () => abrirImportarPacientes(), pode: souAdmin, quem: 'o administrador' },
@@ -8856,6 +8852,7 @@
     let n = 0;
     db.appointments.forEach(a => { if (sai.has(a.patientId)) { a.patientId = ficaId; n++; } });
     (db.prostheses || []).forEach(x => { if (sai.has(x.patientId)) x.patientId = ficaId; });
+    (Array.isArray(db.orcamentos) ? db.orcamentos : []).forEach(x => { if (x && sai.has(x.patientId)) x.patientId = ficaId; });   // 24/11
     // O que ficou vazio no cadastro que fica é completado com os dados do outro
     db.patients.filter(p => sai.has(p.id)).forEach(o => {
       ['birth', 'cpf', 'rg', 'address'].forEach(k => { if (!fica[k] && o[k]) fica[k] = o[k]; });
@@ -9177,7 +9174,7 @@
 
   // ===== 5 e 6) Interface e layout que se adapta à tela =====
   // Os botões que ficam só com o ícone em telas menores ganham o nome ao parar o mouse
-  [['#fitBtn', 'Encaixe / emergência'], ['#blockBtn', 'Bloquear horário'], ['#patientsBtn', 'Pacientes'], ['#dentistsBtn', 'Dentistas e horários'], ['#bdayBtn', 'Aniversariantes do mês'], ['#dayListBtn', 'Lista do dia'], ['#confirmBtn', 'Confirmar pacientes'], ['#searchBtn', 'Buscar consultas'], ['#privacyBtn', 'Modo recepção ocupada'], ['#moreBtn', 'Configurações']]
+  [['#fitBtn', 'Encaixe / emergência'], ['#blockBtn', 'Bloquear horário'], ['#patientsBtn', 'Pacientes'], ['#dentistsBtn', 'Dentistas e horários'], ['#bdayBtn', 'Aniversariantes do mês'], ['#dayListBtn', 'Lista do dia'], ['#confirmBtn', 'Confirmar pacientes'], ['#searchBtn', 'Buscar consultas'], ['#moreBtn', 'Configurações']]
     .forEach(([s, t]) => { const b = $(s); if (b && !b.title) b.title = t; });
   (function () {
     const st = document.createElement('style');
@@ -9355,15 +9352,15 @@
     if (!inp || !box || box.dataset.todos) return r;
     box.dataset.todos = '1';
     $('#plToSearch').insertAdjacentHTML('afterend', '<div class="pl-total" id="plTotal" aria-live="polite"></div>');
-    let lista = [], mostrados = 0, cont = new Map();
+    let lista = [], mostrados = 0, cont = new Map(), dents = new Map();   // dents: dentistas de cada paciente (24/11)
     const linha = p => {
       const n = cont.get(p.id) || 0;
-      return `<button type="button" class="result" data-pl="${p.id}"><span class="result-name">${esc(p.name)}</span><span class="muted">${esc(phoneOut(p.phone))} · ${n} ${n === 1 ? 'consulta' : 'consultas'}</span></button>`;
+      return `<button type="button" class="result" data-pl="${p.id}"><span class="result-name">${esc(p.name)}</span><span class="muted">${esc(phoneOut(p.phone))} · ${n} ${n === 1 ? 'consulta' : 'consultas'}${pacDentistasTxt(dents.get(p.id))}</span></button>`;
     };
     const total = () => {
-      const q = inp.value.trim(), n = lista.length;
-      $('#plTotal').textContent = q ? (n ? `${n} ${n === 1 ? 'paciente encontrado' : 'pacientes encontrados'}` : '')
-        : (n ? `${n} ${n === 1 ? 'paciente cadastrado' : 'pacientes cadastrados'}` : '');
+      const q = inp.value.trim(), n = lista.length, f = pacFiltroTxt();
+      $('#plTotal').textContent = q ? (n ? `${n} ${n === 1 ? 'paciente encontrado' : 'pacientes encontrados'}${f}` : '')
+        : (n ? `${n} ${n === 1 ? 'paciente' : 'pacientes'}${f || (n === 1 ? ' cadastrado' : ' cadastrados')}` : '');
     };
     const mais = () => {
       const pe = $('#plMais');
@@ -9378,14 +9375,13 @@
     };
     const draw = () => {
       const q = inp.value.trim();
-      cont = new Map();
-      db.appointments.forEach(a => cont.set(a.patientId, (cont.get(a.patientId) || 0) + 1));
-      lista = q ? searchPatients(q, Infinity) : db.patients.slice().sort(byName);
+      ({ cont, dents } = pacListaInfo());   // 24/11: a consulta em conjunto conta uma vez; filtro por dentista
+      lista = pacFiltrar(q ? searchPatients(q, Infinity) : db.patients.slice().sort(byName), dents);
       mostrados = 0;
       box.innerHTML = '';
       total();
       if (!lista.length) {
-        box.innerHTML = `<p class="muted">${db.patients.length ? 'Ninguém encontrado.' : 'Nenhum paciente cadastrado ainda. O cadastro é feito no botão Novo horário.'}</p>`;
+        box.innerHTML = `<p class="muted">${db.patients.length ? (pacFiltroTxt() ? 'Nenhum paciente com este filtro.' : 'Ninguém encontrado.') : 'Nenhum paciente cadastrado ainda. O cadastro é feito no botão Novo horário.'}</p>`;
         return;
       }
       mais();
@@ -9952,6 +9948,1319 @@
     document.head.appendChild(st);
   })();
 
+  // ---------- Pedidos de 24/11 ----------
+  // 1) Orçamento do paciente: no cadastro do paciente (Pacientes → paciente → Orçamentos). Dentes, procedimentos,
+  //    quantidade e valores, total, data, dados do paciente e dentista. Dá para imprimir (modelo neutro, com o nome
+  //    e a logo da clínica). Ao cadastrar um paciente novo, dá para marcar "Fazer o orçamento" (opcional).
+  //    Fica em db.orcamentos (lista) e vai na sincronização como "orcamentos:<id>" (área Pacientes).
+  // 2) Status do paciente na consulta: Em aberto (padrão), Veio e Não veio. Dá para trocar depois de marcar
+  //    e voltar para Em aberto. 3) Só no dia de hoje: a recepção não muda o status de outros dias (dia passado sem
+  //    status continua pela tela de pendências); o administrador ainda corrige dias que passaram; dia futuro: ninguém.
+  // 4) Coluna Dentistas: no lugar da data, dentistas ativos / limite do plano (ex.: 2/8).
+  // 5) Modo recepção ocupada: saiu (o botão, o aviso e a opção do menu). Fica sempre desligado.
+  // 6) Janelas: as largas usam mais da tela em monitores grandes e a Lista do dia não corta mais o texto.
+  // 7) Agenda do dia trancada: os horários livres ficam com listras e cadeado, como um horário bloqueado.
+  // 8) Consulta com mais de um dentista: no Novo horário, "+ Mais um dentista nesta consulta". A consulta entra na
+  //    agenda de cada dentista (uma cópia por dentista, ligadas pelo campo "grupo"). Veio / Não veio, remarcar,
+  //    editar e excluir valem para todas as cópias.
+  // 9) Pacientes por dentista: na lista de Pacientes, filtro por dentista e os dentistas de cada paciente
+  //    (vem das consultas; não precisa cadastrar nada). No cadastro do paciente, a linha "Dentistas".
+  // 10) Área restrita: Restaurar backup, Usuários e senhas, Desativar este aparelho e enviar backup restaurado
+  //    para todos pedem a senha do administrador. "Começar do zero" saiu do programa quando usa o servidor:
+  //    agora fica no painel do dono (painel.js). Sem servidor (modo local), continua, dentro da área restrita.
+
+  // ===== 4) Coluna Dentistas: ativos / limite do plano =====
+  const _renderDentists24 = renderDentists;
+  renderDentists = function () {
+    const r = _renderDentists24.apply(this, arguments);
+    const el = $('#dentistsMeta');
+    if (el) {
+      const n = activeDentists().length, lim = limitesDoPlano(), max = lim ? Number(lim.dentistas) || 0 : 0;
+      const nome = n === 1 ? 'dentista ativo' : 'dentistas ativos';
+      el.textContent = max ? `${n}/${max}` : String(n);
+      el.title = max ? `${n} ${nome} de ${max} do plano${lim.planoNome ? ' ' + lim.planoNome : ''}` : `${n} ${nome}`;
+      el.classList.toggle('dm-cheio', !!max && n >= max);
+    }
+    return r;
+  };
+
+  // ===== 8) Consulta com mais de um dentista (ajudas usadas também pelo status) =====
+  const irmaos = a => a && a.grupo ? db.appointments.filter(x => x.grupo === a.grupo && x.id !== a.id && x.status !== 'deleted') : [];
+  const grupoDe = a => a ? [a].concat(irmaos(a)) : [];
+  const CAMPOS_STATUS = ['status', 'arrivedAt', 'delayMinutes', 'noShowAt', 'released', 'releasedAt'];
+  const CAMPOS_CONSULTA = ['patientId', 'typeName', 'date', 'start', 'duration', 'fit', 'editedAt', 'confirmOpenedAt'];
+  function grupoCopiar(a, campos) {
+    irmaos(a).forEach(x => (campos || CAMPOS_STATUS).forEach(k => { x[k] = a[k] === undefined ? null : a[k]; }));
+  }
+  // Uma linha por consulta: as cópias de uma consulta em conjunto contam uma vez só (fica a primeira da lista)
+  function umaPorGrupo(lista) {
+    const visto = new Set();
+    return lista.filter(a => { if (!a || !a.grupo) return true; if (visto.has(a.grupo)) return false; visto.add(a.grupo); return true; });
+  }
+  const ordemDent = id => { const i = db.dentists.findIndex(d => d.id === id); return i < 0 ? 999 : i; };
+  // Dentistas da consulta, sempre na ordem da lista de dentistas (o mesmo texto em todas as telas)
+  const dentistasDaConsulta = a => grupoDe(a).map(x => x.dentistId).filter((v, i, l) => v && l.indexOf(v) === i).sort((x, y) => ordemDent(x) - ordemDent(y));
+  function nomesJuntos(ids) {
+    const n = ids.map(id => dentistName(id)).filter(Boolean);
+    return n.length <= 1 ? (n[0] || '') : n.slice(0, -1).join(', ') + ' e ' + n[n.length - 1];
+  }
+  function tirarCopia(x) { const i = db.appointments.indexOf(x); if (i >= 0) db.appointments.splice(i, 1); }
+
+  // ===== 2 e 3) Status do paciente: Em aberto (padrão), Veio, Não veio — só no dia de hoje =====
+  const AVISO_FUTURO = 'Esta consulta ainda não chegou. O status (Em aberto, Veio ou Não veio) só muda no dia da consulta.';
+  const AVISO_ABERTO = 'Em aberto só no dia da consulta. Num dia que já passou, escolha Veio ou Não veio.';
+  // Pode pôr esta consulta neste status agora? (alvo: 'scheduled' = Em aberto, 'arrived' = Veio, 'no_show' = Não veio)
+  function statusLivre(a, alvo) {
+    if (!a || a.status === 'deleted' || !can('agenda.editar')) return false;
+    const h = todayStr();
+    if (a.date > h) return false;
+    if (a.date < h) return souAdmin() && alvo !== 'scheduled';
+    return true;
+  }
+  // Falta com horário liberado: só volta a ocupar se ninguém usou o horário depois
+  function voltaOcupar(a) {
+    if (!(a.status === 'no_show' && a.released)) return true;
+    const s = toMin(a.start), e = s + a.duration, ign = new Set(grupoDe(a).map(x => x.id));
+    for (const x of grupoDe(a)) {
+      const c = occupying(x.dentistId, x.date).find(o => !ign.has(o.id) && o.start < e && s < o.end && (o.kind === 'block' || (o.kind === 'appt' && !x.fit)));
+      if (c) {
+        const quem = c.kind === 'block' ? `um bloqueio (${c.ref.reason})` : ((getPatient(c.ref.patientId) || {}).name || 'outro paciente');
+        toast(`Não dá para mudar: o horário desta falta foi liberado e agora está com ${quem}. Se precisar, remarque a consulta.`);
+        return false;
+      }
+    }
+    return true;
+  }
+  const _markArrived24 = markArrived, _markNoShow24 = markNoShow;
+  markArrived = desfRastrear(function (id) {
+    const a = getAppt(id);
+    if (!a || a.status === 'arrived') return;
+    if (a.date > todayStr()) { toast(AVISO_FUTURO); return; }
+    if (!voltaOcupar(a)) return;
+    const r = _markArrived24.apply(this, arguments);
+    if (a.status === 'arrived') {
+      a.noShowAt = null; a.released = false; a.releasedAt = null;
+      grupoCopiar(a);
+      save(); render();
+    }
+    return r;
+  });
+  markNoShow = desfRastrear(function (id) {
+    const a = getAppt(id);
+    if (!a || a.status === 'no_show') return;
+    if (a.date > todayStr()) { toast(AVISO_FUTURO); return; }
+    const r = _markNoShow24.apply(this, arguments);
+    if (a.status === 'no_show') {
+      a.arrivedAt = null; a.delayMinutes = null; a.releasedAt = null;
+      grupoCopiar(a);
+      save(); render();
+    }
+    return r;
+  });
+  // Voltar para Em aberto (só no dia da consulta)
+  function marcarEmAbertoAgora(id) {
+    if (!allow('agenda.editar')) return;
+    const a = getAppt(id);
+    if (!a || a.status === 'scheduled' || a.status === 'deleted') return;
+    if (a.date !== todayStr()) { toast(a.date > todayStr() ? AVISO_FUTURO : AVISO_ABERTO); return; }
+    if (!voltaOcupar(a)) return;
+    Object.assign(a, { status: 'scheduled', arrivedAt: null, delayMinutes: null, noShowAt: null, released: false, releasedAt: null });
+    grupoCopiar(a);
+    save(); closeModal(true); render();
+    toast('Status de volta para Em aberto.');
+  }
+  const markOpen = desfRastrear(marcarEmAbertoAgora);
+  ACT_PERM.reabrir = 'agenda.editar';
+  // Nome no Desfazer
+  const _desfNome24 = desfNome;
+  desfNome = function (mud, rotulo) {
+    if (!rotulo) {
+      const c = mud.find(x => x.k.startsWith('appointments:') && x.antes && x.depois);
+      if (c) {
+        const a = JSON.parse(c.depois), b = JSON.parse(c.antes);
+        if (a.status === 'scheduled' && (b.status === 'arrived' || b.status === 'no_show')) {
+          const p = getPatient(a.patientId);
+          return `Voltar para Em aberto · ${p ? p.name : 'paciente'}`;
+        }
+      }
+    }
+    return _desfNome24.apply(this, arguments);
+  };
+  // Liberar horário: vale para as cópias da consulta em conjunto
+  const _releaseSlot24 = releaseSlot;
+  releaseSlot = function (id) {
+    const a = getAppt(id);
+    const r = _releaseSlot24.apply(this, arguments);
+    if (a && a.released && irmaos(a).length) { grupoCopiar(a); save(); render(); }
+    return r;
+  };
+  // O nome "Agendado" vira "Em aberto" (na agenda, na legenda, na barra de baixo e na busca)
+  const _statusInfo24 = statusInfo;
+  statusInfo = function (a) {
+    const s = _statusInfo24.apply(this, arguments);
+    return s && s.key === 'scheduled' ? Object.assign({}, s, { label: 'Em aberto' }) : s;
+  };
+  $$('#legendBody span').forEach(sp => { if (sp.querySelector('.dot.scheduled')) sp.lastChild.textContent = 'Em aberto'; });
+  SEARCH_STATUS.forEach(x => { if (x[0] === 'scheduled') x[1] = 'Em aberto'; });
+  const _renderStatus24 = renderStatus;
+  renderStatus = function () {
+    const r = _renderStatus24.apply(this, arguments);
+    const it = $$('#statusbar .sb-item').find(x => x.querySelector('.sw.scheduled'));
+    if (it) it.lastChild.textContent = it.lastChild.textContent.replace('Agendados', 'Em aberto');
+    return r;
+  };
+  // Menu da consulta (botão direito): Veio / Não veio trocam entre si, e "Voltar para Em aberto"
+  const _apptMenuItems24 = apptMenuItems;
+  apptMenuItems = function (a) {
+    let items = _apptMenuItems24.apply(this, arguments);
+    if (!a || a.status === 'deleted') return items;
+    items = items.map(it => {
+      if (!it || (it.act !== 'came' && it.act !== 'missed')) return it;
+      const alvo = it.act === 'came' ? 'arrived' : 'no_show';
+      return Object.assign({}, it, { disabled: a.status === alvo || !statusLivre(a, alvo) });
+    });
+    if (a.status === 'arrived' || a.status === 'no_show') {
+      const i = items.findIndex(it => it && it.act === 'missed');
+      items.splice(i >= 0 ? i + 1 : items.length, 0, { act: 'reabrir', label: 'Voltar para Em aberto', icon: I.undo, disabled: !statusLivre(a, 'scheduled'), run: () => markOpen(a.id) });
+    }
+    return items;
+  };
+  // Detalhe da consulta: o status vira uma escolha de três (Em aberto · Veio · Não veio)
+  function stControle(a, m) {
+    if (a.status === 'deleted' || !can('agenda.editar')) return;
+    const h = todayStr();
+    if (a.date < h && !souAdmin()) return;   // dia passado: o aviso do dia e as pendências continuam como estavam
+    ['#aCame', '#aMissed'].forEach(s => { const b = $(s, m); if (b) b.remove(); });
+    const atual = a.status === 'arrived' ? 'arrived' : a.status === 'no_show' ? 'no_show' : 'scheduled';
+    const ops = [['scheduled', 'Em aberto', ''], ['arrived', 'Veio', I.check], ['no_show', 'Não veio', I.x]];
+    const nota = a.date > h ? AVISO_FUTURO
+      : a.date < h ? 'Dia passado: como administrador, você pode corrigir entre Veio e Não veio.'
+      : atual === 'scheduled' ? 'Marque quando o paciente chegar ou se ele faltar. Dá para trocar depois.'
+      : 'Marcou errado? Dá para trocar ou voltar para Em aberto.';
+    const box = document.createElement('div');
+    box.className = 'st24';
+    box.innerHTML = `<div class="st24-lab" id="st24Lab">Status do paciente</div>
+      <div class="st24-seg" role="radiogroup" aria-labelledby="st24Lab">${ops.map(([k, t, ic]) =>
+        `<button type="button" role="radio" class="st24-op st24-${k}" data-st24="${k}" aria-checked="${k === atual}"${k !== atual && !statusLivre(a, k) ? ' disabled' : ''}>${ic}${t}</button>`).join('')}</div>
+      <p class="st24-nota">${esc(nota)}</p>`;
+    const ref = $('.actions', m);
+    if (ref) m.insertBefore(box, ref); else m.appendChild(box);
+    const acts = $('.actions', m);
+    if (acts && !acts.children.length) acts.remove();
+    box.onclick = e => {
+      const b = e.target.closest('[data-st24]');
+      if (!b || b.disabled || b.getAttribute('aria-checked') === 'true') return;
+      const k = b.dataset.st24;
+      if (k === 'arrived') markArrived(a.id); else if (k === 'no_show') markNoShow(a.id); else markOpen(a.id);
+    };
+  }
+  const _openApptModal24 = openApptModal;
+  openApptModal = function (id) {
+    const r = _openApptModal24.apply(this, arguments);
+    const a = getAppt(id), m = $('#modal');
+    if (!a || $('#modalWrap').hidden || !m || !$('.facts', m)) return r;
+    if (irmaos(a).length) {
+      const dt = $$('.facts dt', m).find(x => x.textContent === 'Dentista');
+      if (dt && dt.nextElementSibling) { dt.textContent = 'Dentistas'; dt.nextElementSibling.textContent = nomesJuntos(dentistasDaConsulta(a)); }
+    }
+    stControle(a, m);
+    return r;
+  };
+
+  // ===== 7) Agenda do dia trancada: listras e cadeado nos horários =====
+  // (e 8: nos cartões da consulta em conjunto, com quem é)
+  const _renderGrid24 = renderGrid;
+  renderGrid = function () {
+    const r = _renderGrid24.apply(this, arguments);
+    const grid = $('#grid');
+    if (!grid) return r;
+    const tr = diaTrancado(state.date);
+    grid.classList.toggle('dl-grade', tr);
+    if (tr) {
+      let primeiro = true;
+      $$('.row', grid).forEach(row => {
+        const s = $('.slot', row);
+        if (!s || row.classList.contains('off')) { primeiro = true; return; }
+        const t = s.dataset.time || '';
+        const mostra = primeiro || row.classList.contains('hour');
+        primeiro = false;
+        s.innerHTML = `<span class="dl-sl">${mostra ? lockSvg + '<span>Agenda trancada</span>' : ''}</span><span class="dl-livre">+ ${esc(t)} livre</span>`;
+        s.setAttribute('aria-label', `Agenda trancada às ${t}`);
+      });
+      $$('.ev[data-appt] .ev-time', grid).forEach(el => el.insertAdjacentHTML('afterbegin', `<span class="dl-ev" title="Agenda do dia trancada">${lockSvg}</span>`));
+    }
+    $$('.ev[data-appt]', grid).forEach(el => {
+      const a = getAppt(el.dataset.appt), outros = a ? irmaos(a) : [];
+      if (!outros.length) return;
+      const nomes = nomesJuntos(outros.map(x => x.dentistId).filter((v, i, l) => l.indexOf(v) === i));
+      const st = $('.ev-status', el);
+      const chip = `<span class="chip chip-md" title="Consulta junto com ${esc(nomes)}">${I.users}<span class="md-txt">com ${esc(nomes)}</span></span>`;
+      if (st) st.insertAdjacentHTML('beforebegin', chip); else el.insertAdjacentHTML('beforeend', chip);
+    });
+    return r;
+  };
+
+  // ===== 8) Novo horário / editar: mais de um dentista =====
+  let mdSel = new Set();
+  (function () {
+    const campo = $('#fDentist') && $('#fDentist').closest('.field');
+    if (!campo || $('#mdBox')) return;
+    const box = document.createElement('div');
+    box.className = 'md-box'; box.id = 'mdBox';
+    box.innerHTML = `<button type="button" class="link small md-abrir" id="mdAbrir">+ Mais um dentista nesta consulta</button>
+      <div class="md-area" id="mdArea" hidden>
+        <span class="label">Junto com <span class="md-opc">(opcional)</span></span>
+        <div class="md-chips" id="mdChips" role="group" aria-label="Outros dentistas nesta consulta"></div>
+        <p class="hint md-hint">A consulta entra na agenda de cada dentista marcado, no mesmo horário.</p>
+      </div>`;
+    campo.after(box);
+    $('#mdAbrir').onclick = () => { $('#mdArea').hidden = false; $('#mdAbrir').hidden = true; mdRender(); };
+    $('#fDentist').addEventListener('change', () => { mdSel.delete($('#fDentist').value); mdRender(); });
+    $('#mdChips').addEventListener('click', e => {
+      const b = e.target.closest('[data-md]');
+      if (!b) return;
+      if (mdSel.has(b.dataset.md)) mdSel.delete(b.dataset.md); else mdSel.add(b.dataset.md);
+      mdRender();
+    });
+  })();
+  function mdRender() {
+    const box = $('#mdBox'), chips = $('#mdChips');
+    if (!box || !chips) return;
+    const main = $('#fDentist').value;
+    const outros = activeDentists().filter(d => d.id !== main);
+    mdSel.forEach(id => { const d = getDentist(id); if (d && id !== main && !outros.includes(d)) outros.push(d); });
+    box.hidden = !outros.length;
+    chips.innerHTML = outros.map(d => `<button type="button" class="md-chip" data-md="${d.id}" aria-pressed="${mdSel.has(d.id)}"><span class="md-av" style="--av:${avatarColor(d)}" aria-hidden="true">${esc(initials(d.name))}</span><span class="md-nome">${esc(d.name)}</span></button>`).join('');
+  }
+  const mdLer = () => [...mdSel].filter(id => id && id !== $('#fDentist').value && getDentist(id));
+  const _openApptDrawer24 = openApptDrawer;
+  openApptDrawer = function (opts) {
+    const r = _openApptDrawer24.apply(this, arguments);
+    if ($('#drawer').hidden) return r;
+    const a = opts && opts.apptId ? getAppt(opts.apptId) : null;
+    mdSel = new Set(a ? irmaos(a).map(x => x.dentistId) : []);
+    const aberto = mdSel.size > 0;
+    if ($('#mdArea')) { $('#mdArea').hidden = !aberto; $('#mdAbrir').hidden = aberto; }
+    mdRender();
+    return r;
+  };
+  const _onSubmitAppt24 = onSubmitAppt;
+  onSubmitAppt = desfRastrear(function (e) {
+    const extras = mdLer();
+    const orig = form.editingId ? getAppt(form.editingId) : null;
+    const antes = orig ? irmaos(orig) : [];
+    if (!extras.length && !antes.length) return _onSubmitAppt24.apply(this, arguments);
+    const main = $('#fDentist').value, date = $('#fDate').value, time = $('#fTime').value;
+    const durRaw = $('#fDuration').value.trim(), dur = Number(durRaw), fit = $('#fFit').checked;
+    // Confere o expediente e os conflitos de cada dentista a mais antes de salvar
+    if (extras.length && date && time && isInt(durRaw) && dur > 0) {
+      const s = toMin(time), end = s + dur, ign = new Set(orig ? grupoDe(orig).map(x => x.id) : []);
+      for (const id of extras) {
+        let msg = '';
+        if (!fit && !isInsideHours(id, date, s, end)) msg = outOfHoursMessage(id, date) + ' Escolha outro horário ou tire este dentista.';
+        else {
+          const c = occupying(id, date).find(o => !ign.has(o.id) && o.start < end && s < o.end && (!fit || o.kind === 'block'));
+          if (c) msg = conflictMessage(c, id);
+        }
+        if (msg) { if (e && e.preventDefault) e.preventDefault(); hideFormError(); return showFormError(msg); }
+      }
+    }
+    // O dentista principal passou a ser um dos que estavam juntos: a cópia dele sai (senão conflita com ela mesma)
+    const troca = antes.find(x => x.dentistId === main) || null;
+    const stTroca = troca ? troca.status : null;
+    if (troca) troca.status = 'deleted';
+    const ids = new Set(db.appointments.map(x => x.id));
+    let r;
+    try { r = _onSubmitAppt24.apply(this, arguments); }
+    finally { if (troca && !$('#drawer').hidden) troca.status = stTroca; }
+    if (!$('#drawer').hidden) return r;   // não salvou (o erro já está na tela)
+    const a = orig ? getAppt(orig.id) : db.appointments.find(x => !ids.has(x.id));
+    if (!a) return r;
+    if (troca) tirarCopia(troca);
+    const quer = new Set(extras.filter(id => id !== a.dentistId));
+    if (!quer.size) {
+      irmaos(a).forEach(tirarCopia);
+      delete a.grupo;
+    } else {
+      if (!a.grupo) a.grupo = 'g-' + uid();
+      irmaos(a).forEach(x => {
+        if (!quer.has(x.dentistId)) { tirarCopia(x); return; }
+        quer.delete(x.dentistId);
+        CAMPOS_CONSULTA.concat(CAMPOS_STATUS).forEach(k => { x[k] = a[k] === undefined ? null : a[k]; });
+      });
+      quer.forEach(id => db.appointments.push(Object.assign(JSON.parse(JSON.stringify(a)), { id: uid(), dentistId: id, scheduledAt: a.scheduledAt || new Date().toISOString() })));
+      toast(`Consulta salva na agenda de ${nomesJuntos(dentistasDaConsulta(a))}.`);
+    }
+    save(); render();
+    return r;
+  });
+  // Excluir: sai da agenda de todos os dentistas da consulta
+  const _openDeleteModal24 = openDeleteModal;
+  openDeleteModal = function (id) {
+    const r = _openDeleteModal24.apply(this, arguments);
+    const a = getAppt(id), f = $('#delForm');
+    if (!a || !f || !irmaos(a).length || typeof f.onsubmit !== 'function') return r;
+    const hint = $('.hint', f);
+    if (hint) hint.insertAdjacentHTML('afterend', `<p class="md-aviso">${I.users}<span>Esta consulta é com ${esc(nomesJuntos(dentistasDaConsulta(a)))}: sai da agenda de todos.</span></p>`);
+    const orig = f.onsubmit;
+    f.onsubmit = desfRastrear(function () {
+      const outros = irmaos(a);
+      const res = orig.apply(this, arguments);
+      if (a.status === 'deleted') {
+        outros.forEach(x => { x.status = 'deleted'; x.deletedAt = a.deletedAt; x.deleteReason = a.deleteReason; });
+        save(); render();
+      }
+      return res;
+    });
+    return r;
+  };
+  // Resposta do paciente (link ou área do paciente) dada em qualquer cópia vale para todas
+  const _replyOf24 = replyOf;
+  replyOf = function (a) {
+    const r = _replyOf24.apply(this, arguments);
+    if (r || !a || !a.grupo) return r;
+    for (const x of irmaos(a)) {
+      const y = _replyOf24.call(this, x);
+      if (y && y.date === a.date && y.start === a.start) return y;
+    }
+    return null;
+  };
+  // Confirmar pacientes: com "Todos os dentistas", uma mensagem por consulta (não uma por dentista)
+  const _confirmCandidates24 = confirmCandidates;
+  confirmCandidates = function (date, dId) {
+    let list = _confirmCandidates24.apply(this, arguments);
+    let mudou = false;
+    list.forEach(a => {   // mensagem aberta numa cópia conta para as outras
+      const outros = irmaos(a);
+      const aberta = [a].concat(outros).map(x => x.confirmOpenedAt).filter(Boolean).sort().pop();
+      if (aberta) [a].concat(outros).forEach(x => { if (x.confirmOpenedAt !== aberta) { x.confirmOpenedAt = aberta; mudou = true; } });
+    });
+    if (mudou) save();
+    if (!dId) list = umaPorGrupo(list);
+    return list;
+  };
+  const _buildMessage24 = buildMessage;
+  buildMessage = function (a, p, d) {
+    const t = _buildMessage24.apply(this, arguments);
+    const ids = a ? dentistasDaConsulta(a) : [];
+    if (ids.length < 2 || !d) return t;
+    const um = withName(d.name), outros = ids.filter(id => id !== d.id).map(id => withName(dentistName(id)).replace(/^com /, ''));
+    return t.replace(um, um + (outros.length > 1 ? ', ' + outros.slice(0, -1).join(', ') : '') + ' e ' + outros[outros.length - 1]);
+  };
+  // Histórico rápido do paciente: a consulta em conjunto conta uma vez
+  const _patientHistory24 = patientHistory;
+  patientHistory = function (pid, exceptId) {
+    const ex = exceptId ? getAppt(exceptId) : null;
+    const all = umaPorGrupo(db.appointments.filter(a => a.patientId === pid && a.status !== 'deleted'))
+      .filter(a => !(ex && ex.grupo && a.grupo === ex.grupo && a.id !== exceptId));
+    const desc = (x, y) => (y.date + y.start).localeCompare(x.date + x.start);
+    const recent = all.filter(a => a.id !== exceptId).sort(desc);
+    const visits = all.filter(a => a.status === 'arrived').sort(desc);
+    const today = todayStr();
+    const next = all.filter(a => a.id !== exceptId && a.status === 'scheduled' && a.date >= today)
+      .sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start))[0] || null;
+    return { recent, total: all.length, faltas: all.filter(a => a.status === 'no_show').length, last: visits[0] || null, next };
+  };
+
+  // ===== 6) Lista do dia: sem texto cortado; consulta em conjunto numa linha só =====
+  dayListTable = function (date, dId) {
+    let list = db.appointments
+      .filter(a => a.date === date && a.status !== 'deleted' && (!dId || a.dentistId === dId))
+      .sort((x, y) => x.start.localeCompare(y.start) || dentistName(x.dentistId).localeCompare(dentistName(y.dentistId)));
+    if (!dId) list = umaPorGrupo(list);
+    if (!list.length) return `<p class="muted">Nenhum horário em ${fmtDMY(date)}${dId ? ' ' + withName(dentistName(dId)) : ''}.</p>`;
+    const c = { scheduled: 0, late: 0, arrived: 0, no_show: 0 };
+    list.forEach(a => { const k = statusInfo(a).key; if (c[k] !== undefined) c[k]++; });
+    const showD = !dId;
+    return `<div class="dl-sum"><span><i class="sw scheduled"></i>Em aberto ${c.scheduled}</span><span><i class="sw late"></i>Atrasados / sem registro ${c.late}</span><span><i class="sw arrived"></i>Chegaram ${c.arrived}</span><span><i class="sw no_show"></i>Faltaram ${c.no_show}</span></div>
+      <table class="daylist dl24"><thead><tr><th class="c-hora">Hora</th><th class="c-pac">Paciente</th><th class="c-tipo">Tipo</th>${showD ? '<th class="c-dent">Dentista</th>' : ''}<th class="c-tel">Telefone</th><th class="c-sit">Situação</th></tr></thead><tbody>
+      ${list.map(a => {
+        const p = getPatient(a.patientId) || { name: 'Paciente', phone: '' };
+        const st = statusInfo(a), outros = irmaos(a);
+        const dent = showD ? esc(nomesJuntos(dentistasDaConsulta(a))) : '';
+        return `<tr><td class="nowrap c-hora">${a.start}–${fromMin(toMin(a.start) + a.duration)}</td>
+          <td class="c-pac"><b>${esc(p.name)}</b>${a.fit ? ' <span class="chip chip-fit">Encaixe</span>' : ''}${!showD && outros.length ? ` <span class="chip chip-md">com ${esc(nomesJuntos(outros.map(x => x.dentistId)))}</span>` : ''}</td>
+          <td class="c-tipo">${typeBadge(a.typeName)} ${esc(a.typeName)}</td>
+          ${showD ? `<td class="c-dent">${dent}</td>` : ''}
+          <td class="nowrap c-tel">${esc(phoneOut(p.phone))}</td>
+          <td class="c-sit"><span class="pill st-${st.key}">${esc(st.label)}${a.status === 'arrived' && a.delayMinutes > 0 ? ` · ${a.delayMinutes} min de atraso` : ''}</span>${replyOf(a) ? ` <span class="pill ${replyCls(replyOf(a))}">${replyText(replyOf(a))}</span>` : ''}</td></tr>`;
+      }).join('')}
+      </tbody></table>`;
+  };
+
+  // ===== 9) Pacientes por dentista =====
+  // Dentistas de cada paciente, pelas consultas (as excluídas não contam): paciente → Map(dentista → nº de consultas)
+  function pacMapa() {
+    const m = new Map();
+    db.appointments.forEach(a => {
+      if (a.status === 'deleted' || !a.dentistId) return;
+      if (!m.has(a.patientId)) m.set(a.patientId, new Map());
+      const d = m.get(a.patientId);
+      d.set(a.dentistId, (d.get(a.dentistId) || 0) + 1);
+    });
+    return m;
+  }
+  // Para a lista de Pacientes (bloco de 13/11): nº de consultas (a consulta em conjunto conta uma vez) e dentistas
+  function pacListaInfo() {
+    const cont = new Map(), visto = new Set();
+    db.appointments.forEach(a => {
+      if (a.status === 'deleted') return;
+      const k = a.grupo || a.id;
+      if (visto.has(k)) return;
+      visto.add(k);
+      cont.set(a.patientId, (cont.get(a.patientId) || 0) + 1);
+    });
+    return { cont, dents: pacMapa() };
+  }
+  let pacFiltro = '';   // '' = todos, 'sem' = sem consulta, ou o id do dentista (vale até fechar o programa)
+  function pacFiltrar(lista, dents) {
+    const f = $('#plDent') ? $('#plDent').value : '';
+    if (!f) return lista;
+    if (f === 'sem') return lista.filter(p => !dents.has(p.id));
+    return lista.filter(p => dents.has(p.id) && dents.get(p.id).has(f));
+  }
+  function pacFiltroTxt() {
+    const f = $('#plDent') ? $('#plDent').value : '';
+    return !f ? '' : f === 'sem' ? ' sem consulta' : ' ' + ofName(dentistName(f) || 'dentista');
+  }
+  function pacDentistasTxt(m) {
+    if (!m || !m.size) return '';
+    const n = [...m.entries()].sort((x, y) => y[1] - x[1]).map(([id]) => dentistName(id)).filter(Boolean);
+    return n.length ? ` · ${esc(n.slice(0, 3).join(', '))}${n.length > 3 ? ` e mais ${n.length - 3}` : ''}` : '';
+  }
+  const _openPatientsModal24 = openPatientsModal;
+  openPatientsModal = function () {
+    const r = _openPatientsModal24.apply(this, arguments);
+    const inp = $('#plSearch'), ref = $('#plToSearch');
+    if (!inp || !ref || $('#plDent') || db.dentists.length < 2) return r;
+    const ops = db.dentists.slice().sort((x, y) => Number(isActiveDentist(y)) - Number(isActiveDentist(x)) || String(x.name).localeCompare(String(y.name), 'pt-BR'))
+      .map(d => `<option value="${d.id}">${esc(d.name)}${isActiveDentist(d) ? '' : ' (inativo)'}</option>`).join('');
+    ref.insertAdjacentHTML('afterend', `<label class="pl-filtro" for="plDent"><span>Dentista</span><select id="plDent"><option value="">Todos os dentistas</option>${ops}<option value="sem">Sem consulta</option></select></label>`);
+    const sel = $('#plDent');
+    sel.value = pacFiltro && (pacFiltro === 'sem' || getDentist(pacFiltro)) ? pacFiltro : '';
+    sel.onchange = () => { pacFiltro = sel.value; if (typeof inp.oninput === 'function') inp.oninput(); };
+    if (sel.value && typeof inp.oninput === 'function') inp.oninput();
+    return r;
+  };
+  ASSIST_TOPICOS.forEach(t => { if (t && t.abrir === _openPatientsModal24) t.abrir = openPatientsModal; });
+
+  // Cadastro do paciente: dentistas, consultas (a em conjunto aparece uma vez) e orçamentos
+  function pdHistorico(id, m) {
+    const hist = db.appointments.filter(a => a.patientId === id).sort((x, y) => (y.date + y.start).localeCompare(x.date + x.start));
+    if (!hist.some(a => a.grupo)) return;
+    const lista = umaPorGrupo(hist), ul = $('ul.hist', m);
+    const h3 = $$('.row-between h3', m).find(x => /^Consultas/.test(x.textContent));
+    if (h3) h3.textContent = `Consultas (${lista.length})`;
+    if (!ul) return;
+    ul.innerHTML = lista.map(a => {
+      const st = statusInfo(a);
+      const ids = a.grupo ? db.appointments.filter(x => x.grupo === a.grupo).map(x => x.dentistId).filter((v, i, l) => v && l.indexOf(v) === i) : [a.dentistId];
+      const extra = [];
+      if (a.status === 'arrived' && a.delayMinutes > 0) extra.push(`${a.delayMinutes} min de atraso`);
+      if (a.status === 'deleted') extra.push(`Excluído em ${fmtStamp(a.deletedAt)} · Motivo: ${esc(a.deleteReason)}`);
+      return `<li class="${a.status === 'deleted' ? 'deleted' : ''}"><div>
+          <div class="when">${fmtDMY(a.date)} · ${a.start}–${fromMin(toMin(a.start) + a.duration)}</div>
+          <div>${esc(a.typeName)} · ${esc(nomesJuntos(ids))}${a.fit ? ' · <b style="color:var(--fit-ink)">Encaixe</b>' : ''}</div>
+          <div class="sub">Agendado em ${fmtStamp(a.scheduledAt)}${a.editedAt ? ' · Editado em ' + fmtStamp(a.editedAt) : ''}</div>
+          ${extra.length ? `<div class="sub">${extra.join(' · ')}</div>` : ''}
+        </div><span class="pill st-${st.key}">${esc(st.label)}</span></li>`;
+    }).join('');
+  }
+  const _openPatientDetail24 = openPatientDetail;
+  openPatientDetail = function (id) {
+    const r = _openPatientDetail24.apply(this, arguments);
+    const p = getPatient(id), m = $('#modal');
+    if (!p || $('#modalWrap').hidden || !m || !$('#pdEdit', m)) return r;
+    const dm = pacMapa().get(id), dl = $('.facts', m);
+    if (dl) {
+      const txt = dm && dm.size ? [...dm.entries()].sort((x, y) => y[1] - x[1])
+        .map(([did, n]) => `${esc(dentistName(did) || 'Dentista que saiu')} <span class="muted">(${n} ${n === 1 ? 'consulta' : 'consultas'})</span>`).join(' · ') : '<span class="muted">Nenhuma consulta ainda</span>';
+      const antes = $$('dt', dl).find(x => x.textContent === 'Cadastrado em');
+      const html = `<dt>Dentistas</dt><dd class="pd-dents">${txt}</dd>`;
+      if (antes) antes.insertAdjacentHTML('beforebegin', html); else dl.insertAdjacentHTML('beforeend', html);
+    }
+    pdHistorico(id, m);
+    orcSecao(p, m);
+    return r;
+  };
+  ASSIST_TOPICOS.forEach(t => { if (t && t.abrir === _openPatientDetail24) t.abrir = openPatientDetail; });
+
+  // ===== 1) Orçamento do paciente =====
+  const orcLista = () => { if (!Array.isArray(db.orcamentos)) db.orcamentos = []; return db.orcamentos; };
+  const getOrc = id => orcLista().find(x => x && x.id === id) || null;
+  const orcDoPaciente = pid => orcLista().filter(x => x && x.patientId === pid)
+    .sort((x, y) => String(y.data || '').localeCompare(String(x.data || '')) || String(y.criadoEm || '').localeCompare(String(x.criadoEm || '')));
+  const ORC_SIT = [['aberto', 'Em aberto', 'st-scheduled'], ['aprovado', 'Aprovado', 'st-arrived'], ['recusado', 'Não aprovado', 'st-no_show']];
+  const orcSit = k => ORC_SIT.find(x => x[0] === k) || ORC_SIT[0];
+  // Valores guardados em centavos
+  const reais = c => ((Number(c) || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const valorCampo = c => c == null || c === '' ? '' : ((Number(c) || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function lerReais(t) {
+    let s = String(t == null ? '' : t).replace(/[^\d,.]/g, '');
+    if (!s) return null;
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/\.\d{3}(\.|$)/.test(s) && !/\.\d{1,2}$/.test(s)) s = s.replace(/\./g, '');
+    const v = Number(s);
+    return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) : null;
+  }
+  const orcSubtotal = it => (Number(it.qtd) || 0) * (Number(it.valor) || 0);
+  const orcTotal = o => (o && o.itens || []).reduce((t, it) => t + orcSubtotal(it), 0);
+  const orcNumero = () => { const d = new Date(); return `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`; };
+  function idadeDe(birth) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birth || '')) return null;
+    const h = todayStr();
+    let n = Number(h.slice(0, 4)) - Number(birth.slice(0, 4));
+    if (h.slice(5) < birth.slice(5)) n--;
+    return n >= 0 && n < 130 ? n : null;
+  }
+  // Dentes na numeração FDI (a usada no Brasil): permanentes e de leite
+  const ODONTO = {
+    perm: [[18, 17, 16, 15, 14, 13, 12, 11], [21, 22, 23, 24, 25, 26, 27, 28], [48, 47, 46, 45, 44, 43, 42, 41], [31, 32, 33, 34, 35, 36, 37, 38]],
+    leite: [[55, 54, 53, 52, 51], [61, 62, 63, 64, 65], [85, 84, 83, 82, 81], [71, 72, 73, 74, 75]]
+  };
+  const ORDEM_DENTES = ODONTO.perm.flat().concat(ODONTO.leite.flat());
+  const lerDentes = t => String(t || '').split(/[^0-9]+/).filter(Boolean).map(Number).filter(n => ORDEM_DENTES.includes(n));
+  const juntarDentes = ns => [...new Set(ns)].sort((x, y) => x - y).join(', ');   // em ordem de número: 11, 12, 21…
+  // Procedimentos para sugerir: os tipos de consulta e o que já foi usado em orçamentos
+  function orcProcs() {
+    const s = new Map();
+    db.types.forEach(t => { if (t) s.set(norm(t), t); });
+    orcLista().forEach(o => (o.itens || []).forEach(it => { if (it.proc && !s.has(norm(it.proc))) s.set(norm(it.proc), it.proc); }));
+    return [...s.values()].sort((x, y) => String(x).localeCompare(String(y), 'pt-BR'));
+  }
+
+  let orcAposSalvar = null, salvandoHorario = false;
+  // Abre o modelo do orçamento (novo ou um que já existe). pre: { dentistId, proc } para começar preenchido.
+  // volta: o que fazer ao fechar ('paciente' = volta ao cadastro do paciente)
+  function orcAbrir(id, pid, pre, volta) {
+    if (!allow('pacientes.ver')) return;
+    const o0 = id ? getOrc(id) : null;
+    const p = getPatient(o0 ? o0.patientId : pid);
+    if (!p) { toast('Paciente não encontrado.'); return; }
+    const edita = can('pacientes.editar');
+    if (!o0 && !allow('pacientes.editar')) return;
+    const ultima = db.appointments.filter(a => a.patientId === p.id && a.status !== 'deleted').sort((x, y) => (y.date + y.start).localeCompare(x.date + x.start))[0];
+    const o = o0 ? JSON.parse(JSON.stringify(o0)) : { patientId: p.id, dentistId: (pre && pre.dentistId) || (ultima && ultima.dentistId) || state.dentistId || '', data: todayStr(), situacao: 'aberto', itens: [], obs: '' };
+    if (!Array.isArray(o.itens)) o.itens = [];
+    if (!o.itens.length) o.itens.push({ dentes: '', proc: (pre && pre.proc) || '', qtd: 1, valor: null });
+    o.itens.forEach(it => { it.qAuto = !o0; });
+    const dents = activeDentists().slice();
+    const dAtual = getDentist(o.dentistId);
+    if (dAtual && !dents.includes(dAtual)) dents.push(dAtual);
+    const idade = idadeDe(p.birth);
+    const voltar = () => { closeModal(true); if (volta === 'paciente') openPatientDetail(p.id); };
+    const dis = edita ? '' : ' disabled';
+    openModal(`
+      <div class="modal-head"><div>
+          ${volta === 'paciente' ? `<button type="button" class="link" id="orcBack">‹ ${esc(p.name)}</button>` : '<div class="eyebrow">Orçamento</div>'}
+          <h2>${o0 ? `Orçamento nº ${esc(o0.numero || '')}` : 'Novo orçamento'}</h2>
+        </div>${closeX}</div>
+      <form id="orcForm" class="orc" novalidate>
+        <div class="orc-pac">
+          <div class="orc-pac-nome">${esc(p.name)}</div>
+          <div class="orc-pac-dados">${[p.phone ? esc(phoneOut(p.phone)) : '', p.birth ? `nasc. ${fmtDMY(p.birth)}${idade != null ? ` (${idade} anos)` : ''}` : '', p.cpf ? 'CPF ' + esc(p.cpf) : ''].filter(Boolean).join(' · ') || '<span class="muted">Sem telefone, nascimento ou CPF no cadastro</span>'}</div>
+        </div>
+        <div class="orc-top">
+          <label class="field"><span class="label">Data</span><input type="date" id="orcData" value="${esc(o.data || todayStr())}"${dis}></label>
+          <label class="field"><span class="label">Dentista</span><select id="orcDent"${dis}>${dents.length ? '' : '<option value="">—</option>'}${dents.map(d => `<option value="${d.id}"${d.id === o.dentistId ? ' selected' : ''}>${esc(d.name)}</option>`).join('')}</select></label>
+          <label class="field"><span class="label">Situação</span><select id="orcSit"${dis}>${ORC_SIT.map(([k, t]) => `<option value="${k}"${k === o.situacao ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+        </div>
+        <div class="orc-itens">
+          <div class="orc-cab" aria-hidden="true"><span>Dente(s)</span><span>Procedimento</span><span>Qtd.</span><span>Valor unit. (R$)</span><span>Subtotal</span><span></span></div>
+          <div id="orcLinhas"></div>
+          ${edita ? '<button type="button" class="link orc-mais" id="orcMais">+ Adicionar procedimento</button>' : ''}
+          <datalist id="orcProcs">${orcProcs().map(t => `<option value="${esc(t)}">`).join('')}</datalist>
+        </div>
+        <div class="orc-total"><span>Total</span><b id="orcTotal">${reais(0)}</b></div>
+        <label class="field"><span class="label">Observações <span class="orc-opc">(opcional)</span></span><textarea id="orcObs" rows="3" placeholder="Ex.: forma de pagamento, validade do orçamento, plano de tratamento"${dis}>${esc(o.obs || '')}</textarea></label>
+        <div class="error" id="orcErro" hidden></div>
+        <div class="modal-foot orc-foot">
+          ${o0 && edita ? '<button type="button" class="btn btn-danger" id="orcExcluir">Excluir</button>' : ''}
+          <span class="orc-esp"></span>
+          <button type="button" class="btn" id="orcFechar">${edita ? 'Cancelar' : 'Fechar'}</button>
+          ${APP.celular ? '' : `<button type="button" class="btn orc-bt-pr" id="orcImprimir">${I.print}${edita ? 'Salvar e imprimir' : 'Imprimir'}</button>`}
+          ${edita ? '<button type="submit" class="btn btn-primary">Salvar orçamento</button>' : ''}
+        </div>
+      </form>`, true);
+    const caixa = $('#orcLinhas'), f = $('#orcForm');
+    let picker = null;   // linha com o desenho dos dentes aberto
+    const linhaHtml = (it, i) => `<div class="orc-lin" data-i="${i}">
+        <div class="orc-dentes"><input class="orc-d" value="${esc(it.dentes || '')}" placeholder="Ex.: 11, 12" aria-label="Dente(s) da linha ${i + 1}"${dis}>${edita ? `<button type="button" class="orc-dbt" data-od="${i}" title="Escolher no desenho dos dentes" aria-label="Escolher os dentes da linha ${i + 1}" aria-expanded="${picker === i}">${I.tooth}</button>` : ''}</div>
+        <input class="orc-p" list="orcProcs" value="${esc(it.proc || '')}" placeholder="Procedimento" aria-label="Procedimento da linha ${i + 1}"${dis}>
+        <input class="orc-q" type="number" min="1" max="99" step="1" inputmode="numeric" value="${esc(String(it.qtd || 1))}" aria-label="Quantidade da linha ${i + 1}"${dis}>
+        <input class="orc-v" inputmode="decimal" value="${esc(valorCampo(it.valor))}" placeholder="0,00" aria-label="Valor unitário da linha ${i + 1}"${dis}>
+        <span class="orc-sub" aria-label="Subtotal">${reais(orcSubtotal(it))}</span>
+        ${edita ? `<button type="button" class="orc-x" data-ox="${i}" title="Tirar esta linha" aria-label="Tirar a linha ${i + 1}">${I.x}</button>` : '<span></span>'}
+      </div>${picker === i ? odontoHtml(it) : ''}`;
+    let modoLeite = false;
+    function odontoHtml(it) {
+      const sel = new Set(lerDentes(it.dentes)), Q = modoLeite ? ODONTO.leite : ODONTO.perm;
+      const bt = n => `<button type="button" class="od-d" data-dn="${n}" aria-pressed="${sel.has(n)}">${n}</button>`;
+      return `<div class="orc-odonto" id="orcOdonto">
+        <div class="od-top"><b>${modoLeite ? 'Dentes de leite' : 'Dentes permanentes'}</b><button type="button" class="link small" data-odm="1">${modoLeite ? 'Ver permanentes' : 'Ver dentes de leite'}</button></div>
+        <div class="od-arc"><span class="od-lado">Superior</span><div class="od-q">${Q[0].map(bt).join('')}</div><div class="od-q">${Q[1].map(bt).join('')}</div></div>
+        <div class="od-arc"><span class="od-lado">Inferior</span><div class="od-q">${Q[2].map(bt).join('')}</div><div class="od-q">${Q[3].map(bt).join('')}</div></div>
+        <div class="od-pe"><span class="hint">Toque nos dentes. Também dá para escrever no campo (ex.: arcada superior).</span><button type="button" class="btn btn-small" data-odok="1">Pronto</button></div>
+      </div>`;
+    }
+    const desenhar = () => { caixa.innerHTML = o.itens.map(linhaHtml).join(''); somar(); };
+    const somar = () => { $('#orcTotal').textContent = reais(orcTotal(o)); };
+    const erro = msg => { const el = $('#orcErro'); el.textContent = msg; el.hidden = false; el.scrollIntoView({ block: 'nearest' }); return false; };
+    desenhar();
+    caixa.addEventListener('input', e => {
+      const lin = e.target.closest('.orc-lin');
+      if (!lin) return;
+      const it = o.itens[Number(lin.dataset.i)];
+      if (!it) return;
+      if (e.target.classList.contains('orc-d')) it.dentes = e.target.value;
+      if (e.target.classList.contains('orc-p')) it.proc = e.target.value;
+      if (e.target.classList.contains('orc-q')) { it.qtd = Math.max(0, Math.min(99, Math.floor(Number(e.target.value) || 0))); it.qAuto = false; }
+      if (e.target.classList.contains('orc-v')) it.valor = lerReais(e.target.value);
+      $('.orc-sub', lin).textContent = reais(orcSubtotal(it));
+      somar();
+      $('#orcErro').hidden = true;
+    });
+    caixa.addEventListener('focusout', e => {   // valor arrumado ao sair do campo: 1250 → 1.250,00
+      if (!e.target.classList.contains('orc-v')) return;
+      const it = o.itens[Number(e.target.closest('.orc-lin').dataset.i)];
+      if (it && it.valor != null) e.target.value = valorCampo(it.valor);
+    });
+    caixa.addEventListener('click', e => {
+      const x = e.target.closest('[data-ox]');
+      if (x) {
+        const i = Number(x.dataset.ox);
+        if (o.itens.length > 1) o.itens.splice(i, 1); else o.itens[0] = { dentes: '', proc: '', qtd: 1, valor: null, qAuto: true };
+        picker = null; desenhar();
+        return;
+      }
+      const od = e.target.closest('[data-od]');
+      if (od) { const i = Number(od.dataset.od); picker = picker === i ? null : i; desenhar(); return; }
+      if (e.target.closest('[data-odm]')) { modoLeite = !modoLeite; desenhar(); return; }
+      if (e.target.closest('[data-odok]')) { const i = picker; picker = null; desenhar(); const d = $(`.orc-lin[data-i="${i}"] .orc-p`); if (d && !phoneMQ.matches) d.focus(); return; }
+      const dn = e.target.closest('[data-dn]');
+      if (dn && picker != null) {
+        const it = o.itens[picker], sel = new Set(lerDentes(it.dentes)), n = Number(dn.dataset.dn);
+        if (sel.has(n)) sel.delete(n); else sel.add(n);
+        it.dentes = juntarDentes([...sel]);
+        if (it.qAuto !== false) it.qtd = Math.max(1, sel.size);
+        desenhar();
+      }
+    });
+    if ($('#orcMais')) $('#orcMais').onclick = () => {
+      o.itens.push({ dentes: '', proc: '', qtd: 1, valor: null, qAuto: true });
+      picker = null; desenhar();
+      const l = $$('.orc-lin .orc-d', caixa).pop();
+      if (l && !phoneMQ.matches) l.focus();
+    };
+    const fechar = () => { if (modalGuard && !modalGuard()) return; voltar(); };
+    if ($('#orcBack')) $('#orcBack').onclick = fechar;
+    $('#orcFechar').onclick = fechar;
+    let imprimirDepois = false;
+    if ($('#orcImprimir')) $('#orcImprimir').onclick = () => {
+      if (!edita) { orcImprimir(o0); return; }
+      imprimirDepois = true; f.requestSubmit();
+    };
+    if ($('#orcExcluir')) $('#orcExcluir').onclick = () => {
+      const bt = $('#orcExcluir');
+      if (!bt.dataset.certeza) { bt.dataset.certeza = '1'; bt.textContent = 'Excluir mesmo?'; return; }
+      if (!allow('pacientes.editar')) return;
+      const i = orcLista().findIndex(x => x.id === o0.id);
+      if (i >= 0) orcLista().splice(i, 1);
+      save();
+      toast('Orçamento excluído.');
+      voltar();
+    };
+    f.onsubmit = e => {
+      e.preventDefault();
+      const pr = imprimirDepois; imprimirDepois = false;
+      if (!allow('pacientes.editar')) return;
+      const itens = [];
+      for (let i = 0; i < o.itens.length; i++) {
+        const it = o.itens[i], proc = cleanSpaces(it.proc), dentes = cleanSpaces(it.dentes);
+        if (!proc && !dentes && it.valor == null) continue;
+        if (!proc) return erro(`Escreva o procedimento da linha ${i + 1}.`);
+        if (it.valor == null) return erro(`Escreva o valor da linha ${i + 1} (${proc}). Se não cobra, escreva 0.`);
+        const qtd = Math.floor(Number(it.qtd) || 0);
+        if (qtd < 1 || qtd > 99) return erro(`A quantidade da linha ${i + 1} precisa ser de 1 a 99.`);
+        itens.push({ dentes, proc, qtd, valor: it.valor });
+      }
+      if (!itens.length) return erro('Coloque pelo menos um procedimento com o valor.');
+      const data = $('#orcData').value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro('Escolha a data do orçamento.');
+      const agora = new Date().toISOString(), u = currentUser();
+      const dados = { patientId: p.id, dentistId: $('#orcDent').value || '', data, situacao: $('#orcSit').value, itens, obs: $('#orcObs').value.trim(), total: itens.reduce((t, it) => t + orcSubtotal(it), 0) };
+      let salvo = o0 ? getOrc(o0.id) : null;
+      if (salvo) Object.assign(salvo, dados, { editadoEm: agora, editadoPor: u ? u.name : '' });
+      else { salvo = Object.assign({ id: uid(), numero: orcNumero(), criadoEm: agora, criadoPor: u ? u.name : '' }, dados); orcLista().push(salvo); }
+      save();
+      toast(o0 ? 'Orçamento salvo.' : `Orçamento nº ${salvo.numero} salvo no cadastro de ${p.name}.`);
+      if (pr) orcImprimir(salvo);
+      voltar();
+    };
+    modalGuardOrc(f, voltar);
+    if (!phoneMQ.matches && edita) { const d = $('.orc-lin .orc-p', caixa); if (d && !d.value) d.focus(); else { const v = $('.orc-lin .orc-d', caixa); if (v) v.focus(); } }
+  }
+  // Fechar com mudança não salva: avisa na própria janela (como na janela dos dentistas)
+  function modalGuardOrc(f, voltar) {
+    let mexeu = false;
+    f.addEventListener('input', () => { mexeu = true; });
+    f.addEventListener('click', e => { if (e.target.closest('[data-dn],[data-ox],#orcMais')) mexeu = true; });
+    modalGuard = () => {
+      if (!mexeu || !document.body.contains(f)) return true;
+      const el = $('#orcErro');
+      el.innerHTML = 'O orçamento tem mudanças que não foram salvas. <button type="button" class="link" id="orcSalvarFechar">Salvar</button> · <button type="button" class="link" id="orcDescartar" style="color:var(--red)">Fechar sem salvar</button>';
+      el.hidden = false;
+      $('#orcSalvarFechar').onclick = () => f.requestSubmit();
+      $('#orcDescartar').onclick = () => { modalGuard = null; voltar(); };
+      el.scrollIntoView({ block: 'nearest' });
+      return false;
+    };
+  }
+  // Impressão do orçamento (modelo neutro: nome e logo da clínica)
+  function orcImprimir(o) {
+    if (!o) return;
+    if (APP.celular) { toast('No celular não dá para imprimir. Imprima o orçamento pelo computador.'); return; }
+    const p = getPatient(o.patientId) || { name: 'Paciente' };
+    const clinica = cleanSpaces(db.settings.clinicName) || cleanSpaces(session && session.clinica && session.clinica.nome) || '';
+    const idade = idadeDe(p.birth), dn = dentistName(o.dentistId);
+    const s = orcSit(o.situacao);
+    $('#printArea').innerHTML = `<div class="orc-pr">
+      <div class="opr-cab">
+        <div class="opr-cli">${db.settings.logo ? `<img src="${db.settings.logo}" alt="">` : ''}${clinica ? `<b>${esc(clinica)}</b>` : ''}</div>
+        <div class="opr-tit"><h1>Orçamento</h1><div>Nº ${esc(o.numero || '')}</div><div>Data: ${fmtDMY(o.data)}</div>${o.situacao && o.situacao !== 'aberto' ? `<div>${esc(s[1])}</div>` : ''}</div>
+      </div>
+      <div class="opr-box"><dl>
+        <dt>Paciente</dt><dd>${esc(p.name)}</dd>
+        <dt>Telefone</dt><dd>${p.phone ? esc(phoneOut(p.phone)) : '—'}</dd>
+        <dt>Nascimento</dt><dd>${p.birth ? fmtDMY(p.birth) + (idade != null ? ` (${idade} anos)` : '') : '—'}</dd>
+        <dt>CPF</dt><dd>${esc(p.cpf || '—')}</dd>
+        ${p.address ? `<dt>Endereço</dt><dd>${esc(p.address)}</dd>` : ''}
+        <dt>Dentista</dt><dd>${esc(dn || '—')}</dd>
+      </dl></div>
+      <table class="opr-tab"><thead><tr><th>Dente(s)</th><th>Procedimento</th><th class="n">Qtd.</th><th class="n">Valor unit.</th><th class="n">Subtotal</th></tr></thead>
+        <tbody>${(o.itens || []).map(it => `<tr><td>${esc(it.dentes || '—')}</td><td>${esc(it.proc)}</td><td class="n">${Number(it.qtd) || 0}</td><td class="n">${reais(it.valor)}</td><td class="n">${reais(orcSubtotal(it))}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="4">Total</td><td class="n">${reais(orcTotal(o))}</td></tr></tfoot></table>
+      ${o.obs ? `<div class="opr-obs"><b>Observações</b><p>${esc(o.obs).replace(/\n/g, '<br>')}</p></div>` : ''}
+      <div class="opr-ass"><div><span></span>Paciente ou responsável</div><div><span></span>${esc(dn || 'Dentista')}</div></div>
+      <div class="opr-rod">Impresso em ${fmtStamp(new Date().toISOString())}</div>
+    </div>`;
+    window.print();
+  }
+  // Seção "Orçamentos" no cadastro do paciente
+  function orcSecao(p, m) {
+    if (!can('pacientes.ver')) return;
+    const lista = orcDoPaciente(p.id), edita = can('pacientes.editar');
+    const sec = document.createElement('section');
+    sec.className = 'orc-sec';
+    sec.innerHTML = `<div class="row-between"><h3>Orçamentos (${lista.length})</h3>${edita ? '<button type="button" class="btn btn-small" id="orcNovo">+ Novo orçamento</button>' : ''}</div>
+      ${lista.length ? `<ul class="orc-lista">${lista.map(o => {
+        const s = orcSit(o.situacao), procs = (o.itens || []).map(it => it.proc).filter(Boolean).join(', ');
+        return `<li><button type="button" class="orc-item" data-orc="${o.id}">
+            <span class="orc-i1"><b>${fmtDMY(o.data)}</b> · ${esc(dentistName(o.dentistId) || 'sem dentista')} <span class="muted">· nº ${esc(o.numero || '')}</span></span>
+            <span class="orc-i2">${esc(procs || '—')}</span></button>
+          <span class="orc-i3"><b>${reais(orcTotal(o))}</b><span class="pill ${s[2]}">${s[1]}</span></span>
+          ${APP.celular ? '' : `<button type="button" class="btn btn-small orc-pr-bt" data-orcpr="${o.id}" title="Imprimir este orçamento">${I.print}<span>Imprimir</span></button>`}</li>`;
+      }).join('')}</ul>` : `<p class="muted orc-vazio">Nenhum orçamento ainda.${edita ? ' Toque em “+ Novo orçamento” para montar um.' : ''}</p>`}`;
+    const ref = $$('.row-between', m).find(x => /Consultas/.test(x.textContent));
+    if (ref) m.insertBefore(sec, ref); else m.appendChild(sec);
+    if ($('#orcNovo', sec)) $('#orcNovo', sec).onclick = () => orcAbrir(null, p.id, null, 'paciente');
+    sec.addEventListener('click', e => {
+      const a = e.target.closest('[data-orc]');
+      if (a) { orcAbrir(a.dataset.orc, null, null, 'paciente'); return; }
+      const b = e.target.closest('[data-orcpr]');
+      if (b) orcImprimir(getOrc(b.dataset.orcpr));
+    });
+  }
+  // Paciente novo (no Novo horário): "Fazer o orçamento deste paciente" (opcional)
+  const _renderPicker24 = renderPicker;
+  renderPicker = function () {
+    const r = _renderPicker24.apply(this, arguments);
+    const acts = $('#picker .subform-actions');
+    if (acts && !$('#npOrc') && can('pacientes.editar')) {
+      acts.insertAdjacentHTML('beforebegin', `<label class="fitrow orc-np" for="npOrc"><input type="checkbox" id="npOrc">
+        <span><b>Fazer o orçamento deste paciente</b><span class="hint">Opcional. O modelo do orçamento abre logo depois de salvar o paciente.</span></span></label>`);
+    }
+    return r;
+  };
+  const _savePatientFromSubform24 = savePatientFromSubform;
+  savePatientFromSubform = function () {
+    const quer = !!($('#npOrc') && $('#npOrc').checked);
+    const id = _savePatientFromSubform24.apply(this, arguments);
+    if (id && quer) {
+      if (salvandoHorario) orcAposSalvar = id;   // salvando o horário junto: abre depois que o horário for salvo
+      else orcAbrir(null, id, { dentistId: $('#fDentist').value, proc: cleanSpaces($('#fType').value) });   // "Salvar paciente": abre agora, por cima do Novo horário
+    }
+    return id;
+  };
+  const _openApptDrawer24b = openApptDrawer;
+  openApptDrawer = function () { orcAposSalvar = null; return _openApptDrawer24b.apply(this, arguments); };
+  const _onSubmitAppt24b = onSubmitAppt;
+  onSubmitAppt = function () {
+    salvandoHorario = true;
+    let r;
+    try { r = _onSubmitAppt24b.apply(this, arguments); }
+    finally { salvandoHorario = false; }
+    if (orcAposSalvar && $('#drawer').hidden) {
+      const pid = orcAposSalvar;
+      orcAposSalvar = null;
+      const a = db.appointments.filter(x => x.patientId === pid && x.status !== 'deleted').pop();
+      setTimeout(() => orcAbrir(null, pid, a ? { dentistId: a.dentistId, proc: a.typeName } : null), 0);
+    }
+    return r;
+  };
+  // Sincronização dos orçamentos (área Pacientes)
+  SYNC_AREAS.find(x => x.id === 'pacientes').parts.push('orcamentos');
+  PART_AREA.orcamentos = 'pacientes';
+  const _syncRecords24 = syncRecords;
+  syncRecords = function (d) {
+    const out = _syncRecords24.apply(this, arguments);
+    if (d && Array.isArray(d.orcamentos)) d.orcamentos.forEach(x => { if (x && x.id) out['orcamentos:' + x.id] = x; });
+    return out;
+  };
+  const _applyRemote24 = applyRemote;
+  applyRemote = function (c) {
+    if (c && typeof c.key === 'string' && c.key.startsWith('orcamentos:')) {
+      const id = c.key.slice('orcamentos:'.length), arr = orcLista(), j = arr.findIndex(x => x && x.id === id);
+      if (c.op === 'apagar' || !c.data || typeof c.data !== 'object') { if (j >= 0) arr.splice(j, 1); }
+      else { const v = JSON.parse(JSON.stringify(c.data)); if (j >= 0) arr[j] = v; else arr.push(v); }
+      return;
+    }
+    return _applyRemote24.apply(this, arguments);
+  };
+  const _descreverPendente24 = descreverPendente;
+  descreverPendente = function (c) {
+    if (c.key.startsWith('orcamentos:')) {
+      const o = getOrc(c.key.slice('orcamentos:'.length)), p = o && getPatient(o.patientId);
+      return c.op === 'apagar' || !o ? 'Orçamento apagado' : `Orçamento · ${p ? p.name : 'Paciente'} · ${fmtDM(o.data)}`;
+    }
+    return _descreverPendente24.apply(this, arguments);
+  };
+  // Desfazer: a "foto" também guarda os orçamentos (juntar pacientes muda de quem é o orçamento)
+  const _desfFoto24 = desfFoto;
+  desfFoto = function () {
+    const m = _desfFoto24.apply(this, arguments);
+    orcLista().forEach(x => { if (x && x.id) m.set('orcamentos:' + x.id, JSON.stringify(x)); });
+    return m;
+  };
+
+  // ===== 10) Área restrita (senha do administrador) =====
+  const AR_MIN = 10;   // depois da senha certa, fica aberta por 10 minutos (neste aparelho, para este usuário)
+  let arAte = 0, arDono = null;
+  const arAberta = () => { const u = currentUser(); return !!u && arDono === u.id && Date.now() < arAte; };
+  function conferirSenha(senha) {
+    const u = currentUser();
+    if (!u || u.role !== 'admin') return Promise.resolve({ ok: false, erro: 'Só o administrador entra na área restrita.' });
+    if (!senha) return Promise.resolve({ ok: false, erro: 'Digite a senha.' });
+    if (!online()) {
+      const lu = users.users.find(x => x.id === u.id) || users.users.find(x => norm(x.login) === norm(u.login));
+      return Promise.resolve(passOk(lu, senha) ? { ok: true } : { ok: false, erro: 'Senha errada.' });
+    }
+    // Sem resposta do servidor: confere com a entrada sem internet guardada neste aparelho (cifrada com a senha)
+    const local = erroNet => {
+      const sc = session && session.clinica;
+      if (!sc || !sc.codigo || !u.login) return { ok: false, erro: erroNet };
+      return entrarOffline(sc.codigo, u.login, senha).then(r => r.ok ? { ok: true }
+        : { ok: false, erro: /conferem/.test(r.erro || '') ? 'Senha errada.' : (/Sem internet|30 dias/.test(r.erro || '') ? erroNet : r.erro) });
+    };
+    return servidorReal.chamar('/api/conferir-senha', { senha }).then(r => {
+      if (r && r.ok) return { ok: true };
+      if (r && ['senha', 'muitas-tentativas', 'sem-permissao', 'sessao', 'licenca'].includes(r.codigo)) return { ok: false, erro: r.codigo === 'senha' ? 'Senha errada.' : r.erro };
+      return local('O servidor não conseguiu conferir a senha agora. Tente de novo daqui a pouco.');
+    }, () => local('Sem conexão com o servidor. Conecte à internet e tente de novo.'));
+  }
+  function pedirSenhaRestrita(nome, seguir, opcoes) {
+    closeMenu(); closeBaseMenu();
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow ar-eyebrow">${I.lock}Área restrita</div><h2>${esc(nome)}</h2></div>${closeX}</div>
+      <form id="arForm" class="stack" novalidate>
+        <p class="ar-txt">Esta opção mexe em dados importantes da clínica. Para continuar, digite a <b>senha do administrador</b> (a mesma de entrar no programa).</p>
+        <input type="text" name="username" value="${esc((currentUser() || {}).login || '')}" autocomplete="username" hidden>
+        <label class="field"><span class="label">Senha do administrador</span><input type="password" id="arSenha" autocomplete="current-password"></label>
+        <div class="error" id="arErro" hidden></div>
+        <p class="hint">Depois da senha certa, a área restrita fica aberta por ${AR_MIN} minutos neste aparelho.${online() ? ' O suporte do Dente Sempre também faz estas ações pelo painel de administração.' : ''}</p>
+        <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="submit" class="btn btn-primary" id="arIr">${I.unlock}Continuar</button></div>
+      </form>`);
+    const f = $('#arForm'), bt = $('#arIr'), err = $('#arErro');
+    if (!phoneMQ.matches) $('#arSenha').focus();
+    f.onsubmit = e => {
+      e.preventDefault();
+      if (bt.disabled) return;
+      bt.disabled = true;
+      err.hidden = true;
+      conferirSenha($('#arSenha').value).then(r => {
+        if (!document.body.contains(f)) return;
+        bt.disabled = false;
+        if (!r.ok) { err.textContent = r.erro || 'Senha errada.'; err.hidden = false; $('#arSenha').select(); return; }
+        const u = currentUser();
+        arAte = Date.now() + AR_MIN * 60000; arDono = u ? u.id : null;
+        if (opcoes && opcoes.botao) {   // a janela de escolher arquivo só abre com um clique da pessoa
+          f.innerHTML = `<div class="act-ok">Senha conferida.</div>
+            <div class="modal-foot"><button type="button" class="btn" data-close-modal>Cancelar</button><button type="button" class="btn btn-primary" id="arSeguir">${esc(opcoes.botao)}</button></div>`;
+          $$('[data-close-modal]', f).forEach(b => b.onclick = closeModal);
+          $('#arSeguir').onclick = () => { closeModal(true); seguir(); };
+          $('#arSeguir').focus();
+          return;
+        }
+        closeModal(true);
+        seguir();
+      });
+    };
+  }
+  // Envolve uma função: o administrador precisa da senha (ou da área já aberta). Usar renova os 10 minutos.
+  function restrita(nome, fn, opcoes) {
+    return function () {
+      const self = this, args = arguments;
+      if (!souAdmin()) return fn.apply(self, args);   // quem não é administrador cai na conferência de permissão de sempre
+      if (arAberta()) { arAte = Date.now() + AR_MIN * 60000; return fn.apply(self, args); }
+      pedirSenhaRestrita(nome, () => fn.apply(self, args), opcoes);
+    };
+  }
+  const _startImport24 = startImport, _openUsersModal24 = openUsersModal, _openDeactivateDialog24 = openDeactivateDialog, _openRestoreSendConfirm24 = openRestoreSendConfirm;
+  startImport = restrita('Restaurar backup', startImport, { botao: 'Escolher o arquivo do backup…' });
+  openUsersModal = restrita('Usuários e senhas', openUsersModal);
+  openDeactivateDialog = restrita('Desativar este aparelho', openDeactivateDialog);
+  openRestoreSendConfirm = restrita('Enviar o backup restaurado para todos', openRestoreSendConfirm);
+  // Começar do zero: com servidor, quem faz é o suporte (painel do dono); sem servidor, fica aqui com senha
+  const _abrirComecarDoZero24 = abrirComecarDoZero;
+  const comecarLocal = restrita('Começar do zero', function () {
+    const r = _abrirComecarDoZero24.apply(this, arguments);
+    const bt = $('#czIr'), av = $('.dp-aviso p', $('#modal'));
+    if (av && orcLista().length) av.insertAdjacentText('beforeend', ' Os orçamentos dos pacientes também saem.');
+    if (bt && typeof bt.onclick === 'function') {
+      const orig = bt.onclick;
+      bt.onclick = function () {
+        const res = orig.apply(this, arguments);
+        if (!db.appointments.length && !db.patients.length && !db.dentists.length && orcLista().length) { db.orcamentos = []; save(); }
+        return res;
+      };
+    }
+    return r;
+  });
+  abrirComecarDoZero = function () {
+    if (!online()) return comecarLocal.apply(this, arguments);
+    closeMenu(); closeBaseMenu();
+    openModal(`
+      <div class="modal-head"><div><div class="eyebrow ar-eyebrow">${I.lock}Área restrita</div><h2>Começar do zero</h2></div>${closeX}</div>
+      <div class="stack">
+        <p>Para a segurança da clínica, apagar todos os dados (consultas, pacientes e dentistas) agora é feito pelo <b>suporte do Dente Sempre</b>, no painel de administração. Assim ninguém apaga tudo sem querer.</p>
+        <p class="hint" style="margin:0">Peça ao suporte. Antes de apagar, o suporte guarda uma cópia dos dados da clínica no servidor.</p>
+        <div class="modal-foot"><button type="button" class="btn btn-primary" data-close-modal>Entendi</button></div>
+      </div>`);
+  };
+  // O suporte usou "Começar do zero" no painel (o servidor manda uma época nova que começa com "zero-"):
+  // o aparelho esvazia a agenda e recebe tudo de novo, como numa restauração, mas com o aviso certo
+  const _recomecarDoServidor24 = recomecarDoServidor;
+  recomecarDoServidor = function (epoca) {
+    const r = _recomecarDoServidor24.apply(this, arguments);
+    if (String(epoca || '').startsWith('zero-')) toast('O suporte do Dente Sempre apagou os dados da clínica (Começar do zero). A agenda deste aparelho foi esvaziada também.');
+    return r;
+  };
+  ASSIST_TOPICOS.forEach(t => {
+    if (!t) return;
+    if (t.abrir === _startImport24) t.abrir = startImport;
+    if (t.abrir === _openUsersModal24) t.abrir = openUsersModal;
+    if (t.nome === 'Começar do zero') {
+      t.cam = online() ? 'Feito pelo suporte do Dente Sempre (painel de administração)' : 'Menu → Área restrita → Começar do zero (pede a senha do administrador)';
+      t.faz = online() ? 'Apaga consultas, pacientes e dentistas da clínica. Para ninguém apagar tudo sem querer, só o suporte faz, pelo painel, e guarda uma cópia antes.'
+        : 'Apaga consultas, pacientes e dentistas, depois da senha do administrador e de escrever APAGAR. Salva um backup antes.';
+    }
+    if (t.nome === 'Restaurar backup') t.cam = 'Menu → Área restrita → Restaurar backup (pede a senha do administrador)';
+    if (t.nome === 'Usuários e senhas') t.cam = 'Menu → Área restrita → Usuários e senhas (pede a senha do administrador)';
+    if (t.nome === 'Veio / Não veio') {
+      t.cam = 'Clique na consulta → Status do paciente, ou botão direito na consulta (toque longo no celular) → Veio, Não veio ou Voltar para Em aberto';
+      t.faz = 'Toda consulta começa Em aberto. Marque Veio ou Não veio; se marcou errado, dá para trocar ou voltar para Em aberto. Só no dia da consulta: dia que passou, só o administrador corrige (e a recepção completa o que ficou sem status pelas pendências).';
+    }
+  });
+  // Menu: as opções perigosas ficam juntas no grupo "Área restrita"
+  const AR_IDS = ['users', 'import', 'comecar-zero'];
+  const _baseMenuGroups24 = baseMenuGroups;
+  baseMenuGroups = function () {
+    const gs = _baseMenuGroups24.apply(this, arguments);
+    const cfg = gs.find(g => g.title === 'Configurações');
+    if (!cfg) return gs;
+    const mover = AR_IDS.map(id => cfg.items.find(it => it.id === id)).filter(it => it && !(it.id === 'comecar-zero' && online()));
+    cfg.items = cfg.items.filter(it => !AR_IDS.includes(it.id));
+    if (mover.length) {
+      const aberta = arAberta();
+      gs.push({ title: 'Área restrita', items: mover.map(it => Object.assign({}, it, { state: aberta ? ['Aberta', 'on'] : ['Pede senha', ''] })) });
+    }
+    return cfg.items.length ? gs : gs.filter(g => g !== cfg);
+  };
+  const _openMenu24 = openMenu;
+  openMenu = function (titulo, itens) {
+    if (titulo === 'Configurações' && Array.isArray(itens) && souAdmin()) {
+      const achar = act => itens.find(it => it && it.act === act);
+      const mover = [achar('users'), achar('import')].filter(Boolean);
+      if (!online()) mover.push({ act: 'comecar-zero', label: 'Começar do zero…', icon: I.trash, cls: 'danger', run: abrirComecarDoZero });
+      const novo = itens.filter(it => !(it && (it.act === 'users' || it.act === 'import')));
+      const i = novo.findIndex(it => it && it.act === 'exit');
+      novo.splice(i >= 0 ? i : novo.length, 0, { header: arAberta() ? 'Área restrita · aberta' : 'Área restrita · pede a senha' }, ...mover, { sep: true });
+      const args = Array.from(arguments);
+      args[1] = novo;
+      return _openMenu24.apply(this, args);
+    }
+    return _openMenu24.apply(this, arguments);
+  };
+  // Saiu ou trocou de usuário: a área restrita fecha
+  const _logout24 = logout;
+  logout = function () { arAte = 0; arDono = null; return _logout24.apply(this, arguments); };
+
+  // ===== Assistente: as novidades de 24/11 =====
+  const AI_ORC = /\b(orcament\w*|orcar)\b/;
+  const AI_MD = /\b(mais de (um|1) dentista|dois dentistas|2 dentistas|varios dentistas|outro dentista junto|dentistas juntos|junto com outro dentista|consulta em conjunto|dois profissionais)\b/;
+  const AI_PACDENT = /\b(pacientes? (do|da|de cada|por) (dentista|dr|dra)\w*|separar (os )?pacientes|filtr\w* (de |os )?pacientes)\b/;
+  const AI_AR = /\b(area restrita|senha do administrador|opcoes perigosas)\b/;
+  const AI_ABERTO = /\b(em aberto|volta\w* (para|pra) (o )?(em )?aberto|tira\w* (o )?(veio|nao veio|falta))\b/;
+  ASSIST_TOPICOS.unshift(
+    { k: AI_ORC, nome: 'Orçamento do paciente', cam: 'Pacientes → abra o paciente → Orçamentos → + Novo orçamento. Também no cadastro de paciente novo (Novo horário): “Fazer o orçamento deste paciente”',
+      faz: 'Monta o orçamento com dentes, procedimentos, quantidade e valores; o total sai sozinho. Leva a data, os dados do paciente e o dentista. Fica guardado no cadastro do paciente e dá para imprimir.',
+      own: true, abrir: openPatientsModal, pode: () => can('pacientes.ver'), quem: 'o administrador e a recepção' },
+    { k: AI_MD, nome: 'Consulta com mais de um dentista', cam: 'Novo horário → abaixo do Dentista, “+ Mais um dentista nesta consulta”',
+      faz: 'Marque os outros dentistas do procedimento: a consulta entra na agenda de cada um, no mesmo horário. Veio, Não veio, remarcar, editar e excluir valem para todos.',
+      own: true, abrir: () => openApptDrawer(), pode: () => can('agenda.editar'), quem: 'o administrador e a recepção' },
+    { k: AI_PACDENT, nome: 'Pacientes por dentista', cam: 'Pacientes → Dentista (escolha o dentista na lista)',
+      faz: 'Mostra só os pacientes que têm consulta com o dentista escolhido (ou os que ainda não têm consulta). Cada paciente mostra os dentistas dele, e o cadastro do paciente tem a linha Dentistas.',
+      own: true, abrir: openPatientsModal, pode: () => can('pacientes.ver'), quem: 'o administrador e a recepção' },
+    { k: AI_AR, nome: 'Área restrita', cam: 'Menu → Área restrita',
+      faz: `Restaurar backup, Usuários e senhas, desativar o aparelho e enviar backup restaurado para todos pedem a senha do administrador. Depois da senha, fica aberta por ${AR_MIN} minutos.${online() ? ' Começar do zero é feito pelo suporte, no painel de administração.' : ''}`,
+      own: true, abrir: () => openBaseMenu(), pode: souAdmin, quem: 'o administrador' }
+  );
+  const _aiHandle24 = aiHandle;
+  aiHandle = function (raw) {
+    const t = aiNormV7(raw);
+    if (!t) return _aiHandle24.apply(this, arguments);
+    const pergunta = /^(?:e )?(onde|aonde|cade|como|o que e|o que faz|para que serve|pra que serve|qual menu)\b/.test(t) || /\b(onde fica|como (faco|funciona|uso|eu|crio|imprimo|marco))\b/.test(t);
+    const topico = k => ASSIST_TOPICOS.find(x => x.k === k);
+    // Orçamento ("fazer orçamento para a Maria", "orçamento do João", "onde faço orçamento?")
+    if (AI_ORC.test(t)) {
+      if (!can('pacientes.ver')) return unsure('Seu usuário não vê os orçamentos. Quem pode: o administrador e a recepção.');
+      const ap = aiPatient(t);
+      if (ap.ambiguous && !pergunta) return ambiguousPatients(ap.ambiguous);
+      if (pergunta || !ap.p) return aiResponderTopico(topico(AI_ORC), false);
+      const novo = /\b(nov[oa]|faz\w*|faca|cri\w*|mont\w*|abr\w* um)\b/.test(t) || !orcDoPaciente(ap.p.id).length;
+      if (novo) {
+        if (!can('pacientes.editar')) return unsure('Seu usuário não faz orçamentos. Quem pode: o administrador e a recepção.');
+        orcAbrir(null, ap.p.id, null, 'paciente');
+        return ans(`Abri um <b>orçamento novo</b> para <b>${esc(ap.p.name)}</b>. Coloque os dentes, os procedimentos e os valores; o total sai sozinho.`);
+      }
+      openPatientDetail(ap.p.id);
+      const n = orcDoPaciente(ap.p.id).length;
+      setTimeout(() => { const s = $('.orc-sec'); if (s) s.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60);
+      return ans(`Abri o cadastro de <b>${esc(ap.p.name)}</b>: ${n} ${n === 1 ? 'orçamento' : 'orçamentos'}, na parte <b>Orçamentos</b>.`);
+    }
+    if (AI_MD.test(t)) return aiResponderTopico(topico(AI_MD), !pergunta);
+    if (AI_PACDENT.test(t)) return aiResponderTopico(topico(AI_PACDENT), !pergunta);
+    if (AI_AR.test(t)) return aiResponderTopico(topico(AI_AR), false);
+    // "deixa a Maria em aberto" / "volta a consulta do João para em aberto"
+    if (AI_ABERTO.test(t) && !pergunta) {
+      const ap = aiPatient(t);
+      if (ap.ambiguous) return ambiguousPatients(ap.ambiguous);
+      if (ap.p) {
+        if (!can('agenda.editar')) return unsure('Seu usuário não muda o status das consultas.');
+        const a = db.appointments.find(x => x.patientId === ap.p.id && x.date === todayStr() && (x.status === 'arrived' || x.status === 'no_show'));
+        if (!a) return unsure(`<b>${esc(ap.p.name)}</b> não tem consulta de hoje marcada como Veio ou Não veio. Em aberto só no dia da consulta.`);
+        markOpen(a.id);
+        return ans(`A consulta de <b>${esc(ap.p.name)}</b> (hoje às ${a.start}) voltou para <b>Em aberto</b>.`);
+      }
+    }
+    return _aiHandle24.apply(this, arguments);
+  };
+  const _aiHelp24 = aiHelp;
+  aiHelp = function () {
+    const r = _aiHelp24.apply(this, arguments);
+    if (r && typeof r.html === 'string') r.html = r.html.replace('</ul>', `<li>“fazer orçamento para a Maria”, “orçamento do João”</li>
+        <li>“consulta com dois dentistas”, “pacientes da Dra. Ana”, “deixa a Maria em aberto”</li>
+      </ul>`);
+    return r;
+  };
+
+  // ===== Aparência das novidades de 24/11 =====
+  (function () {
+    const st = document.createElement('style');
+    st.textContent = `
+  /* 4) Dentistas: ativos / limite do plano */
+  .pane-meta.dm-cheio{color:var(--amber-ink);font-weight:700}
+  /* 2 e 3) Status do paciente na consulta */
+  .st24{margin-top:12px;padding:10px 12px 8px;border:1px solid var(--line);background:#fafbfd}
+  .st24-lab{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
+  .st24-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line-strong);border-radius:var(--r);overflow:hidden;background:#fff}
+  .st24-op{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:4px 8px;border:0;border-left:1px solid var(--line-strong);background:#fff;font-size:15px;font-weight:600;color:#26324a;cursor:pointer;white-space:nowrap}
+  .st24-op:first-child{border-left:0}
+  .st24-op svg{width:16px;height:16px;flex:none}
+  @media (hover:hover){ .st24-op:not([disabled]):not([aria-checked="true"]):hover{background:var(--accent-hover)} }
+  .st24-op[disabled]{color:#a3abb7;cursor:not-allowed;background:#f6f7f9}
+  .st24-scheduled[aria-checked="true"]{background:var(--appt);color:var(--appt-ink);box-shadow:inset 0 -3px 0 var(--appt-border)}
+  .st24-arrived[aria-checked="true"]{background:var(--ok);color:var(--ok-ink);box-shadow:inset 0 -3px 0 var(--ok-border)}
+  .st24-no_show[aria-checked="true"]{background:var(--miss);color:var(--miss-ink);box-shadow:inset 0 -3px 0 var(--miss-border)}
+  .st24-op[aria-checked="true"]{cursor:default;font-weight:700}
+  .st24-nota{margin:6px 0 0;font-size:13px;color:var(--muted)}
+  /* 7) Agenda do dia trancada: horários com listras e cadeado (como o horário bloqueado) */
+  #grid.dl-grade{background:repeating-linear-gradient(45deg,#f2f4f7 0 8px,#e7eaef 8px 16px)}
+  #grid.dl-grade .row:not(.off) .slot{display:flex;align-items:center;color:var(--block-ink);font-weight:600;box-shadow:inset 4px 0 0 var(--block-border);overflow:hidden;white-space:nowrap}
+  #grid.dl-grade .dl-sl{display:inline-flex;align-items:center;gap:6px}
+  #grid.dl-grade .dl-sl svg{width:14px;height:14px;flex:none}
+  #grid.dl-grade .dl-livre{display:none}
+  #agendaScroll.dl-on #grid.dl-grade .row:not(.off) .slot,#agendaScroll.dl-on #grid.dl-grade .row:not(.off) .slot:active,#agendaScroll.dl-on #grid.dl-grade .row:not(.off) .slot:focus-visible{background:transparent;color:var(--block-ink)}
+  @media (hover:hover){
+    #agendaScroll.dl-on #grid.dl-grade .row:not(.off) .slot:hover{background:transparent;color:var(--block-ink)}
+    #agendaScroll:not(.dl-on) #grid.dl-grade .row:not(.off) .slot:hover{background:var(--accent-hover);color:var(--accent)}
+    #agendaScroll:not(.dl-on) #grid.dl-grade .row:not(.off) .slot:hover .dl-sl{display:none}
+    #agendaScroll:not(.dl-on) #grid.dl-grade .row:not(.off) .slot:hover .dl-livre{display:inline}
+  }
+  .ev .dl-ev{display:inline-flex;vertical-align:-2px;margin-right:4px}
+  .ev .dl-ev svg{width:13px;height:13px}
+  /* 8) Consulta com mais de um dentista */
+  .md-box{margin-top:-6px}
+  .md-abrir{padding:2px 0}
+  .md-area{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+  .md-opc{font-weight:400;color:var(--muted)}
+  .md-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .md-chip{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:3px 12px 3px 4px;border:1px solid var(--line-strong);border-radius:18px;background:#fff;font-size:14px;color:#26324a;cursor:pointer;max-width:100%}
+  .md-chip .md-av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:700;color:#fff;background:var(--av);flex:none}
+  .md-chip .md-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .md-chip[aria-pressed="true"]{background:var(--select);border-color:var(--accent);color:var(--accent-dark);font-weight:700}
+  .md-chip[aria-pressed="true"]::after{content:"✓";font-weight:700;margin-left:2px}
+  .md-hint{margin:0}
+  .chip-md{background:#fff;color:#33405a;border:1px solid #c9d2de}
+  .chip-md svg{width:12px;height:12px;flex:none}
+  .ev.narrow .chip-md .md-txt,.ev.compact .chip-md .md-txt{display:none}
+  .md-aviso{display:flex;align-items:flex-start;gap:8px;margin:0;padding:8px 10px;background:var(--amber-soft);border:1px solid #f0d28a;color:var(--amber-ink);font-size:14px}
+  .md-aviso svg{width:16px;height:16px;flex:none;margin-top:2px}
+  /* 9) Pacientes por dentista */
+  .pl-filtro{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;color:var(--muted);font-weight:600}
+  .pl-filtro select{flex:0 1 320px;min-width:0;height:36px}
+  .pd-dents .muted{font-size:13px}
+  /* 1) Orçamento */
+  .orc{display:flex;flex-direction:column;gap:12px}
+  .orc-pac{border:1px solid var(--line-soft);background:#fafbfd;padding:8px 12px}
+  .orc-pac-nome{font-weight:700;font-size:16px}
+  .orc-pac-dados{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+  .orc-top{display:grid;grid-template-columns:170px minmax(0,1fr) 170px;gap:10px}
+  .orc-top .field{min-width:0}
+  .orc-itens{display:flex;flex-direction:column;gap:6px}
+  .orc-cab,.orc-lin{display:grid;grid-template-columns:minmax(130px,1.1fr) minmax(170px,2.6fr) 60px minmax(90px,.85fr) minmax(96px,.85fr) 34px;gap:6px;align-items:center}
+  .orc-cab{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:0 2px}
+  .orc-cab span:nth-child(3),.orc-cab span:nth-child(4),.orc-cab span:nth-child(5){text-align:right}
+  .orc-lin input{min-width:0;width:100%}
+  .orc-dentes{display:flex;min-width:0}
+  .orc-dentes .orc-d{flex:1;border-top-right-radius:0;border-bottom-right-radius:0}
+  .orc-dbt{flex:none;width:36px;border:1px solid var(--line-strong);border-left:0;background:#f6f8fb;display:grid;place-items:center;color:var(--accent);cursor:pointer;border-radius:0 var(--r) var(--r) 0}
+  .orc-dbt svg{width:17px;height:17px}
+  .orc-dbt[aria-expanded="true"]{background:var(--select);color:var(--accent-dark)}
+  .orc-q,.orc-v{text-align:right}
+  .orc-sub{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .orc-x{width:34px;height:34px;border:1px solid transparent;background:transparent;color:#8a94a3;display:grid;place-items:center;cursor:pointer;border-radius:var(--r)}
+  .orc-x:hover{background:var(--red-soft);color:var(--red-ink)}
+  .orc-x svg{width:16px;height:16px}
+  .orc-mais{align-self:flex-start;padding:4px 0}
+  .orc-odonto{border:1px solid var(--line-strong);background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 18px rgba(24,33,47,.10)}
+  .od-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px}
+  .od-arc{display:grid;grid-template-columns:70px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+  .od-lado{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase}
+  .od-q{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:3px}
+  .od-q + .od-q{border-left:2px solid var(--line-strong);padding-left:8px}
+  .od-d{min-width:0;height:34px;border:1px solid var(--line-strong);border-radius:var(--r);background:#fff;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;color:#26324a;padding:0}
+  .od-d:hover{background:var(--accent-hover)}
+  .od-d[aria-pressed="true"]{background:var(--accent);border-color:var(--accent-dark);color:#fff}
+  .od-pe{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .od-pe .hint{margin:0}
+  .orc-total{display:flex;justify-content:flex-end;align-items:baseline;gap:16px;border-top:2px solid var(--line);padding-top:8px;font-size:15px}
+  .orc-total b{font-size:22px;font-variant-numeric:tabular-nums;color:#1f2a3d}
+  .orc-opc{font-weight:400;color:var(--muted)}
+  .orc-foot{align-items:center}
+  .orc-esp{flex:1}
+  .orc-bt-pr,.orc-pr-bt{display:inline-flex;align-items:center;gap:6px}
+  .orc-bt-pr svg,.orc-pr-bt svg{width:16px;height:16px}
+  .orc-np{margin-top:2px}
+  .orc-sec{margin-top:4px}
+  .orc-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .orc-lista li{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-left:4px solid var(--accent-line);border-radius:var(--r);padding:4px 8px 4px 0}
+  .orc-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;background:transparent;text-align:left;padding:4px 10px;cursor:pointer;color:inherit;font-size:15px}
+  .orc-item:hover .orc-i1 b{color:var(--accent)}
+  .orc-i1{max-width:100%;overflow-wrap:anywhere}
+  .orc-i2{max-width:100%;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+  .orc-i3{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .orc-vazio{margin:0}
+  /* 10) Área restrita */
+  .ar-eyebrow{display:inline-flex;align-items:center;gap:6px;color:var(--amber-ink)}
+  .ar-eyebrow svg{width:14px;height:14px}
+  .ar-txt{margin:0}
+  #arIr{display:inline-flex;align-items:center;gap:6px}
+  #arIr svg{width:16px;height:16px}
+  /* 6) Janelas que se adaptam à tela: as largas usam mais da tela e as tabelas não cortam o texto */
+  .dname,.dw-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25}   /* nome comprido do dentista: quebra a linha em vez de cortar */
+  @media (min-width:601px){
+    .modal.wide{width:min(max(760px,72vw),1180px,100%)}
+    .daylist.dl24 .c-pac{min-width:10em}
+    .daylist.dl24 .c-tipo{min-width:8em}
+    .daylist.dl24 .c-dent{min-width:8em}
+    .daylist.dl24 .c-sit{min-width:7.5em}
+    .daylist.dl24 .c-sit .pill{margin:1px 0}
+  }
+  @media (min-width:1600px){ .modal{width:min(580px,100%)} }
+  @media (min-width:2200px){ .modal{width:min(640px,100%)} }
+  @media (min-width:601px) and (max-width:900px){
+    .orc-top{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+    .orc-top .field:nth-child(2){grid-column:1 / -1;grid-row:1}
+  }
+  @media (max-width:900px){
+    /* Orçamento em tela estreita (celular, tablet): cada procedimento vira um cartão */
+    .orc-cab{display:none}
+    .orc-lin{grid-template-columns:64px minmax(0,1fr) minmax(0,1fr) 40px;grid-template-areas:"d d d x" "p p p p" "q v s s";border:1px solid var(--line);padding:8px;row-gap:8px}
+    .orc-dentes{grid-area:d}
+    .orc-lin .orc-p{grid-area:p}
+    .orc-lin .orc-q{grid-area:q}
+    .orc-lin .orc-v{grid-area:v}
+    .orc-lin .orc-sub{grid-area:s}
+    .orc-lin .orc-x{grid-area:x;justify-self:end}
+    .od-arc{grid-template-columns:1fr;gap:4px}
+    .od-q + .od-q{border-left:0;padding-left:0;border-top:2px solid var(--line-strong);padding-top:4px}
+  }
+  @media (max-width:600px){
+    .st24-op{min-height:48px;font-size:16px}
+    .md-chip{min-height:44px;font-size:15px}
+    .pl-filtro select{flex:1;height:44px;font-size:16px}
+    .orc-top{grid-template-columns:1fr 1fr}
+    .orc-top .field:nth-child(2){grid-column:1 / -1;grid-row:1}
+    .orc-lin input,.orc-dbt{height:44px}
+    .od-d{height:40px;font-size:14px}
+    .orc-foot .btn{flex:1 1 auto;height:44px}
+    .orc-esp{display:none}
+    .orc-lista li{flex-wrap:wrap;padding-right:8px}
+    .orc-pr-bt{display:none}
+  }
+  /* Impressão do orçamento (modelo neutro) */
+  @media print{
+    #printArea .orc-pr{font:10.5pt/1.45 "Segoe UI",Arial,sans-serif;color:#000}
+    #printArea .opr-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:12px}
+    #printArea .opr-cli{display:flex;align-items:center;gap:12px;font-size:13pt}
+    #printArea .opr-cli img{max-height:56px;max-width:190px}
+    #printArea .opr-tit{text-align:right}
+    #printArea .opr-tit h1{font-size:18pt;margin:0 0 2px;text-transform:uppercase;letter-spacing:.06em}
+    #printArea .opr-box{border:1px solid #888;padding:8px 10px;margin-bottom:12px}
+    #printArea .opr-box dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;margin:0}
+    #printArea .opr-box dt{color:#444}
+    #printArea .opr-box dd{margin:0}
+    #printArea .opr-tab{width:100%;border-collapse:collapse;margin-bottom:12px}
+    #printArea .opr-tab th,#printArea .opr-tab td{border:1px solid #888;padding:5px 7px;text-align:left;vertical-align:top}
+    #printArea .opr-tab th{background:#eee;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:9.5pt;text-transform:uppercase}
+    #printArea .opr-tab .n{text-align:right;white-space:nowrap}
+    #printArea .opr-tab th:nth-child(1){width:17%}
+    #printArea .opr-tab th:nth-child(3){width:7%}
+    #printArea .opr-tab th:nth-child(4),#printArea .opr-tab th:nth-child(5){width:15%}
+    #printArea .opr-tab tfoot td{font-weight:700;font-size:12pt}
+    #printArea .opr-tab tfoot td:first-child{text-align:right}
+    #printArea .opr-obs{border:1px solid #888;padding:6px 10px;margin-bottom:12px}
+    #printArea .opr-obs p{margin:4px 0 0}
+    #printArea .opr-ass{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:56px;text-align:center;font-size:10pt}
+    #printArea .opr-ass span{display:block;border-top:1px solid #000;margin-bottom:4px}
+    #printArea .opr-rod{margin-top:24px;font-size:8.5pt;color:#555}
+    #printArea .opr-tab tr,#printArea .opr-ass{break-inside:avoid}
+  }`;
+    document.head.appendChild(st);
+  })();
+  // ---------- fim dos pedidos de 24/11 ----------
+
   function baseMenuGroups() {
     const today = todayStr();
     const nToday = db.appointments.filter(a => a.date === today && a.status === 'scheduled').length;
@@ -9982,7 +11291,6 @@
         { id: 'confirm', icon: I.confirm, label: 'Confirmar pacientes', sub: nToday ? `${nToday} agendados hoje` : 'Mensagens de WhatsApp, uma por vez', run: () => openConfirmModal(state.date, '') },
         { id: 'daylist', icon: I.list, label: 'Lista do dia', sub: 'Ver ou imprimir', run: () => openDayListModal(state.date, '') },
         { id: 'groupmsg', icon: I.chat, label: 'Mensagem para grupo', sub: 'Faltosos, consultas de amanhã e outros filtros', run: openGroupMsgModal },
-        { id: 'privacy', icon: I.eyeOff, ico: isPrivate() ? 'warn' : '', label: 'Modo recepção ocupada', sub: 'Esconde CPF, RG, endereço e telefone', state: isPrivate() ? ['Ligado', 'on'] : ['Desligado', ''], run: togglePrivacy }
       ] },
       { title: 'Configurações', items: [
         { id: 'customize', icon: I.home, label: 'Personalizar', sub: 'Cores, logo e nome da clínica', run: openCustomizeModal },
@@ -10040,7 +11348,6 @@
   $('#confirmBtn').onclick = () => openConfirmModal(state.date, '');
   $('#dayListBtn').onclick = () => openDayListModal(state.date, '');
   $('#bdayBtn').onclick = () => openBirthdaysModal();
-  $('#privacyBtn').onclick = togglePrivacy;
   $('#moreBtn').onclick = openMoreMenu;
   $('#typesLink').onclick = () => { closeDrawer(); openTypesModal(); };
 
